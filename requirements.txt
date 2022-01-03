@@ -1,0 +1,6 @@
+numpy==1.19.5
+gurobipy==9.1.2
+scipy==1.5.4
+polytope==0.2.3
+matplotlib==3.1.1
+cvxopt==1.2.7   # contains glpk
