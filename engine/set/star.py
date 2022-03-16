@@ -3,11 +3,21 @@ import numpy as np
 import scipy
 import scipy.sparse as sp
 import gurobipy as gp
-from gurobipy import GRB
+from gurobipy import GRB 
+
+####### TODO: NO POLYTOPE ########
 import polytope as pc
+##################################
+
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d as a3
 import matplotlib.colors as colors
+
+import sys
+
+sys.path.insert(0, "../../../engine/set/")
+from zono import *
+from box import *
 
 class Star:
     # Star set class
@@ -30,8 +40,9 @@ class Star:
                 outer_zono = np.array([]), # an outer zonotope covering this star, used for reachability of logsig and tansig networks
                 lb = np.array([]),
                 ub = np.array([])):
-        from engine.set.zono import Zono
-        from engine.set.box import Box
+        
+        #from engine.set.zono import Zono
+        #from engine.set.box import Box
 
         assert isinstance(V, np.ndarray), 'error: basic matrix is not an ndarray'
         assert isinstance(C, np.ndarray), 'error: constraint matrix is not an ndarray'

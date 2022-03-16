@@ -1,12 +1,102 @@
 #!/usr/bin/python3
 import numpy as np
+import gurobipy as gp
+from gurobipy import GRB 
+
+import sys
+        
+sys.path.insert(0, "../../../engine/set/")
+        
+from star import *
+
+############################ ERROR MESSAGES ############################
+
+#INVALID_PARAM_NUMBER_MSG = "ImageStar does not support this number of parameters"
+
+ERRMSG_INCONSISTENT_CONSTR_DIM = "Inconsistent dimension between constraint matrix and constraint vector"
+ERRMSG_INCONSISTENT_PRED_BOUND_DIM = "Number of predicates is different from the size of the lower bound or upper bound predicate vector"
+ERRMSG_INCONSISTENT_BOUND_DIM = "Invalid lower/upper bound predicate vector, vector should have one column"
+ERRMSG_INVALID_CONSTR_VEC = "Invalid constraint vector, vector should have one column"
+ERRMSG_INVALID_BASE_MATRIX = "Invalid basis matrix"
+ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM = "Inconsistency between the basis matrix and the number of predicate variables"
+
+ERRMSG_INCONSISTENT_LB_DIM = "Inconsistent dimension between lower bound image and the constructed imagestar"
+ERRMSG_INCONSISTENT_UB_DIM = "Inconsistent dimension between upper bound image and the constructed imagestar"
+
+ERRMSG_INCONSISTENT_CENTER_IMG_ATTACK_MATRIX = "Inconsistency between center image and attack bound matrices"
+ERRMSG_INCONSISTENT_CHANNELS_NUM = "Inconsistent number of channels between the center image and the bound matrices"
+
+ERRMSG_INCONSISTENT_LB_UB_DIM = "Inconsistency between lower bound image and upper bound image"
+
+ERRMSG_INVALID_INIT = "Invalid number of input arguments, (should be from 0, 3, 5 , or 7)"
+
+ERRMSG_IMGSTAR_EMPTY = "The ImageStar is empty"
+
+ERRMSG_INVALID_PREDICATE_VEC = "Invalid predicate vector"
+
+ERRMSG_INCONSISTENT_PREDVEC_PREDNUM = "Inconsistency between the size of the predicate vector and the number of predicates in the imagestar"
+
+ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM = "Inconsistent number of channels between scale array and the ImageStar"
+
+ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR = "Inconsistent dimenion between input image and the ImageStar"
+
+ERRMSG_INVALID_INPUT_IMG = "Invalid input image"
+
+ERRMSG_INVALID_INPUT_POINT = "Invalid input point"
+ERRMSG_INVALID_FIRST_INPUT_POINT = "The first input point is invalid"
+ERRMSG_INVALID_SECOND_INPUT_POINT = "The second input point is invalid"
+
+
+
+
+
+############################ PARAMETERS IDS ############################
+
+##### ATTRIBUTES:
+V_ID = 0
+C_ID = 1
+D_ID = 2
+PREDLB_ID = 3
+PREDUB_ID = 4
+IM_LB_ID = 5
+IM_UB_ID = 6
+IM_ID = 7
+LB_ID = 8
+UB_ID = 9
+
+NUMPRED_ID = 10
+HEIGHT_ID = 11
+WIDTH_ID = 12
+NUM_CHANNEL_ID = 13
+FLATTEN_ORDER_ID = 14
+
+LAST_ATTRIBUTE_ID = FLATTEN_ORDER_ID
+#####################
+
+############################ PARAMETERS NUMBERS ############################
+IMAGESTAR_ATTRIBUTES_NUM = LAST_ATTRIBUTE_ID + 1
+PREDICATE_IMGBOUNDS_INIT_ARGS_NUM = 7
+PREDICATE_INIT_ARGS_NUM = 5
+IMAGE_INIT_ARGS_NUM = 3
+BOUNDS_INIT_ARGS_NUM = 2
+#####################
+
+IM_OFFSET = 7
+IMAGE_INIT_ARGS_OFFSET = IM_ID
+BOUNDS_INIT_ARGS_OFFSET = IM_LB_ID
+
+DEFAULT_DISP_OPTION = ""
+
+COLUMN_FLATTEN = 'F'
+########################################################################
+
 
 class ImageStar:
     # Class for representing set of images using Star set
     # An image can be attacked by bounded noise. An attacked image can
     # be represented using an ImageStar Set
-    # author: Sung Woo Choi
-    # date: 9/30/2021
+    # author: Mykhailo Ivashchenko
+    # date: 2/14/2022
 
     #=================================================================%
     #   a 3-channels color image is represented by 3-dimensional array 
@@ -70,255 +160,943 @@ class ImageStar:
     # 
     # ====================================================================
 
-    # constructor using 2D representation / 1D representation of an ImageStar
-    def __init__(obj, V = np.array([]),     # a cell (size = numPred)
-                C = np.array([]),           # a constraints matrix of the predicate
-                d = np.array([]),           # a constraints vector of the predicate
-                pred_lb = np.array([]),     # lower bound vector of the predicate
-                pred_ub = np.array([]),     # upper bound vector of the predicate
-                im_lb = np.array([]),       # lower bound image of the ImageStar
-                im_ub = np.array([]),       # upper bound image of the ImageStar
-                IM = np.array([]),          # center image (high-dimensional array)
-                LB = np.array([]),          # lower bound of attack (high-dimensional array)
-                UB = np.array([])):         # upper bound of attack (high-dimensional array)
-        from engine.set.star import Star
 
-        obj.MaxIdxs = np.array([])           # used for unmaxpooling operation in Segmentation network
-        obj.InputSizes = np.array([])      # used for unmaxpooling operation in Segmentation network
-        # The 2D representation of ImageStar is convenient for reachability analysis
-        if V.size and C.size and d.size and pred_lb.size and pred_ub.size:
-            assert C.shape[0] == d.shape[0], 'error: inconsistent dimension between constraint matrix and constraint vector'
-            assert d.shape[1] == 1, 'error: invalid constraint vector, vector should have one column'
+    def __init__(self, *args):
+        """
+            Constructor using 2D representation / 1D representation of an ImageStar
             
-            obj.numPred = C.shape[1]
-            obj.C = C
-            obj.d = d
-
-            if im_lb.size and im_ub.size:
-                assert C.size[1] == pred_ub.size[0] == pred_lb.size[0], 'error: number of predicates is different from the size of the lower bound or upper bound predicate vector'
-                assert pred_lb[1] == pred_ub[1] == 1, 'error: invalid lower/upper bound predicate vector, vector should have one column'
-
-                obj.pred_lb = pred_lb
-                obj.pred_ub = pred_ub
-
-                n = V.shape
-                if len(n) == 3:
-                    obj.V = V
-                    [obj.numChannel, obj.height, obj.width] = n
-                elif len(n) == 4:
-                    assert n[0] == obj.numPred + 1, 'error: inconsistency between the basis matrix and the number of predicate variables'
-                    obj.V = V
-                    [_, obj.numChannel, obj.height, obj.width] = n
-                elif len(n) == 2:
-                    obj.V = V
-                    obj.numChannel = 1
-                    [obj.height, obj.width] = n
-                else:
-                    raise Exception('invalid basis matrix')
-
-                if im_lb.size > 0 and (im_lb.shape[0] != obj.height or im_lb.shape[1] != obj.width):
-                    raise Exception('error: inconsistent dimension between lower bound image and the constructed imagestar')
-                else:
-                    obj.im_lb = im_lb
-                    
-                if im_ub.size > 0 and (im_ub.shape[0] != obj.height or im_ub.shape[1] != obj.width):
-                    raise Exception('error: inconsistent dimension between upper bound image and the constructed imagestar')
-                else:
-                    obj.im_ub = im_ub
-                return
-
-        if IM.size and LB.size and UB.size:
-            # input center image and lower and upper bound matrices (box-representation)
-            n = IM.shape # n[0] is number of channels 
-                         # n[1] and n[2] are height and width of image
-            l = LB.shape
-            u = UB.shape
-
-            assert n[0] == l[0] == u[0] and n[1] == l[1] == u[1], 'error: inconsistency between center image and attack bound matrices'
-            assert len[n] == len[l] == len[u], 'error: inconsistency between center image and attack bound matrices'
-
-            if len(n) == len(l) == len(u) == 2:
-                obj.numChannel = 1
-                [obj.height, obj.width] = n
-                obj.IM = IM
-                obj.LB = LB
-                obj.UB = UB
-            elif len[n] == len[l] == len[u] == 3:
-                if n[3] == l[3] == u[3]:
-                    [obj.numChannel, obj.height, obj.width] = n
-                    obj.IM = IM
-                    obj.LB = LB
-                    obj.UB = UB
-                else:
-                    raise Exception('error: inconsistent number of channels between the center image and the bound matrices')
-            else:
-                raise Exception('error: inconsistent number of channels between the center image and the bound matrices')
-
-            obj.im_lb = IM + LB # lower bound image
-            obj.im_ub = IM + UB # upper bound image
-
-            # converting box ImageStar to an array of 2D Stars
-            n = obj.im_lb.shape
-            if len(3) == 3:
-                I = Star(obj.im_lb.flatten(), obj.im_ub.flatten())
-                obj.V = np.reshape(I.V, (I.nVar + 1, n[0], n[1], n[2]))
-            else:
-                I = Star(obj.im_lb.flatten(), obj.im_ub.flatten())
-                obj.V = np.reshape(I.V, (I.nVar + 1, n[0], n[1]))
-
-            obj.C = I.C
-            obj.d = I.d
-            obj.pred_lb = I.predicate_lb
-            obj.pred_ub = I.predicate_ub
-            obj.numPred = I.nVar
-            return            
+            args : np.array([params]) -> a list of initial arguments
+            
+            params can inlude =>
+            
+            ================ First initialization option ================
+            V : np.array([]) -> a cell (size = numPred)
+            C : np.array([]) -> a constraints matrix of the predicate
+            d : np.array([]) -> a constraints vector of the predicate
+            pred_lb : np.array([]) -> lower bound vector of the predicate
+            pred_ub : np.array([]) -> upper bound vector of the predicate
+            im_lb : np.array([]) -> lower bound image of the ImageStar
+            im_ub : np.array([]) -> upper bound image of the ImageStar
+            =============================================================
+            
+            ================ Second initialization option ================
+            V : np.array([]) -> a cell (size = numPred)
+            C : np.array([]) -> a constraints matrix of the predicate
+            d : np.array([]) -> a constraints vector of the predicate
+            pred_lb : np.array([]) -> lower bound vector of the predicate
+            pred_ub : np.array([]) -> upper bound vector of the predicate
+            =============================================================
+            
+            ================ Third initialization option ================
+            IM : np.array([]) -> center image (high-dimensional array)
+            LB : np.array([]) -> lower bound of attack (high-dimensional array)
+            UB : np.array([]) -> upper bound of attack (high-dimensional array
+            =============================================================
+        """
+        
+        self.validate_params(args)
+        
+        self.attributes = []       
+        
+        for i in range(IMAGESTAR_ATTRIBUTES_NUM):
+            self.attributes.append(np.array([]))
+        
+        self.attributes[FLATTEN_ORDER_ID] = COLUMN_FLATTEN
+        
+        if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM or len(args) == PREDICATE_INIT_ARGS_NUM:    
+            if np.size(args[V_ID]) and np.size(args[C_ID]) and np.size(args[D_ID]) and np.size(args[PREDLB_ID]) and np.size(args[PREDUB_ID]):
+                assert (len(np.shape(args[C_ID])) == 1 and np.size(args[D_ID]) == 1) or (np.shape(args[C_ID])[1] == np.shape(args[D_ID])[0]), \
+                       'error: %s' % ERRMSG_INCONSISTENT_CONSTR_DIM
                 
-        raise Exception('error: failed to create ImageStar')
-
-#------------------check if this function is working--------------------------------------------
-    # first implemnt Star.contains()
-    # randomly generate a set of images from an imagestar set
-    # def sample(obj, N):
-    #     # @N: number of images
-    #     from engine.set.star import Star
-    #     assert obj.V.size, 'error: the ImageStar is an empty set'
+                assert (np.size(args[D_ID]) == 1) or (np.shape(args[D_ID])[1] == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
+                
+                self.attributes[NUMPRED_ID] = np.shape(args[C_ID])[0];
+                self.attributes[C_ID] = args[C_ID].astype('float64')
+                self.attributes[D_ID] = args[D_ID].astype('float64')
+                
+                assert np.shape(args[C_ID])[0] == np.shape(args[PREDLB_ID])[0] == np.shape(args[PREDUB_ID])[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
+                
+                assert len(np.shape(args[PREDLB_ID])) == len(np.shape(args[PREDUB_ID])) == 1 or np.shape(args[PREDUB_ID])[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
+                
+                self.attributes[PREDLB_ID] = args[PREDLB_ID].astype('float64')
+                self.attributes[PREDUB_ID] = args[PREDUB_ID].astype('float64')
+                
+                n = np.shape(args[V_ID])
+                
+                if len(n) < 2:
+                    raise Exception('error: %s' % ERRMSG_INVALID_BASE_MATRIX)
+                else:
+                    self.attributes[HEIGHT_ID] = n[0]
+                    self.attributes[WIDTH_ID] = n[1]
+                    
+                    self.attributes[V_ID] = args[V_ID]
+                    
+                    if len(n) == 4:
+                        assert n[3] == self.args[NUMPRED_ID] + 1, 'error: %s' % ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM
+                        
+                        self.attributes[NUM_CHANNEL_ID] = n[2]
+                    else:
+                        # TODO: ASK WHY THIS HAPPENS AFTER THE ASSIGNMENT IN LINE 205
+                        #self.attributes[NUMPRED_ID] = 0
+                        
+                        if len(n) == 3:
+                            self.attributes[NUM_CHANNEL_ID] = n[2]
+                        elif len(n) == 2:
+                            self.attributes[NUM_CHANNEL_ID] = 1
+                
+                if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM: 
+                    if np.shape(args[IM_LB_ID])[0] != 0 and (np.shape(args[IM_LB_ID])[0] != self.attributes[HEIGHT_ID] or np.shape(args[IM_LB_ID])[1] != self.attributes[WIDTH_ID]):
+                        raise Exception('error: %s' % ERRMSG_INCONSISTENT_LB_DIM)
+                    else:
+                        self.attributes[IM_LB_ID] = im_lb.astype('float64')      
+                        
+                    if np.shape(args[IM_UB_ID])[0] != 0 and (np.shape(args[IM_UB_ID])[0] != self.attributes[HEIGHT_ID] or np.shape(args[IM_UB_ID])[1] != self.attributes[WIDTH_ID]):
+                        raise Exception('error: %s' % ERRMSG_INCONSISTENT_UB_DIM)
+                    else:
+                        self.attributes[IM_UB_ID] = args[IM_UB_ID].astype('float64')
+                    
+        elif len(args) == IMAGE_INIT_ARGS_NUM:
+            args = self.offset_args(args, IMAGE_INIT_ARGS_OFFSET)
+            if np.size(args[IM_ID]) and np.size(args[LB_ID]) and np.size(args[UB_ID]) and np.shape(args[V_ID])[0] == 0:
+                n = np.shape(args[IM_ID])
+                l = np.shape(args[LB_ID])
+                u = np.shape(args[UB_ID])
+                
+                assert (n[0] == l[0] == u[0] and n[1] == l[1] == u[1]) and (len(n) == len(l) == len(u)), 'error: %s' % ERRMSG_INCONSISTENT_CENTER_IMG_ATTACK_MATRIX
+                            
+                assert len(n) == len(l) == len(u), 'error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM
+                
+                self.attributes[IM_ID] = args[IM_ID].astype('float64')
+                self.attributes[LB_ID] = args[LB_ID].astype('float64')
+                self.attributes[UB_ID] = args[UB_ID].astype('float64')
+                
+                self.attributes[HEIGHT_ID] = n[0]
+                self.attributes[WIDTH_ID] = n[1]
+                
+                if len(n) == 2:
+                    self.attributes[NUM_CHANNEL_ID] = 2
+                elif len(n) == 3:
+                    self.attributes[NUM_CHANNEL_ID] = 3
+                else:
+                    raise Exception('error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM)
+                
+                self.attributes[IM_LB_ID] = self.attributes[IM_ID] + self.attributes[LB_ID]
+                self.attributes[IM_UB_ID] = self.attributes[IM_ID] + self.attributes[UB_ID]
+                
+                n = np.shape(self.attributes[IM_LB_ID])
+                
+                I = 0
+                
+                if len(n) == 3:
+                    #TODO: Star returns 'can't create Star set' error
+                    I = Star(self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]), self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]))
+                    self.attributes[V_ID] = np.reshape(I.V, (I.nVar + 1, n[0] * n[1] * n[2]))
+                else:
+                    I = Star(self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]), self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]))
+                    self.attributes[V_ID] = np.reshape(I.V, (I.nVar + 1, n[0] * n[1]))
+                    
+                self.attributes[C_ID] = I.C
+                self.attributes[D_ID] = I.d
+                
+                # TODO: ask why does Star have predicate_lb and ImageStar pred_lb?
+                self.attributes[PREDLB_ID]  = I.predicate_lb
+                self.attributes[PREDUB_ID] = I.predicate_ub
+                
+                self.attributes[NUMPRED_ID] = I.nVar
+        elif len(args) == BOUNDS_INIT_ARGS_NUM:
+            args = self.offset_args(args, BOUNDS_INIT_ARGS_OFFSET)
+            if np.size(args[IM_LB_ID]) and np.size(args[IM_UB_ID]) and np.shape(args[V_ID])[0] == 0: #and np.shape(args[IM_ID])[0] == 0:
+                lb_shape = np.shape(args[IM_LB_ID])
+                ub_shape = np.shape(args[IM_UB_ID])
+                
+                assert len(lb_shape) == len(ub_shape), 'error: %s' % ERRMSG_INCONSISTENT_LB_UB_DIM
+                
+                for i in range(len(lb_shape)):
+                    assert lb_shape[i] == ub_shape[i], 'error: %s' % ERRMSG_INCONSISTENT_LB_UB_DIM
+                    
+                lb = args[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+                ub = args[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+                
+                # TODO: error: failed to create Star set 
+                S = Star(lb, ub)
+                    
+                self.copy_deep(S.toImageStar)
+                    
+                self.attributes[IM_LB_ID] = lb_im.astype('float64')
+                self.attributes[IM_UB_ID] = im_ub.astype('float64')
+        elif self.isempty_init(args):
+            self.init_empty_imagestar()
+        else:
+            raise Exception('error: %s' % ERRMSG_INVALID_INIT)
         
-    #     if obj.C.size == 0 or obj.d.size == 0:
-    #         images = obj.IM
-    #     else:
-    #         V = np.hstack((np.zerons(obj.numPred, 1), np.eye(obj.numPred)))
-    #         S = Star(V, obj.C, obj.d)
-    #         pred_samples = S.sample(N)
-
-#------------------check if this function is working--------------------------------------------
-    def evaluate(obj, pred_val):
-        assert obj.V.size, 'error: the imagestar is an empty set'
-        assert pred_val.shape[1] == 1, 'error: invalid predicate vector'
-        assert pred_val.shape[0] == obj.numPred, 'error: inconsistency between the size of the predicate vector and the number of predicates in the ImageStar'
-
-        image = np.zeros(obj.numChannel, obj.height, obj.width)
-        for i in range(obj.numChannel):
-            image[i, :, :] = obj.V[1, i, :, :]
-            for j in range(1, obj.numPred + 1):
-                image[i, :, :] = image[i, :, :] + pred_val[j-1] * obj.V[j, i, :, :]
+    def sample(self, N):
+        """
+            Rangomly generates a set of images from an imagestar set
+        
+            N : int -> number of images
+            return -> set of images
+        """
+        
+        assert (not self.isempty(self.attributes[V_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        
+        if self.isempty(self.attributes[C_ID]) or self.isempty(self.attributes[D_ID]):
+            return self.attributes[IM_ID]
+        else:
+            new_V = np.hstack((np.zeros((self.attributes[NUMPRED_ID], 1)), np.eye(self.attributes[NUMPRED_ID])))
+            #TODO: Star returns an error when checking the dimensions even though they match
+            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID])
+            pred_samples = S.sample(N)
+            
+            images = []
+            
+            for i in range(len(pred_samples)):
+                images.append(images, np.array(self.evaluate(pred_samples[:, i])))
+                
+            return images
+        
+    def evaluate(self, pred_val):
+        """
+            Evaluate an ImageStar with specific values of predicates
+            
+            pred_val : *int -> a vector of predicate variables
+            return -> evaluated image
+        """            
+        
+        assert (not isempty(self.attributes[V_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        
+        assert np.shape(pred_val)[1] == 1, 'error: %s' % ERRMSG_INVALID_PREDICATE_VEC
+        
+        assert np.shape(pred_val)[0] == self.attributes[NUMPRED_ID], 'error: %s' % ERRMSG_INCONSISTENT_PREDVEC_PREDNUM
+        
+        image = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
+        
+        for i in range(self.attributes[NUM_CHANNEL_ID]):
+            image[:, :, i] = self.attributes[V_ID][:, :, i, 1]
+            
+            for j in range(2, self.attributes[NUMPRED_ID] + 1):
+                image[:, :, i] = image[:, :, i] + pred_val[j - 1] * self.attributes[V_ID][:, :, i, j]
+ 
         return image
+ 
+    def affine_map(self, scale, offset):
+        """
+            Performs affine mapping of the ImageStar: y = scale * x + offset
+            
+            scale : *float -> scale coefficient [1 x 1 x num_channel] array
+            offset : *float -> offset coefficient [1 x 1 x num_channel] array
+            return -> a new ImageStar
+        """
+ 
+        assert (self.isempty(scale) or self.is_scalar(scalar) or np.shape(scale)[2] == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
+        
+        new_V = 0
+        
+        if not self.isempty(scale):
+            new_V = np.multiply(scale, self.attributes[V_ID])
+        else:
+            new_V = self.attributes[V_ID]
+        
+        if not self.isempty(offset):
+            new_V[:, :, :, 0] = new_V[:, :, :, 0] + offset
+            
+        return ImageStar(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], sef.attributes[PRED_UB_ID])
     
- #------------------check if this function is working--------------------------------------------
-    # affineMap of an ImageStar is another ImageStar
-    # y = scale * x + offset
-    def affineMap(obj, scale, offset):
-        # @scale: scale coefficient [NumChannels x 1 x 1] array
-        # @offset: offset coeeficient [NumChannels x 1 x 1] array
-        # return: a new ImageStar
-
-        assert scale.size and not np.isscalar(scale) and scale.shape[0] == obj.numChannels, 'error: inconsistent number of channels between scale array and the ImageStar'
+    def to_star(self):
+        """
+            Converts current ImageStar to Star
+            
+            return -> created Star
+        """
+ 
+        pixel_num = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNEL_ID]
         
-        if scale.size:
-            new_V = scale * obj.V
+        new_V = np.zeros(N, self.attributes[NUMPRED_ID] + 1)
+        
+        for j in range(self.attributes[NUMPRED_ID] + 1):
+            new_V[:, j] = np.reshape(self.attributes[V_ID][:, :, :, j], N, 0)
+            
+        if not isempty(self.attributes[IM_LB_ID]) and not isempty(self.attributes[IM_UB_ID]):
+            state_lb = self.attributes[IM_LB_ID].flatten()
+            state_ub = self.attributes[IM_UB_ID].flatten()
+            
+            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], self.attributes[PRED_UB_ID], state_lb, state_ub)
         else:
-            new_V = obj.V
-
-        if offset.size:
-            new_V[1, :, :, :] = new_V[1, :, :, :] + offset
-        
-        return ImageStar(new_V, obj.C, obj.d, obj.pred_lb, obj.pred_ub)
-
-#------------------check if this function is working--------------------------------------------
-    # transform to Star
-    def toStar(obj):
-        from engine.set.star import Star
-        nc = obj.numChannel
-        h = obj.height
-        w = obj.width
-        np = obj.numPred
-
-        N = h*w*nc # total number of pixels in the input image
-        V1 = np.zeros(N, np+1)
-        for j in range(np+1):
-            V1[:, j] = obj.V[j, :,:,:].reshape(N, 1)
-        
-        if obj.im_lb.size and obj.im_ub.size:
-            state_lb = obj.im_lb.reshape(-1,1)
-            state_ub = obj.im_ub.reshape(-1,1)
-            return Star(V1, obj.C, obj.d, obj.pred_lb. obj.pred_ub, state_lb, state_ub)
-        else:
-            return Star(V1, obj.C, obj.d, obj.pred_lb, obj.pred_ub)
-        
-    # checking if an ImageStar is an empty set
-    def isEmptySet(obj):
-        S = obj.toStar()
+            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], self.attributes[PRED_UB_ID])
+            
+        return S
+ 
+    def is_empty_set(self):
+        """
+            Checks if the ImageStar is empty
+            
+            return -> True if empty, False if isn't empty
+        """
+ 
+        S = self.to_star()
         return S.isEmptySet()
+    
+    def contains(self, image):
+        """
+            Checks if the ImageStar contains the image
+            
+            image : *float -> input image
+            return -> = 1 if the ImageStar contain the image
+                      = 0 if the ImageStar does not contain the image
+        """
+ 
+        img_size = np.shape(image)
+        
+        if len(img_size) == 2: # one channel image
+            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and self.attributes[NUM_CHANNEL_ID] == 1), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
+        elif len(img_size) == 3:
+            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and img_size[2] == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
+        else:
+            raise Exception('error: %s' % ERRMSG_INVALID_INPUT_IMG)
+            
+        image_vec = image.flatten()
+        
+        S = self.to_star()
+        
+        return S.contains(image_vec)
+    
+    def project2D(self, point1, point2):
+        """
+            Projects the ImageStar on the give plane
+            
+            point1 : int -> first dimension index
+            point2 : int -> first dimension index
+            return -> projected Star
+        """
+            
+        assert (len(point1) == 3 and pen(point2) == 3), 'error: %s' % ERRMSG_INVALID_INPUT_POINT
+        assert self.validate_point_dim(point1, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_FIRST_INPUT_POINT
+        assert self.validate_point_dim(point2, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_SECOND_INPUT_POINT
+        
+        n = self.attributes[NUMPRED_ID] + 1
+        
+        new_V = np.zeros(2, n)
+        
+        for i in range(n):
+            new_V[0, i] = self.attributes[V_ID][point1[0], point1[1], point1[2], i]
+            new_V[1, i] = self.attributes[V_ID][point2[0], point2[1], point2[2], i]
+            
+        return Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], self.attributes[PRED_UB_ID])
+        
+        
+    def get_range(self, *args):
+        """
+            Gets ranges of a state at specific position using the Gurobi solver
+            
+            args : np.array([params]) -> multimple parameters that include =>
+            vert_id : int -> vertica index
+            horiz_id : int -> horizontall index
+            channel_id : int -> channel index
+            
+            
+            
+            return : np.array([
+                        xmin : int -> min of (vert_id, horiz_id, channel_id),
+                        xmax : int -> max of (vert_id, horiz_id, channel_id)
+                        ])
+        """
+        
+        assert (len(args) == DEFAULT_SOLVER_ARGS_NUM or len(args) == CUSTOM_SOLVER_ARGS_NUM), 'error: %s' % ERRMSG_GETRANGES_INVALID_ARGS_NUM
+        assert (not self.isempty(args[IMGSTAR_ID].get_C()) and not self.isempty(args[IMGSTAR_ID].get_D())), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        assert (args[VERT_ID] > -1 and args[VERT_ID] < args[IMGSTAR_ID].get_height()), 'error: %s' % ERRMSG_INVALID_VERT_ID
+        assert (args[HORIZ_ID] > -1 and args[HORIZ_ID] < args[IMGSTAR_ID].get_width()), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
+        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < args[IMGSTAR_ID].get_num_channel()), 'error: %s' % ERRMSG_INVALID_CHANNELNUM_ID
+        
+        bounds = np.array(np.array([]), np.array([]))
+        
+        f = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 1:obj.nVar + 1]
+        
+        if (f == 0).all():
+            bounds[XMIN_ID] = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
+            bounds[XMAX_ID] = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
+        else:
+            min_ = gp.Model()
+            min_.Params.LogToConsole = 0
+            min_.Params.OptimalityTol = 1e-9
+            if self.attributes[PRED_LB_ID].size and obj.attributes[PRED_UB_ID].size:
+                x = min_.addMVar(shape=self.attributes[NVAR_ID], lb=attributes[PRED_LB_ID], ub=attributes[PRED_UB_ID])
+            else:
+                x = min_.addMVar(shape=self.attributes[NVAR_ID])
+            min_.setObjective(f @ x, GRB.MINIMIZE)
+            C = sp.csr_matrix(obj.C)
+            d = np.array(obj.d).flatten()
+            min_.addConstr(C @ x <= d)
+            min_.optimize()
 
-    # contain, check if ImageStar contains an image
-    # def contains(obj, image):
+            if min_.status == 2:
+                xmin = min_.objVal + self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
+            else:
+                raise Exception('error: cannot find an optimal solution, exitflag = %d' % (min_.status))
 
-    # projection of ImageStar on specific 2d plane
-    # def project2D(obj, point1, point2):
+            max_ = gp.Model()
+            max_.Params.LogToConsole = 0
+            max_.Params.OptimalityTol = 1e-9
+            if self.attributes[PRED_LB_ID].size and obj.attributes[PRED_UB_ID].size:
+                x = max_.addMVar(shape=self.attributes[NVAR_ID], lb=attributes[PRED_LB_ID], ub=attributes[PRED_UB_ID])
+            else:
+                x = max_.addMVar(shape=self.attributes[NVAR_ID])
+            max_.setObjective(f @ x, GRB.MAXIMIZE)
+            C = sp.csr_matrix(obj.C)
+            d = np.array(obj.d).flatten()
+            max_.addConstr(C @ x <= d)
+            max_.optimize()
 
-    # get ranges of a state at specific position
-    # def getRange(obj, vert_ind, horiz_ind, chan_ind, lp_solver = 'gurobi'):
+            if max_.status == 2:
+                xmax = max_.objVal + self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
+            else:
+                raise Exception('error: cannot find an optimal solution, exitflag = %d' % (max_.status))
 
-    # get lower bound and upper bound images of an ImageStar
-    # def getRanges(obj, lp_solver = 'gurobi'):
+        return [xmin, xmax]
 
-    # estimate range quickly using only predicate bound information
-    # def estimateRange(obj, h, w, c):
-    #     # @h: height index
-    #     # @w: width index
-    #     # @c: channel index
-    #     # return: xmin: min of x[h, w, c]
-    #     #         xmax: max of x[h, w, c]
+    def estimate_range(self, height_id, width_id, channel_id):
+        """
+            Estimates a range using only a predicate bounds information
+            
+            h : int -> height index
+            w : int -> width index
+            c : int -> channel index
+            
+            return -> [xmin, xmax]
+        """
 
-    # estimate ranges quickly using only predicate bound information
-    # def estimateRanges(obj, disp_opt = ''):
+        assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        assert (height_id > -1 and height_id < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
+        assert (width_id > -1 and width_id < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
+        assert (channel_id > -1 and channel_id < self.attributes[CHANNEL_ID]), 'error: %s' % ERRMSG_INVALID_CHANNEL_ID 
+        
+        f = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 1:obj.nVar + 1]
+        xmin = f[0]
+        xman = f[0]
+        
+        for i in range(1, self.attributes[NUMPRED_ID] + 1):
+            if f[i] >= 0:
+                xmin = xmin + f[i] * self.attributes[PRED_LB_ID][i - 1]
+                xmax = xmax + f[i] * self.attributes[PRED_UB_ID][i - 1]
+            else:
+                xmin = xmin + f[i] * self.attributes[PRED_UB_ID][i - 1]
+                xmax = xmax + f[i] * self.attributes[PRED_LB_ID][i - 1]
 
-    # update local ranges for Max Pooling operation
-    # def updateRanges(obj, points, lp_solver = 'gurobi'):
+        return [xmin, xmax]
 
-    # estimate the number of attacked pixels
-    # def getNumAttackedPixels(obj):
-        # return: number of attacked pixels in an ImageStar
+    def estimate_ranges(self, dis_opt = DEFAULT_DISP_OPTION):
+        """
+            Estimates the ranges using only a predicate bound information
+            
+            dis_opt : string -> display option
+            
+            return -> [image_lb, image_ub]
+        """
+        
+        assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        
+        if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
+            image_lb = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
+            image_ub = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
+            
+            size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[CHANNEL_ID]
+            
+            disp_flag = False
+            if equals(dis_opt, DISPLAY_ON_OPTION):
+                disp_flag = True
+                print(ESTIMATE_RANGE_STAGE_STARTED)
+                
+            for i in range(self.attributes[HEIGHT_ID]):
+                for j in range(self.attributes[WIDTH_ID]):
+                    for k in range(self.attributes[CHANNEL_ID]):
+                        image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i, j, k)
+                        
+                        if disp_flag:
+                            print(ESTIMATE_RANGE_STAGE_OVER)
+                
+            self.attributes[IM_LB_ID] = image_lb
+            self.attributes[IM_UB_ID] = image_ub
+        else:
+            image_lb = self.attributes[IM_LB_ID]
+            image_ub = self.attributes[IM_UB_ID]
+            
+        return [image_lb, image_ub]
+    
+    def get_ranges(self, *args):
+        """
+            Computes the lowe and upper bound images of the ImageStar
+            
+            return -> [image_lb : np.array([]) -> lower bound image,
+                       image_ub : np.array([]) -> upper bound image]
+        """
+                
+        image_lb = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
+        image_Ub = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
 
-    # get local bound for Max Pooling operation
-    # def get_localBound(obj, PoolSize, channel_id, lp_solver = 'gurobi'):
+        size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[CHANNEL_ID]
+            
+        disp_flag = False
+        if equals(dis_opt, DISPLAY_ON_OPTION):
+            disp_flag = True
+            print(ESTIMATE_RANGE_STAGE_STARTED)
+                
+        for i in range(self.attributes[HEIGHT_ID]):
+            for j in range(self.attributes[WIDTH_ID]):
+                for k in range(self.attributes[CHANNEL_ID]):
+                    image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i, j, k)
+                        
+                    if disp_flag:
+                        print(ESTIMATE_RANGE_STAGE_OVER)
+                
+        self.attributes[IM_LB_ID] = image_lb
+        self.attributes[IM_UB_ID] = image_ub
+            
+        return [image_lb, image_ub]
+            
+    def update_ranges(self, *args):
+        """
+            Updates local ranges for the MaxPooling operation
+            
+            points : np.array([*]) -> local points = [x1 y1 c1; x2 y2 c2; ...]
+        """
+        
+        for i in range(np.shape(args[POINTS_ID])[0]):
+            self.get_range(args[POINTS_ID][i, 0], args[POINTS_ID][i, 1], args[POINTS_ID][i, 2])
+            
+    def get_num_attacked_pixels(self):
+        """
+            Computes the number of attacked pixels in the ImageStar
+            
+            return : int -> the number of pixels
+        """
+        
+        V1 = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
+        V3 = V1
+        
+        for i in range(1, self.attributes[NUMPRED_ID] + 1):
+            V2 = (self.attributes[V_ID][:,:,i] != V1)
+            V3 = V3 + V2
+            
+        V4 = np.amax(V3, 2)
+        return sum(sum(V4))
+    
+    def get_local_bound(self, *args):
+        """
+            Computes the local bound for the Max Pooling operation
+            
+            args : np.array([]) that includes =>
+            start_point : np.array([x1, y1]) -> the start point of the local (partial) image
+            pool_size : np.array([height, width]) -> the height and width of max pooling
+            channel_id : int -> the index of the channel
+            
+            return : [lb : np.array([*]) -> the lower bound of all points in the local region,
+                      ub : np.array([*]) -> the upper bound of all points in the local region]
+            
+        """
+        
+        points = self.get_local_points(args[START_POINT_ID], args[POOL_SIZE_ID])
+        points_num = leln(points)
+        
+        if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
+            image_lb, image_ub = self.get_ranges()
+        else:
+            image_lb = self.attributes[IM_LB_ID]
+            image_ub = self.attributes[IM_UB_ID]
+            
+        lb = image_lb[points[0,0], points[0,1], args[CHANNEL_NUM_ID]]
+        lb = image_ub[points[0,0], points[0,1], args[CHANNEL_NUM_ID]]
+        
+        for i in range(1, points_num):
+            if image_lb[points[i,0], points[i,1], args[CHANNEL_NUM_ID]] < lb:
+                lb = image_lb[points[i,0], points[i,1], args[CHANNEL_NUM_ID]]
+            
+            if image_ub[points[i,0], points[i,1], args[CHANNEL_NUM_ID]] > ub:
+                ub = image_ub[points[i,0], points[i,1], args[CHANNEL_NUM_ID]]
+                
+        return [lb, ub]
+            
+    def get_local_points(self, start_point, pool_size):
+        """
+            Computes all local points indices for Max Pooling operation
+            
+            start_point : np.array([x1, y1]) -> the start point of the local (partial) image
+            pool_size : np.array([height, width]) -> the height and width of max pooling
+            
+            returns : np.array([*]) -> all indices of the points for a single max pooling operation
+                                       (includeing the start point)
+        """
+            
+        x0 = start_point[0] # vertical index of the startpoint
+        y0 = start_point[1] # horizontal index of the startpoint
+        
+        h = pool_sizep[0] # height of the MaxPooling layer
+        w = pool_size[1] # width of the MaxPooling layer
+        
+        assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 < self.attributes[HEIGHT_ID] \
+                        and y0 + w - 1 < self.attributes[WIDTH_ID]), \
+                        'error: %s' % ERRMSG_INVALID_STARTPOINT_POOLSIZE 
+                        
+        points = np.zeros((h * w, 2))
+        
+        for i in range(h):
+            if i == 0:
+                x1 = x0
+            else:
+                x1 = x1 + 1
+                
+            for j in range(w):
+                if j==0:
+                    y1 = y0;
+                else:
+                    y1 = y1 + 1;
+                    
+                points[(i - 1) * w + j, :] = np.array([x1, y1])
+                
+        return points
+      
+    def get_localMax_index(self, *args):
+        """
+            Gets local max index. Attempts to find the maximum point of the local image.
+            It's used in over-approximate reachability analysis of the maxpooling operation
+        
+            startpoints : np.array([int, int]) -> startpoint of the local image
+            pool_size : np.array([int, int]) -> the height and width of the max pooling layer
+            channel_id : int -> the channel index
+            
+            return -> max_id
+        """
+        
+        points = self.get_local_points(args[START_POINT_ID], args[POOL_SIZE_ID])
+    
+        if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
+            self.estimate_ranges()
+    
+        height = args[POOL_SIZE_ID][0]
+        width = args[POOL_SIZE_ID][0]
+        size = height * width
+        
+        lb = np.zeros((1, n))
+        ub = np.zeros((1, n))
+        
+        for i in range(size):
+            current_point = points[i, :]
+            
+            lb[:, i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+            ub[:, i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+        
+            
+        [max_lb_val, max_lb_id] = max(lb, 1)
+        
+        a = (ub - max_lb_val) > 0
+        a1 = (ub - max_lb_val) >= 0
+        a[a==max_lb_id] = []
+        
+        if self.isempty(a):
+            max_id = points[max_lb_id, :]
+        else:
+            candidates = a1
+            
+            candidates_num = len(candidates)
+            
+            new_points = np.zeros((candidates_num, 3))
+            new_points1 = np.zeros((candidates_num, 2))
+            
+            for i in range(m):
+                selected_points = points[candidates[i], :]
+                new_points = np.append(selected_points, p)
+                new_points1[i, :] = selected_points
+                
+            [max_lb_val, max_lb_id] = max(lb, 1)
+            
+            a = (ub - max_lb_val) > 0
+            a[a==max_lb_id] = []
+            
+            if self.isempty(a):
+                max_id = new_points1[max_lb_val, :]
+            else:
+                candidates1 = (ub - max_lb_val) >= 0
+                max_id = new_points1[max_lb_id, :]
+                
+                candidates1[candidates1 == max_lb_id] == []
+                candidates_num = len(candidates1)
+                
+                max_id1 = max_id
+                
+                for j in range(candidates_num):
+                    p1 = new_points[candidates1[j], :]
+                    
+                    if self.is_p1_larger_p2(np.array([p1[0], p2[1], args[CHANNEL_ID]]), \
+                                            np.array([max_id[0], max_id[1], args[CHANNEL_ID]])):
+                        max_id1 = np.array([max_ids1, p1])
+                        
+                        
+                max_id = max_id1
+                        
+                print('\nThe local image has %d max candidates: \t%d' % np.size(max_id, 0))
+                
+            return np.array([np.size(max_id, 0), args[CHANNEL_ID] * np.ones((np.size(max_id, 0), 1))])
+          
+    def get_localMax_index2(self, start_point, pool_size, channel_id):
+        """
+            Gets local max index. Attempts to find the maximum point of the local image.
+            It's used in over-approximate reachability analysis of the maxpooling operation
+        
+            startpoints : np.array([int, int]) -> startpoint of the local image
+            pool_size : np.array([int, int]) -> the height and width of the max pooling layer
+            channel_id : int -> the channel index
+            
+            return -> max_id
+        """
+        
+        points = self.get_local_points(start_point, pool_size)
+        
+        height = args[POOL_SIZE_ID][0]
+        width = args[POOL_SIZE_ID][0]
+        size = height * width
+        
+        lb = np.zeros((1, n))
+        ub = np.zeros((1, n))
+        
+        for i in range(size):
+            current_point = points[i, :]
+            
+            lb[:, i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+            ub[:, i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+        
+            
+        [max_lb_val, max_lb_id] = max(lb, 1)
+            
+        max_id = (ub - max_lb_val) > 0
+        size = np.size(max_id, 0)
+        channels = channel_id * np.onex((size, 1))
+        
+        return np.array([max_id, channels])
 
-    # get all local points index for Max Pooling operation
-    # def get_localPoints(obj, startpoint, PoolSize):
-        # @startpoint: startpoint of the local(partial) image
-        #              startpoint = [x1 y1]
-        # @PoolSize: [height width] the height and width of max pooling layer
-        # @points: all index of all points for a single max
-        # pooling oepration (including the startpoint)
+    def add_max_id(self, name, max_id):
+        """
+            Adds a matrix used for unmaxpooling reachability
+            
+            name : string -> name of the max pooling layer
+            max_id : np.array([*int]) -> max indices
+        """
+            
+        return Exception("unimplemented")
+    
+    def update_max_id(self, name, max_id, pos):
+        """
+            Updates a matrix used for unmaxpooling reachability
+        
+            name : string -> name of the max pooling layer
+            max_id : np.array([*int]) -> max indices
+            pos : np.array([]) -> the position of the local pixel of the max map
+                                  corresponding to the max_id
+        """
+        
+        ids_num = len(self.attributes[MAX_IDS])
+        
+        unk_layer_num = 0
+        
+        for i in range(ids_num):
+            if self.attributes[MAX_IDS][i].get_name() == name:
+                self.attributes[MAX_IDS][i].get_max_ids()[pos[0], pos[1], pos[2]] = max_id
+                break
+            else:
+                unk_laye_num += 1
+                
+        if unk_laye_num == ids_num:
+            raise Exception('error: %s' % ERRMSG_UNK_NAME_MAX_POOL_LAYER)
 
-    # get local max index, this method tries to find thee maximum point
-    # of a local image, used in over-approximate reachability analysis
-    # of maxpooling operation
-    # def get_localMax_index(obj, startpoint, PoolSize, channel_id, lp_solver = 'gurobi'):
+    def add_input_size(self, name, input_size):
+        """
+            Adds a matrix used for unmaxpooling reachability
+            
+            name : string -> name of the max pooling layer
+            input_size : np.array([*int]) -> input size of the original image
+        """
+            
+        return Exception("unimplemented")
+        
+    def is_p1_larger_p2(self, *args):
+        """
+            Compares two specific points in the image. Checks if p1 > p2 is feasible.
+            Can be used in max pooling operation
+            
+            p1 : np.array([*int]) - the first points = [h1, w1, c1]
+            p2 : np.array([*int]) - the second points = [h2, w2, c2], where
+                                    h - height, w - width, c - channel id
+                                    
+            return : bool -> 1 if p1 > p2 is feasible,
+                             0 if p1 > p2 is not feasible
+            
+        """
+        
+        C1 = np.zeros((1, self.attributes[NUM_PRED_ID]))
+        
+        for i in range(1, self.attributes[NUM_PRED_ID] + 1):
+            C1[i-1] = self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], i] - \
+                      self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], i]
+                      
+        d1 = self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], 1] - \
+                 self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2]]
+                 
+        new_C = np.vstack((self.attributes[C_ID], C1))
+        new_d = np.vstack((self.attributes[D_ID], d1))
+        
+        S = Star(obj.V, new_C, new_d, obj.predicate_lb, obj.predicate_ub)
 
-    # get local max index, this method tries to find the maximum point 
-    # of a local image, used in over-approximate reachability analysis
-    # of maxpooling operation
-    # def get_localMax_index2(obj, startpoint, PoolSize, channel_id):
-        # @startpoint: startpoint of the local(partial) image
-        #              startpoint = [x1 y1]
-        # @PoolSize: [height width] the height and width of max pooling layer
-        # @channel_id: the channel index
-        # @max_id: = []: we don't know which one has maximum value,
-        #   i.e., the maximum values may be the intersection between of several pixel values.
-        #           = [xi yi]: the point that has maximum value
+        if S.isEmptySet():
+            return 0
+        else:
+            return 1
+     
+    def is_max(self, *args):
+        """
+            Checks if a pixel value is the maximum value compared with the other ones.
+            Implements one of the core steps of the maxpooling operation over
+            the ImageStar
+            
+            max_map -> the current max_map of the ImageStar
+            ori_image -> the original ImageStar to compute the max_map
+            center -> the center pixel position that is checked
+                      center = [x1, y1, c1]
+            others -> the positions of the pixels we want to compare the center against
+                      others = [x2, y2, c3; x3, y3, c3]
+            out_image : ImageStar -> the updated input image
+            
+            return -> a new predicate
+        """
+        
+        size = np.shape(args[OTHERS_ID])[0]
+        
+        new_C = np.zeros((size, args[MAX_MAP_ID].get_num_pred()))
+        new_d = np.zeros((size, 1))
+        
+        for i in range(n):
+            new_d[i] = args[ORI_IMAGE_ID].get_V()[args[CENTER_ID][0], args[CENTER_ID][1], args[CENTER_ID][2], 0] - \
+                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][0], args[OTHERS_ID][1], args[OTHERS_ID][2], 0]
+        
+            for j in range(args[MAX_MAP_ID].get_num_pred()):
+                new_C[i, j] = args[ORI_IMAGE_ID].get_V()[args[CENTER_ID][0], args[CENTER_ID][1], args[CENTER_ID][2], j + 1] - \
+                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][0], args[OTHERS_ID][1], args[OTHERS_ID][2], j + 1]
+        
+        C1 = np.vstack(args[MAX_MAP_ID].get_C(), new_C)
+        d1 = np.vstack(args[MAX_MAP_ID].get_D(), new_d)
+        
+        # TODO: remove redundant constraints here
+        
+        return C1, d1
+    
+    def reshape(self, input, new_shape):
+        """
+            Reshapes the ImageStar
+            
+            input : ImageStar -> the input ImageStar
+            new_shape : np.array([]) -> new shape
+            
+            return -> a reshaped ImageStar
+        """
+        
+        size = np.size(new_shape)
+        
+        assert size[1] == 3 and size[0] == 1, 'error: %s' % ERRMSG_INVALID_NEW_SHAPE
+        
+        assert np.multiply(new_shape[:]) == input.get_height() * input.get_width() * input.get_num_channel(), \
+               'error: %s' % ERRMSG_SHAPES_INCONSISTENCY
+               
+        new_V = np.reshape(input.get_V(), (new_shape, input.get_num_pred() + 1))
+        
+        return ImageStar(new_V, input.get_C(), input.get_d(), \
+                         input.get_pred_lb(), input.get_pred_ub,
+                         input.get_im_lb, input.get_im_ub)
+        
+    def add_constraints(self, input, p1, p2):
+        """
+            Adds a new constraint to predicate variables of an ImageStar
+            used for finding counter examples. Add a new constraint: p2 >= p1
+            
+            input : ImageStar -> an input ImageStar
+            p1 : np.array([]) -> first point position
+            p2 : np.array([]) -> second point position
+            new_C : np.array([]) -> a new predicate constraint matrix C
+            new_d : new predicate constraint vector
+            
+            return -> [new_C, new_d] - a new predicate
+        """
+        
+        assert input is ImageStar, 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
+        
+        new_d = input.get_V()[p2[0], p2[1], p2[2], 1] - input.get_V()[p2[0], p2[1], p2[2], 1]
+        new_C = input.get_V()[p2[0], p2[1], p2[2], 1:input.get_num_pred() + 1]
+        
+        new_C = np.reshape(new_c, (1, input.get_num_pred()))
+        
+        new_C = np.vstack(input.get_C(), new_C)
+        new_C = np.vstack(input.get_d(), new_d)
+        
+        return new_C, new_d
+        
+########################## UTILS ##########################
 
-    # add maxidx used for unmaxpooling reachability
-    # def addMaxIdx(obj, name, maxIdx):
-        # @name: name of the max pooling layer
-        # @maxIdx: max indexes
+    def validate_params(self, params):
+        for param in params:
+            assert isinstance(param, np.ndarray), 'error: ImageStar does not support parameters of dtype = %s' % param.dtype
 
+    def isempty_init(self, *params):
+        flag = true
+        
+        for param in params:
+            flag = self.isempty(param)
+            
+            if flag == false:
+                break
+            
+        return flag
+            
+    def isempty(self, param):
+        return param.shape == []
+            
+    def init_empty_imagestar(self):
+        self.attributes[V_ID] = np.array([])        
+        self.attributes[C_ID] = np.array([])          
+        self.attributes[D_ID] = np.array([])
+                   
+        self.attributes[PRED_LB_ID] = np.array([])     
+        self.attributes[PRED_UB_ID] = np.array([])
+             
+        self.attributes[IM_LB_ID] = np.array([])       
+        self.attributes[IM_UB_ID] = np.array([])
+        
+        self.attributes[IM_ID] = np.array([])
+        self.attributes[LB_ID] = np.array([]) 
+        self.attributes[UB_ID] = np.array([])
 
+    def copy_deep(self, imagestar):
+        self.attributes[V_ID] = imagestar.V        
+        self.attributes[C_ID] = imagestar.C 
+        self.attributes[D_ID] = imagestar.d
+                   
+        self.attributes[PRED_LB_ID] = imagestar.pred_lb     
+        self.attributes[PRED_UB_ID] = imagestar.pred_ub 
+             
+        self.attributes[IM_LB_ID] = imagestar.im_lb     
+        self.attributes[IM_UB_ID] = imagestar.im_ub 
+        
+        self.attributes[IM_ID] = imagestar.IM 
+        self.attributes[LB_ID] = imagestar.LB 
+        self.attributes[UB_ID] = imagestar.UB 
 
+    def validate_point_dim(self, point, height, width):
+        return (point[0] > -1) and (point[0] <= self.attributes[HEIGHT_ID]) and \
+               (point[1] > -1) and (point[1] <= self.attributes[WIDTH_ID]) and \
+               (point[1] > -1) and (point[1] <= self.attributes[NUM_CHANNEL_ID])
 
-
-
-
-
-
-
-
+    def offset_args(self, args, offset):
+        result = []
+        
+        for i in range(len(args) + offset):
+            result.append(np.array([]))
+            
+            if i >= offset:
+                result[i] = args[i - offset]
+                
+        return result
+           
+            
