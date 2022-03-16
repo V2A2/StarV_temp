@@ -17,50 +17,23 @@ class TestImageStarEvaluate(unittest.TestCase):
 
     def test_evaluation(self):
         """
-            pred_val : int -> number of images
+            eval_input : int -> number of images
         """
                 
-        test_pred_val = self.read_csv_data(sources[EVALUATION_INIT][PRED_VAL_ID])
+        test_eval_input = self.read_csv_data(sources[EVALUATION_INIT][EVAL_INPUT_ID])
+        test_eval_output = self.read_csv_data(sources[EVALUATION_INIT][EVAL_OUTPUT_ID])
                 
-        test_V = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][V_ID])
-        test_C = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][C_ID])
-        test_d = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][D_ID])
-        test_predicate_lb = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][PREDICATE_LB_ID])
-        test_predicate_ub = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][PREDICATE_UB_ID])
+        test_V = np.reshape(self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][V_ID]), (28,28,1,785))
+        test_C = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][C_ID])
+        test_d = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][D_ID])
+        test_predicate_lb = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_LB_ID])
+        test_predicate_ub = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_UB_ID])
         
         test_star = ImageStar(
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
             )
                 
-        res = test_star.evaluate(test_pred_val)
-
-    def test_image_init(self):
-        """
-            Tests the initialization with:
-            IM -> ImageStar
-            LB -> Lower image
-            UB -> Upper image
-        """
-        test_IM = np.zeros((4, 4, 3))
-        test_LB = np.zeros((4, 4, 3))
-        test_UB = np.zeros((4, 4, 3))
-        
-        
-        test_IM[:,:,0] = np.array([[1, 1, 0, 1], [0, 0, 1, 1], [1, 0, 1, 0], [1, 1, 1, 1]])
-        test_IM[:,:,1] = np.array([[0, 1, 0, 0], [1, 0, 0, 1], [0, 1, 1, 0], [0, 0, 0, 1]])
-        test_IM[:,:,2] = np.array([[1, 1, 1, 1], [1, 1, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0]])
-        
-        test_LB[:,:,0] = np.array([[-0.1, -0.2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]) # attack on pixel (1,,1,) and (1,,2)
-        test_LB[:,:,1] = np.array([[-0.1, -0.15, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
-        test_LB[:,:,2] = test_LB[:,:,1]
-        
-        test_UB[:,:,0] = np.array([[0.1, 0.2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
-        test_UB[:,:,1] = np.array([[0.1, 0.15, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
-        test_UB[:,:,2] = test_UB[:,:,1]
-            
-        test_star = ImageStar(
-                test_IM, test_LB, test_UB
-            )
+        self.assertEqual(test_star.evaluate(test_eval_input).all(), test_eval_output.all())
 
 ########################## UTILS ##########################
     def read_csv_data(self, path):        

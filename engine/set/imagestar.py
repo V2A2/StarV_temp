@@ -232,7 +232,7 @@ class ImageStar:
                     self.attributes[V_ID] = args[V_ID]
                     
                     if len(n) == 4:
-                        assert n[3] == self.args[NUMPRED_ID] + 1, 'error: %s' % ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM
+                        assert n[3] == self.attributes[NUMPRED_ID] + 1, 'error: %s' % ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM
                         
                         self.attributes[NUM_CHANNEL_ID] = n[2]
                     else:
@@ -362,9 +362,9 @@ class ImageStar:
             return -> evaluated image
         """            
         
-        assert (not isempty(self.attributes[V_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        assert (not self.isempty(self.attributes[V_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
-        assert np.shape(pred_val)[1] == 1, 'error: %s' % ERRMSG_INVALID_PREDICATE_VEC
+        assert len(np.shape(pred_val)) == 1, 'error: %s' % ERRMSG_INVALID_PREDICATE_VEC
         
         assert np.shape(pred_val)[0] == self.attributes[NUMPRED_ID], 'error: %s' % ERRMSG_INCONSISTENT_PREDVEC_PREDNUM
         

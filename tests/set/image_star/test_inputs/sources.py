@@ -1,10 +1,12 @@
 CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT = 0
 CONSTRUCTOR_BOUNDS_INIT = 1
+EVALUATION_INIT = 2
 
 LB_ID = 0
 UB_ID = 1
 
-PRED_VAL_ID = 0
+EVAL_INPUT_ID = 0
+EVAL_OUTPUT_ID = 1
 
 V_ID = 0
 C_ID = 1
@@ -26,6 +28,7 @@ sources = {
                 "test_inputs/fmnist_img/test_ub.mat"
             ],
         EVALUATION_INIT : [
-                "test_inputs/fmnist_img/test_eval_input.mat"
+                "test_inputs/test_eval_input.mat",
+                "test_inputs/test_eval_output.mat"
             ]
     }

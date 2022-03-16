@@ -22,11 +22,11 @@ class TestImageStarSample(unittest.TestCase):
         
         test_N = 2
         
-        test_V = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][V_ID])
-        test_C = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][C_ID])
-        test_d = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][D_ID])
-        test_predicate_lb = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][PREDICATE_LB_ID])
-        test_predicate_ub = self.read_csv_data(sources[CONSTRUCTOR_FIRST_INIT][PREDICATE_UB_ID])
+        np.reshape(self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][V_ID]), (28,28,1,785))
+        test_C = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][C_ID])
+        test_d = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][D_ID])
+        test_predicate_lb = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_LB_ID])
+        test_predicate_ub = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_UB_ID])
         
         test_star = ImageStar(
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
