@@ -317,7 +317,7 @@ class ImageStar:
                 lb = args[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 ub = args[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 
-                # TODO: error: failed to create Star set 
+                #TODO: Star returns 'can't create Star set' error because StarV Star constructor initialization does not correspond to the implementation in NNV 
                 S = Star(lb, ub)
                     
                 self.copy_deep(S.toImageStar)
@@ -411,18 +411,19 @@ class ImageStar:
  
         pixel_num = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNEL_ID]
         
-        new_V = np.zeros(N, self.attributes[NUMPRED_ID] + 1)
+        new_V = np.zeros((pixel_num, self.attributes[NUMPRED_ID] + 1))
         
         for j in range(self.attributes[NUMPRED_ID] + 1):
-            new_V[:, j] = np.reshape(self.attributes[V_ID][:, :, :, j], N, 0)
+            #new_V[:, j] = np.reshape(self.attributes[V_ID][:, :, :, j], (pixel_num, 0))
+            new_V[:, j] = self.attributes[V_ID][:, :, :, j].flatten(order=self.attributes[FLATTEN_ORDER_ID])
             
-        if not isempty(self.attributes[IM_LB_ID]) and not isempty(self.attributes[IM_UB_ID]):
-            state_lb = self.attributes[IM_LB_ID].flatten()
-            state_ub = self.attributes[IM_UB_ID].flatten()
+        if not self.isempty(self.attributes[IM_LB_ID]) and not self.isempty(self.attributes[IM_UB_ID]):
+            state_lb = self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+            state_ub = self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
             
-            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], self.attributes[PRED_UB_ID], state_lb, state_ub)
+            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID], state_lb, state_ub)
         else:
-            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], self.attributes[PRED_UB_ID])
+            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
             
         return S
  

@@ -2,9 +2,10 @@ CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT = 0
 CONSTRUCTOR_BOUNDS_INIT = 1
 EVALUATION_INIT = 2
 AFFINEMAP_INIT = 3
+TO_STAR_INIT = 4
 
-LB_ID = 0
-UB_ID = 1
+TEST_LB_ID = 0
+TEST_UB_ID = 1
 
 EVAL_INPUT_ID = 0
 EVAL_OUTPUT_ID = 1
@@ -49,7 +50,11 @@ sources = {
                 "test_inputs/test_affineMap_offset.mat",
                 
                 "test_inputs/test_affineMap_output.mat"
-            ]
+            ],
+        TO_STAR_INIT : [
+                "test_inputs/fmnist_img/test_lb.mat",
+                "test_inputs/fmnist_img/test_ub.mat"
+            ],
     }
 
 

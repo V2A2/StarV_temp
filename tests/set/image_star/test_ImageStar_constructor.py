@@ -68,8 +68,8 @@ class TestImageStarConstructor(unittest.TestCase):
             ub -> upper bound
         """
         
-        test_lb = self.read_csv_data(sources[CONSTRUCTOR_BOUNDS_INIT][LB_ID])
-        test_ub = self.read_csv_data(sources[CONSTRUCTOR_BOUNDS_INIT][UB_ID])
+        test_lb = read_csv_data(sources[CONSTRUCTOR_BOUNDS_INIT][LB_ID])
+        test_ub = read_csv_data(sources[CONSTRUCTOR_BOUNDS_INIT][UB_ID])
         
         test_star = ImageStar(
                 test_lb, test_ub
