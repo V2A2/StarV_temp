@@ -7,8 +7,6 @@ from test_inputs.sources import *
 sys.path.insert(0, "../../../engine/set/")
 
 from imagestar import *
-import numpy as np
-import mat73
 
 class TestImageStarSample(unittest.TestCase):
     """
@@ -22,11 +20,11 @@ class TestImageStarSample(unittest.TestCase):
         
         test_N = 2
         
-        np.reshape(self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][V_ID]), (28,28,1,785))
-        test_C = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][C_ID])
-        test_d = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][D_ID])
-        test_predicate_lb = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_LB_ID])
-        test_predicate_ub = self.read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_UB_ID])
+        test_V = np.reshape(read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][V_ID]), (28,28,1,785))
+        test_C = np.reshape(read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][C_ID]), (1, 784))
+        test_d = read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][D_ID])
+        test_predicate_lb = read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_LB_ID])
+        test_predicate_ub = read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_UB_ID])
         
         test_star = ImageStar(
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
@@ -61,10 +59,6 @@ class TestImageStarSample(unittest.TestCase):
         test_star = ImageStar(
                 test_IM, test_LB, test_UB
             )
-
-########################## UTILS ##########################
-    def read_csv_data(self, path):        
-        return np.array(list(mat73.loadmat(path).values())[0])
 
 if __name__ == '__main__':
     unittest.main()

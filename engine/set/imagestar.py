@@ -205,16 +205,16 @@ class ImageStar:
         
         if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM or len(args) == PREDICATE_INIT_ARGS_NUM:    
             if np.size(args[V_ID]) and np.size(args[C_ID]) and np.size(args[D_ID]) and np.size(args[PREDLB_ID]) and np.size(args[PREDUB_ID]):
-                assert (len(np.shape(args[C_ID])) == 1 and np.size(args[D_ID]) == 1) or (np.shape(args[C_ID])[1] == np.shape(args[D_ID])[0]), \
+                assert (np.shape(args[C_ID])[0] == 1 and np.size(args[D_ID]) == 1) or (np.shape(args[C_ID])[0] == np.shape(args[D_ID])[0]), \
                        'error: %s' % ERRMSG_INCONSISTENT_CONSTR_DIM
                 
-                assert (np.size(args[D_ID]) == 1) or (np.shape(args[D_ID])[1] == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
+                assert (np.size(args[D_ID]) == 1) or (len(np.shape(args[D_ID])) == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
                 
-                self.attributes[NUMPRED_ID] = np.shape(args[C_ID])[0];
+                self.attributes[NUMPRED_ID] = np.shape(args[C_ID])[1];
                 self.attributes[C_ID] = args[C_ID].astype('float64')
                 self.attributes[D_ID] = args[D_ID].astype('float64')
                 
-                assert np.shape(args[C_ID])[0] == np.shape(args[PREDLB_ID])[0] == np.shape(args[PREDUB_ID])[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
+                assert np.shape(args[C_ID])[1] == np.shape(args[PREDLB_ID])[0] == np.shape(args[PREDUB_ID])[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
                 
                 assert len(np.shape(args[PREDLB_ID])) == len(np.shape(args[PREDUB_ID])) == 1 or np.shape(args[PREDUB_ID])[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
                 
@@ -288,7 +288,7 @@ class ImageStar:
                 I = 0
                 
                 if len(n) == 3:
-                    #TODO: Star returns 'can't create Star set' error
+                    #TODO: Star returns 'can't create Star set' error because StarV Star constructor initialization does not correspond to the implementation in NNV
                     I = Star(self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]), self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]))
                     self.attributes[V_ID] = np.reshape(I.V, (I.nVar + 1, n[0] * n[1] * n[2]))
                 else:
@@ -387,7 +387,7 @@ class ImageStar:
             return -> a new ImageStar
         """
  
-        assert (self.isempty(scale) or self.is_scalar(scalar) or np.shape(scale)[2] == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
+        assert (self.isempty(scale) or self.is_scalar(scale) or len(np.shape(scale)) == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
         
         new_V = 0
         
@@ -396,10 +396,11 @@ class ImageStar:
         else:
             new_V = self.attributes[V_ID]
         
+        # Affine Mapping changes the center
         if not self.isempty(offset):
             new_V[:, :, :, 0] = new_V[:, :, :, 0] + offset
             
-        return ImageStar(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], sef.attributes[PRED_UB_ID])
+        return ImageStar(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
     
     def to_star(self):
         """
@@ -1033,6 +1034,15 @@ class ImageStar:
         
         return new_C, new_d
         
+##################### GET/SET METHODS #####################
+        
+    def get_V(self):
+        """
+            return -> the center and the basis matrix of the ImageStar
+        """
+        
+        return self.attributes[V_ID]
+        
 ########################## UTILS ##########################
 
     def validate_params(self, params):
@@ -1099,4 +1109,5 @@ class ImageStar:
                 
         return result
            
-            
+    def is_scalar(self, param):
+        return isinstance(param, np.ndarray)
