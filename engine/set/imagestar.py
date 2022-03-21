@@ -201,27 +201,31 @@ class ImageStar:
         for i in range(IMAGESTAR_ATTRIBUTES_NUM):
             self.attributes.append(np.array([]))
         
+        self.scalar_attributes_ids = [
+                NUMPRED_ID, HEIGHT_ID, WIDTH_ID, NUM_CHANNEL_ID
+            ]
+        
         self.attributes[FLATTEN_ORDER_ID] = COLUMN_FLATTEN
         
         if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM or len(args) == PREDICATE_INIT_ARGS_NUM:    
             if np.size(args[V_ID]) and np.size(args[C_ID]) and np.size(args[D_ID]) and np.size(args[PREDLB_ID]) and np.size(args[PREDUB_ID]):
-                assert (np.shape(args[C_ID])[0] == 1 and np.size(args[D_ID]) == 1) or (np.shape(args[C_ID])[0] == np.shape(args[D_ID])[0]), \
+                assert (args[C_ID].shape[0] == 1 and np.size(args[D_ID]) == 1) or (args[C_ID].shape[0] == args[D_ID].shape[0]), \
                        'error: %s' % ERRMSG_INCONSISTENT_CONSTR_DIM
                 
                 assert (np.size(args[D_ID]) == 1) or (len(np.shape(args[D_ID])) == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
                 
-                self.attributes[NUMPRED_ID] = np.shape(args[C_ID])[1];
+                self.attributes[NUMPRED_ID] = args[C_ID].shape[1];
                 self.attributes[C_ID] = args[C_ID].astype('float64')
                 self.attributes[D_ID] = args[D_ID].astype('float64')
                 
-                assert np.shape(args[C_ID])[1] == np.shape(args[PREDLB_ID])[0] == np.shape(args[PREDUB_ID])[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
+                assert args[C_ID].shape[1] == args[PREDLB_ID].shape[0] == args[PREDUB_ID].shape[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
                 
-                assert len(np.shape(args[PREDLB_ID])) == len(np.shape(args[PREDUB_ID])) == 1 or np.shape(args[PREDUB_ID])[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
+                assert len(args[PREDLB_ID].shape) == len(args[PREDUB_ID].shape) == 1 or args[PREDUB_ID].shape[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
                 
                 self.attributes[PREDLB_ID] = args[PREDLB_ID].astype('float64')
                 self.attributes[PREDUB_ID] = args[PREDUB_ID].astype('float64')
                 
-                n = np.shape(args[V_ID])
+                n = args[V_ID].shape
                 
                 if len(n) < 2:
                     raise Exception('error: %s' % ERRMSG_INVALID_BASE_MATRIX)
@@ -245,22 +249,22 @@ class ImageStar:
                             self.attributes[NUM_CHANNEL_ID] = 1
                 
                 if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM: 
-                    if np.shape(args[IM_LB_ID])[0] != 0 and (np.shape(args[IM_LB_ID])[0] != self.attributes[HEIGHT_ID] or np.shape(args[IM_LB_ID])[1] != self.attributes[WIDTH_ID]):
+                    if args[IM_LB_ID].shape[0] != 0 and (args[IM_LB_ID].shape[0] != self.attributes[HEIGHT_ID] or args[IM_LB_ID].shape[1] != self.attributes[WIDTH_ID]):
                         raise Exception('error: %s' % ERRMSG_INCONSISTENT_LB_DIM)
                     else:
                         self.attributes[IM_LB_ID] = im_lb.astype('float64')      
                         
-                    if np.shape(args[IM_UB_ID])[0] != 0 and (np.shape(args[IM_UB_ID])[0] != self.attributes[HEIGHT_ID] or np.shape(args[IM_UB_ID])[1] != self.attributes[WIDTH_ID]):
+                    if args[IM_UB_ID].shape[0] != 0 and (args[IM_UB_ID].shape[0] != self.attributes[HEIGHT_ID] or args[IM_UB_ID].shape[1] != self.attributes[WIDTH_ID]):
                         raise Exception('error: %s' % ERRMSG_INCONSISTENT_UB_DIM)
                     else:
                         self.attributes[IM_UB_ID] = args[IM_UB_ID].astype('float64')
                     
         elif len(args) == IMAGE_INIT_ARGS_NUM:
             args = self.offset_args(args, IMAGE_INIT_ARGS_OFFSET)
-            if np.size(args[IM_ID]) and np.size(args[LB_ID]) and np.size(args[UB_ID]) and np.shape(args[V_ID])[0] == 0:
-                n = np.shape(args[IM_ID])
-                l = np.shape(args[LB_ID])
-                u = np.shape(args[UB_ID])
+            if np.size(args[IM_ID]) and np.size(args[LB_ID]) and np.size(args[UB_ID]) and args[V_ID].shape[0] == 0:
+                n = args[IM_ID].shape
+                l = args[LB_ID].shape
+                u = args[UB_ID].shape
                 
                 assert (n[0] == l[0] == u[0] and n[1] == l[1] == u[1]) and (len(n) == len(l) == len(u)), 'error: %s' % ERRMSG_INCONSISTENT_CENTER_IMG_ATTACK_MATRIX
                             
@@ -283,7 +287,7 @@ class ImageStar:
                 self.attributes[IM_LB_ID] = self.attributes[IM_ID] + self.attributes[LB_ID]
                 self.attributes[IM_UB_ID] = self.attributes[IM_ID] + self.attributes[UB_ID]
                 
-                n = np.shape(self.attributes[IM_LB_ID])
+                n = self.attributes[IM_LB_ID].shape
                 
                 I = 0
                 
@@ -305,9 +309,9 @@ class ImageStar:
                 self.attributes[NUMPRED_ID] = I.nVar
         elif len(args) == BOUNDS_INIT_ARGS_NUM:
             args = self.offset_args(args, BOUNDS_INIT_ARGS_OFFSET)
-            if np.size(args[IM_LB_ID]) and np.size(args[IM_UB_ID]) and np.shape(args[V_ID])[0] == 0: #and np.shape(args[IM_ID])[0] == 0:
-                lb_shape = np.shape(args[IM_LB_ID])
-                ub_shape = np.shape(args[IM_UB_ID])
+            if np.size(args[IM_LB_ID]) and np.size(args[IM_UB_ID]) and args[V_ID].shape[0] == 0: #and np.shape(args[IM_ID])[0] == 0:
+                lb_shape = args[IM_LB_ID].shape
+                ub_shape = args[IM_UB_ID].shape
                 
                 assert len(lb_shape) == len(ub_shape), 'error: %s' % ERRMSG_INCONSISTENT_LB_UB_DIM
                 
@@ -364,9 +368,9 @@ class ImageStar:
         
         assert (not self.isempty(self.attributes[V_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
-        assert len(np.shape(pred_val)) == 1, 'error: %s' % ERRMSG_INVALID_PREDICATE_VEC
+        assert len(pred_val.shape) == 1, 'error: %s' % ERRMSG_INVALID_PREDICATE_VEC
         
-        assert np.shape(pred_val)[0] == self.attributes[NUMPRED_ID], 'error: %s' % ERRMSG_INCONSISTENT_PREDVEC_PREDNUM
+        assert pred_val.shape[0] == self.attributes[NUMPRED_ID], 'error: %s' % ERRMSG_INCONSISTENT_PREDVEC_PREDNUM
         
         image = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
         
@@ -387,7 +391,7 @@ class ImageStar:
             return -> a new ImageStar
         """
  
-        assert (self.isempty(scale) or self.is_scalar(scale) or len(np.shape(scale)) == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
+        assert (self.isempty(scale) or self.is_scalar(scale) or len(scale.shape) == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
         
         new_V = 0
         
@@ -413,19 +417,25 @@ class ImageStar:
         
         new_V = np.zeros((pixel_num, self.attributes[NUMPRED_ID] + 1))
         
-        for j in range(self.attributes[NUMPRED_ID] + 1):
-            #new_V[:, j] = np.reshape(self.attributes[V_ID][:, :, :, j], (pixel_num, 0))
-            new_V[:, j] = self.attributes[V_ID][:, :, :, j].flatten(order=self.attributes[FLATTEN_ORDER_ID])
-            
-        if not self.isempty(self.attributes[IM_LB_ID]) and not self.isempty(self.attributes[IM_UB_ID]):
-            state_lb = self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
-            state_ub = self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
-            
-            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID], state_lb, state_ub)
+        if self.isempty(new_V):
+            # TODO: error: failed to create Star set
+            return Star()
         else:
-            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
-            
-        return S
+            for j in range(self.attributes[NUMPRED_ID] + 1):
+                #new_V[:, j] = np.reshape(self.attributes[V_ID][:, :, :, j], (pixel_num, 0))
+                new_V[:, j] = self.attributes[V_ID][:, :, :, j].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+                
+            if not self.isempty(self.attributes[IM_LB_ID]) and not self.isempty(self.attributes[IM_UB_ID]):
+                state_lb = self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+                state_ub = self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+                
+                # TODO: error: failed to create Star set
+                S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID], state_lb, state_ub)
+            else:
+                # TODO: error: failed to create Star set
+                S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
+                
+            return S
  
     def is_empty_set(self):
         """
@@ -446,7 +456,7 @@ class ImageStar:
                       = 0 if the ImageStar does not contain the image
         """
  
-        img_size = np.shape(image)
+        img_size = image.shape
         
         if len(img_size) == 2: # one channel image
             assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and self.attributes[NUM_CHANNEL_ID] == 1), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
@@ -660,7 +670,7 @@ class ImageStar:
             points : np.array([*]) -> local points = [x1 y1 c1; x2 y2 c2; ...]
         """
         
-        for i in range(np.shape(args[POINTS_ID])[0]):
+        for i in range(args[POINTS_ID].shape[0]):
             self.get_range(args[POINTS_ID][i, 0], args[POINTS_ID][i, 1], args[POINTS_ID][i, 2])
             
     def get_num_attacked_pixels(self):
@@ -966,7 +976,7 @@ class ImageStar:
             return -> a new predicate
         """
         
-        size = np.shape(args[OTHERS_ID])[0]
+        size = args[OTHERS_ID].shape[0]
         
         new_C = np.zeros((size, args[MAX_MAP_ID].get_num_pred()))
         new_d = np.zeros((size, 1))
@@ -1051,48 +1061,29 @@ class ImageStar:
             assert isinstance(param, np.ndarray), 'error: ImageStar does not support parameters of dtype = %s' % param.dtype
 
     def isempty_init(self, *params):
-        flag = true
+        flag = True
         
         for param in params:
-            flag = self.isempty(param)
+            flag = self.isempty(np.array(param))
             
-            if flag == false:
+            if flag == False:
                 break
             
         return flag
             
     def isempty(self, param):
-        return param.shape == []
+        return param.shape == [] or param.shape[0] == 0
             
     def init_empty_imagestar(self):
-        self.attributes[V_ID] = np.array([])        
-        self.attributes[C_ID] = np.array([])          
-        self.attributes[D_ID] = np.array([])
-                   
-        self.attributes[PRED_LB_ID] = np.array([])     
-        self.attributes[PRED_UB_ID] = np.array([])
-             
-        self.attributes[IM_LB_ID] = np.array([])       
-        self.attributes[IM_UB_ID] = np.array([])
-        
-        self.attributes[IM_ID] = np.array([])
-        self.attributes[LB_ID] = np.array([]) 
-        self.attributes[UB_ID] = np.array([])
+        for i in range(len(self.attributes)):
+            if self.is_scalar_attribute(i):
+                self.attributes[i] = 0
+            else:
+                self.attributes[i] = np.array([])
 
     def copy_deep(self, imagestar):
-        self.attributes[V_ID] = imagestar.V        
-        self.attributes[C_ID] = imagestar.C 
-        self.attributes[D_ID] = imagestar.d
-                   
-        self.attributes[PRED_LB_ID] = imagestar.pred_lb     
-        self.attributes[PRED_UB_ID] = imagestar.pred_ub 
-             
-        self.attributes[IM_LB_ID] = imagestar.im_lb     
-        self.attributes[IM_UB_ID] = imagestar.im_ub 
-        
-        self.attributes[IM_ID] = imagestar.IM 
-        self.attributes[LB_ID] = imagestar.LB 
-        self.attributes[UB_ID] = imagestar.UB 
+        for i in range(len(self.attributes)):
+            self.attributes[i] = imagestar.get_attribute(i)
 
     def validate_point_dim(self, point, height, width):
         return (point[0] > -1) and (point[0] <= self.attributes[HEIGHT_ID]) and \
@@ -1112,3 +1103,6 @@ class ImageStar:
            
     def is_scalar(self, param):
         return isinstance(param, np.ndarray)
+    
+    def is_scalar_attribute(self, attribute_id):
+        return attribute_id in self.scalar_attributes_ids

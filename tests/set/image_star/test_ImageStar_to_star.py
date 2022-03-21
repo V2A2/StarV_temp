@@ -10,7 +10,7 @@ from imagestar import *
 
 class TestImageStarToStar(unittest.TestCase):
     """
-        Tests ImageStar constructor
+        Tests the conversion from ImageStar to Star
     """
 
     def test_basic_to_star(self):

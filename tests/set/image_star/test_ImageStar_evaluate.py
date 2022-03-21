@@ -12,12 +12,20 @@ import mat73
 
 class TestImageStarEvaluate(unittest.TestCase):
     """
-        Tests ImageStar constructor
+        Tests ImageStar evaluation
     """
 
     def test_evaluation(self):
         """
+            Tests evaluation using predicate initialization
+        
             eval_input : int -> number of images
+            
+            V -> Basis matrix
+            C -> Predicate matrix
+            d -> Predicate vector
+            predicate_lb -> predicate lower bound
+            predicate_ub -> predicate upper bound
         """
                 
         test_eval_input = self.read_csv_data(sources[EVALUATION_INIT][EVAL_INPUT_ID])

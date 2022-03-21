@@ -10,15 +10,21 @@ from imagestar import *
 
 class TestImageStarAffineMap(unittest.TestCase):
     """
-        Tests ImageStar constructor
+        Tests affine mapping
     """
 
     def test_affine_map(self):
         """
+            Test affine mapping -> ImageStar .* scale + offset
+        
             scale : float -> affine map scale
             offset : np.array([*float]) -> affine map offset
             
-            return -> ImageStar .* scale + offset
+            V -> Basis matrix
+            C -> Predicate matrix
+            d -> Predicate vector
+            predicate_lb -> predicate lower bound
+            predicate_ub -> predicate upper bound
         """
                 
         test_am_output = read_csv_data(sources[AFFINEMAP_INIT][AFFINEMAP_OUTPUT_ID])

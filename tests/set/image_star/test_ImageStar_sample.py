@@ -10,12 +10,20 @@ from imagestar import *
 
 class TestImageStarSample(unittest.TestCase):
     """
-        Tests ImageStar constructor
+        Tests ImageStar sampling
     """
 
     def test_sampling(self):
         """
+            Tests sampling using predicate initialization
+        
             N : int -> number of images
+            
+            V -> Basis matrix
+            C -> Predicate matrix
+            d -> Predicate vector
+            predicate_lb -> predicate lower bound
+            predicate_ub -> predicate upper bound
         """
         
         test_N = 2
@@ -34,7 +42,8 @@ class TestImageStarSample(unittest.TestCase):
 
     def test_image_init(self):
         """
-            Tests the initialization with:
+            Tests sampling using image initialization
+            
             IM -> ImageStar
             LB -> Lower image
             UB -> Upper image
