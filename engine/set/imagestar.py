@@ -485,15 +485,18 @@ class ImageStar:
         assert self.validate_point_dim(point1, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_FIRST_INPUT_POINT
         assert self.validate_point_dim(point2, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_SECOND_INPUT_POINT
         
+        point1 -= 1
+        point2 -= 1
+        
         n = self.attributes[NUMPRED_ID] + 1
         
-        new_V = np.zeros(2, n)
+        new_V = np.zeros((2, n))
         
         for i in range(n):
             new_V[0, i] = self.attributes[V_ID][point1[0], point1[1], point1[2], i]
             new_V[1, i] = self.attributes[V_ID][point2[0], point2[1], point2[2], i]
             
-        return Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PRED_LB_ID], self.attributes[PRED_UB_ID])
+        return Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
         
         
     def get_range(self, *args):
@@ -1089,7 +1092,7 @@ class ImageStar:
     def validate_point_dim(self, point, height, width):
         return (point[0] > -1) and (point[0] <= self.attributes[HEIGHT_ID]) and \
                (point[1] > -1) and (point[1] <= self.attributes[WIDTH_ID]) and \
-               (point[1] > -1) and (point[1] <= self.attributes[NUM_CHANNEL_ID])
+               (point[2] > -1) and (point[2] <= self.attributes[NUM_CHANNEL_ID])
 
     def offset_args(self, args, offset):
         result = []

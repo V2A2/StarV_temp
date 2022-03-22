@@ -5,6 +5,7 @@ AFFINEMAP_INIT = 3
 TO_STAR_INIT = 4
 IS_EMPTY_INIT = 5
 CONTAINS_INIT = 6
+PROJECT2D_INIT = 7
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -75,6 +76,16 @@ sources = {
                 
                 "test_inputs/test_contains_true_input.mat"
             ],
+        PROJECT2D_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_point1.mat",
+                "test_inputs/test_point2.mat"
+            ]
     }
 
 

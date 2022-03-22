@@ -13,7 +13,7 @@ class TestImageStarIsEmpty(unittest.TestCase):
         Tests the 'is_empty' method
     """
 
-    def test_is_empty_neg(self):
+    def test_is_empty_false(self):
         """
             Checks if the initialized ImageStar is empty
             
@@ -36,7 +36,7 @@ class TestImageStarIsEmpty(unittest.TestCase):
         
         self.assertEqual(test_star.is_empty_set(), False)
 
-    def test_is_empty_pos(self):
+    def test_is_empty_true(self):
         """
             Checks if the empty ImageStar is empty
         """
