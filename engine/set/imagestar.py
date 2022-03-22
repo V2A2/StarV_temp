@@ -322,7 +322,7 @@ class ImageStar:
                 ub = args[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 
                 #TODO: Star returns 'can't create Star set' error because StarV Star constructor initialization does not correspond to the implementation in NNV 
-                S = Star(lb, ub)
+                S = Star(lb=lb, ub=ub)
                     
                 self.copy_deep(S.toImageStar)
                     
@@ -465,8 +465,9 @@ class ImageStar:
         else:
             raise Exception('error: %s' % ERRMSG_INVALID_INPUT_IMG)
             
-        image_vec = image.flatten()
+        image_vec = image.flatten(order=self.attributes[FLATTEN_ORDER_ID])
         
+        # TODO: error: failed to create Star set
         S = self.to_star()
         
         return S.contains(image_vec)
@@ -480,7 +481,7 @@ class ImageStar:
             return -> projected Star
         """
             
-        assert (len(point1) == 3 and pen(point2) == 3), 'error: %s' % ERRMSG_INVALID_INPUT_POINT
+        assert (len(point1) == 3 and len(point2) == 3), 'error: %s' % ERRMSG_INVALID_INPUT_POINT
         assert self.validate_point_dim(point1, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_FIRST_INPUT_POINT
         assert self.validate_point_dim(point2, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_SECOND_INPUT_POINT
         

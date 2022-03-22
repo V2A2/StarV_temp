@@ -3,6 +3,8 @@ CONSTRUCTOR_BOUNDS_INIT = 1
 EVALUATION_INIT = 2
 AFFINEMAP_INIT = 3
 TO_STAR_INIT = 4
+IS_EMPTY_INIT = 5
+CONTAINS_INIT = 6
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -19,6 +21,8 @@ PREDICATE_UB_ID = 4
 SCALE_ID = 5
 OFFSET_ID = 6
 AFFINEMAP_OUTPUT_ID = 7
+
+TRUE_INPUT_ID = 5
 
 import numpy as np
 import mat73
@@ -54,6 +58,22 @@ sources = {
         TO_STAR_INIT : [
                 "test_inputs/fmnist_img/test_lb.mat",
                 "test_inputs/fmnist_img/test_ub.mat"
+            ],
+        IS_EMPTY_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat"
+            ],
+        CONTAINS_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_contains_true_input.mat"
             ],
     }
 
