@@ -71,6 +71,11 @@ NUM_CHANNEL_ID = 13
 FLATTEN_ORDER_ID = 14
 
 LAST_ATTRIBUTE_ID = FLATTEN_ORDER_ID
+
+##### ARGUMENTS:
+VERT_ID = 0
+HORIZ_ID = 1
+CHANNEL_ID = 2
 #####################
 
 ############################ PARAMETERS NUMBERS ############################
@@ -88,7 +93,10 @@ BOUNDS_INIT_ARGS_OFFSET = IM_LB_ID
 DEFAULT_DISP_OPTION = ""
 
 COLUMN_FLATTEN = 'F'
-########################################################################
+############################## DEFAULT VALUES ##############################
+
+DEFAULT_SOLVER_ARGS_NUM = 3
+CUSTOM_SOLVER_ARGS_NUM = 4
 
 
 class ImageStar:
@@ -516,15 +524,25 @@ class ImageStar:
                         ])
         """
         
-        assert (len(args) == DEFAULT_SOLVER_ARGS_NUM or len(args) == CUSTOM_SOLVER_ARGS_NUM), 'error: %s' % ERRMSG_GETRANGES_INVALID_ARGS_NUM
-        assert (not self.isempty(args[IMGSTAR_ID].get_C()) and not self.isempty(args[IMGSTAR_ID].get_D())), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
-        assert (args[VERT_ID] > -1 and args[VERT_ID] < args[IMGSTAR_ID].get_height()), 'error: %s' % ERRMSG_INVALID_VERT_ID
-        assert (args[HORIZ_ID] > -1 and args[HORIZ_ID] < args[IMGSTAR_ID].get_width()), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
-        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < args[IMGSTAR_ID].get_num_channel()), 'error: %s' % ERRMSG_INVALID_CHANNELNUM_ID
+        assert (len(args) == DEFAULT_SOLVER_ARGS_NUM or len(args) == CUSTOM_SOLVER_ARGS_NUM), 'error: %s' % ERRMSG_GETRANGES_INVALID_ARGS_NUM   
+        assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
-        bounds = np.array(np.array([]), np.array([]))
+        input_args = np.array([
+                args[VERT_ID] - 1,
+                args[HORIZ_ID] - 1,
+                args[CHANNEL_ID] - 1
+            ], dtype=int)
         
-        f = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 1:obj.nVar + 1]
+        # TODO: account for potential custom solver identifier
+        args = input_args
+        
+        assert (args[VERT_ID] > -1 and args[VERT_ID] < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
+        assert (args[HORIZ_ID] > -1 and args[HORIZ_ID] < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
+        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INVALID_CHANNELNUM_ID
+        
+        bounds = [np.array([]), np.array([])]
+        
+        f = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 1:self.attributes[NUMPRED_ID] + 1]
         
         if (f == 0).all():
             bounds[XMIN_ID] = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
@@ -533,13 +551,13 @@ class ImageStar:
             min_ = gp.Model()
             min_.Params.LogToConsole = 0
             min_.Params.OptimalityTol = 1e-9
-            if self.attributes[PRED_LB_ID].size and obj.attributes[PRED_UB_ID].size:
-                x = min_.addMVar(shape=self.attributes[NVAR_ID], lb=attributes[PRED_LB_ID], ub=attributes[PRED_UB_ID])
+            if self.attributes[PREDLB_ID].size and self.attributes[PREDUB_ID].size:
+                x = min_.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
             else:
-                x = min_.addMVar(shape=self.attributes[NVAR_ID])
+                x = min_.addMVar(shape=self.attributes[NUMPRED_ID])
             min_.setObjective(f @ x, GRB.MINIMIZE)
-            C = sp.csr_matrix(obj.C)
-            d = np.array(obj.d).flatten()
+            C = sp.csr_matrix(self.attributes[C_ID])
+            d = np.array(self.attributes[D_ID]).flatten(order=self.attributes[FLATTEN_ORDER_ID])
             min_.addConstr(C @ x <= d)
             min_.optimize()
 
@@ -551,13 +569,13 @@ class ImageStar:
             max_ = gp.Model()
             max_.Params.LogToConsole = 0
             max_.Params.OptimalityTol = 1e-9
-            if self.attributes[PRED_LB_ID].size and obj.attributes[PRED_UB_ID].size:
-                x = max_.addMVar(shape=self.attributes[NVAR_ID], lb=attributes[PRED_LB_ID], ub=attributes[PRED_UB_ID])
+            if self.attributes[PREDLB_ID].size and self.attributes[PREDUB_ID].size:
+                x = max_.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
             else:
-                x = max_.addMVar(shape=self.attributes[NVAR_ID])
+                x = max_.addMVar(shape=self.attributes[NUMPRED_ID])
             max_.setObjective(f @ x, GRB.MAXIMIZE)
-            C = sp.csr_matrix(obj.C)
-            d = np.array(obj.d).flatten()
+            C = sp.csr_matrix(self.attributes[C_ID])
+            d = np.array(self.attributes[D_ID]).flatten(order=self.attributes[FLATTEN_ORDER_ID])
             max_.addConstr(C @ x <= d)
             max_.optimize()
 
@@ -566,7 +584,7 @@ class ImageStar:
             else:
                 raise Exception('error: cannot find an optimal solution, exitflag = %d' % (max_.status))
 
-        return [xmin, xmax]
+        return np.array([xmin, xmax])
 
     def estimate_range(self, height_id, width_id, channel_id):
         """
@@ -590,11 +608,11 @@ class ImageStar:
         
         for i in range(1, self.attributes[NUMPRED_ID] + 1):
             if f[i] >= 0:
-                xmin = xmin + f[i] * self.attributes[PRED_LB_ID][i - 1]
-                xmax = xmax + f[i] * self.attributes[PRED_UB_ID][i - 1]
+                xmin = xmin + f[i] * self.attributes[PREDLB_ID][i - 1]
+                xmax = xmax + f[i] * self.attributes[PREDUB_ID][i - 1]
             else:
-                xmin = xmin + f[i] * self.attributes[PRED_UB_ID][i - 1]
-                xmax = xmax + f[i] * self.attributes[PRED_LB_ID][i - 1]
+                xmin = xmin + f[i] * self.attributes[PREDUB_ID][i - 1]
+                xmax = xmax + f[i] * self.attributes[PREDLB_ID][i - 1]
 
         return [xmin, xmax]
 
@@ -1076,7 +1094,7 @@ class ImageStar:
         return flag
             
     def isempty(self, param):
-        return param.shape == [] or param.shape[0] == 0
+        return (param is np.array) and (param.shape == [] or param.shape[0] == 0)
             
     def init_empty_imagestar(self):
         for i in range(len(self.attributes)):

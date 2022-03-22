@@ -6,6 +6,7 @@ TO_STAR_INIT = 4
 IS_EMPTY_INIT = 5
 CONTAINS_INIT = 6
 PROJECT2D_INIT = 7
+GETRANGE_INIT = 8
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -24,6 +25,9 @@ OFFSET_ID = 6
 AFFINEMAP_OUTPUT_ID = 7
 
 TRUE_INPUT_ID = 5
+
+INPUT_ID = 5
+OUTPUT_ID = 6
 
 import numpy as np
 import mat73
@@ -85,6 +89,16 @@ sources = {
                 
                 "test_inputs/test_point1.mat",
                 "test_inputs/test_point2.mat"
+            ],
+        GETRANGE_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_get_range_input.mat",
+                "test_inputs/test_get_range_output.mat"
             ]
     }
 
