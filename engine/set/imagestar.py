@@ -47,9 +47,10 @@ ERRMSG_INVALID_FIRST_INPUT_POINT = "The first input point is invalid"
 ERRMSG_INVALID_SECOND_INPUT_POINT = "The second input point is invalid"
 
 
+ESTIMATE_RANGE_STAGE_STARTED = "Ranges estimation started..."
+ESTIMATE_RANGE_STAGE_OVER = "Ranges estimation finished..."
 
-
-
+DISPLAY_ON_OPTION = "disp"
 ############################ PARAMETERS IDS ############################
 
 ##### ATTRIBUTES:
@@ -598,13 +599,18 @@ class ImageStar:
         """
 
         assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        
+        height_id = int(height_id - 1)
+        width_id = int(width_id - 1)
+        channel_id = int(channel_id - 1)
+        
         assert (height_id > -1 and height_id < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
         assert (width_id > -1 and width_id < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
-        assert (channel_id > -1 and channel_id < self.attributes[CHANNEL_ID]), 'error: %s' % ERRMSG_INVALID_CHANNEL_ID 
+        assert (channel_id > -1 and channel_id < self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INVALID_CHANNEL_ID 
         
-        f = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 1:obj.nVar + 1]
+        f = self.attributes[V_ID][height_id, width_id, channel_id, 0:self.attributes[NUMPRED_ID] + 1]
         xmin = f[0]
-        xman = f[0]
+        xmax = f[0]
         
         for i in range(1, self.attributes[NUMPRED_ID] + 1):
             if f[i] >= 0:
@@ -614,7 +620,7 @@ class ImageStar:
                 xmin = xmin + f[i] * self.attributes[PREDUB_ID][i - 1]
                 xmax = xmax + f[i] * self.attributes[PREDLB_ID][i - 1]
 
-        return [xmin, xmax]
+        return np.array([xmin, xmax])
 
     def estimate_ranges(self, dis_opt = DEFAULT_DISP_OPTION):
         """
@@ -628,19 +634,19 @@ class ImageStar:
         assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
         if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
-            image_lb = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
-            image_ub = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
+            image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
+            image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
             
-            size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[CHANNEL_ID]
+            size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNEL_ID]
             
             disp_flag = False
-            if equals(dis_opt, DISPLAY_ON_OPTION):
+            if dis_opt == DISPLAY_ON_OPTION:
                 disp_flag = True
                 print(ESTIMATE_RANGE_STAGE_STARTED)
                 
             for i in range(self.attributes[HEIGHT_ID]):
                 for j in range(self.attributes[WIDTH_ID]):
-                    for k in range(self.attributes[CHANNEL_ID]):
+                    for k in range(self.attributes[NUM_CHANNEL_ID]):
                         image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i, j, k)
                         
                         if disp_flag:
@@ -652,7 +658,7 @@ class ImageStar:
             image_lb = self.attributes[IM_LB_ID]
             image_ub = self.attributes[IM_UB_ID]
             
-        return [image_lb, image_ub]
+        return np.array([image_lb, image_ub])
     
     def get_ranges(self, *args):
         """
@@ -1094,7 +1100,7 @@ class ImageStar:
         return flag
             
     def isempty(self, param):
-        return (param is np.array) and (param.shape == [] or param.shape[0] == 0)
+        return param.size == 0 or (param is np.array and param.shape[0] == 0)
             
     def init_empty_imagestar(self):
         for i in range(len(self.attributes)):
