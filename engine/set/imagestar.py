@@ -46,6 +46,11 @@ ERRMSG_INVALID_INPUT_POINT = "Invalid input point"
 ERRMSG_INVALID_FIRST_INPUT_POINT = "The first input point is invalid"
 ERRMSG_INVALID_SECOND_INPUT_POINT = "The second input point is invalid"
 
+ERRMSG_INVALID_VERT_ID = "Invalid veritical index"
+ERRMSG_INVALID_HORIZ_ID = "Invalid horizonal index"
+ERRMSG_INVALID_CHANNEL_ID = "Invalid channel index"
+
+
 
 ESTIMATE_RANGE_STAGE_STARTED = "Ranges estimation started..."
 ESTIMATE_RANGE_STAGE_OVER = "Ranges estimation finished..."
@@ -647,7 +652,7 @@ class ImageStar:
             for i in range(self.attributes[HEIGHT_ID]):
                 for j in range(self.attributes[WIDTH_ID]):
                     for k in range(self.attributes[NUM_CHANNEL_ID]):
-                        image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i, j, k)
+                        image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i+1, j+1, k+1)
                         
                         if disp_flag:
                             print(ESTIMATE_RANGE_STAGE_OVER)

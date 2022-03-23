@@ -8,6 +8,7 @@ CONTAINS_INIT = 6
 PROJECT2D_INIT = 7
 GETRANGE_INIT = 8
 ESTIMATE_RANGE_INIT = 9
+ESTIMATE_RANGES_INIT = 10
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -31,7 +32,6 @@ INPUT_ID = 5
 OUTPUT_ID = 6
 
 OUTPUT_ID = 5
-OUTPUT_ID = 6
 
 import numpy as np
 import mat73
@@ -113,6 +113,15 @@ sources = {
                 
                 "test_inputs/test_estimate_range_input.mat",
                 "test_inputs/test_estimate_range_output.mat"
+            ],
+        ESTIMATE_RANGES_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_estimate_ranges_output.mat"
             ]
     }
 
