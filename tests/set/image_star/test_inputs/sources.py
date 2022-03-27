@@ -9,6 +9,7 @@ PROJECT2D_INIT = 7
 GETRANGE_INIT = 8
 ESTIMATE_RANGE_INIT = 9
 ESTIMATE_RANGES_INIT = 10
+GET_RANGES_INIT = 11
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -30,6 +31,8 @@ TRUE_INPUT_ID = 5
 
 INPUT_ID = 5
 OUTPUT_ID = 6
+
+OUTPUT_ID = 5
 
 OUTPUT_ID = 5
 
@@ -122,6 +125,15 @@ sources = {
                 "test_inputs/fmnist_img/test_predicate_ub.mat",
                 
                 "test_inputs/test_estimate_ranges_output.mat"
+            ],
+        GET_RANGES_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_get_ranges_output.mat"
             ]
     }
 

@@ -665,28 +665,28 @@ class ImageStar:
             
         return np.array([image_lb, image_ub])
     
-    def get_ranges(self, *args):
+    def get_ranges(self, dis_opt = DEFAULT_DISP_OPTION):
         """
-            Computes the lowe and upper bound images of the ImageStar
+            Computes the lower and upper bound images of the ImageStar
             
             return -> [image_lb : np.array([]) -> lower bound image,
                        image_ub : np.array([]) -> upper bound image]
         """
                 
-        image_lb = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
-        image_Ub = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
+        image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
+        image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
 
-        size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[CHANNEL_ID]
+        size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNEL_ID]
             
         disp_flag = False
-        if equals(dis_opt, DISPLAY_ON_OPTION):
+        if dis_opt == DISPLAY_ON_OPTION:
             disp_flag = True
             print(ESTIMATE_RANGE_STAGE_STARTED)
                 
         for i in range(self.attributes[HEIGHT_ID]):
             for j in range(self.attributes[WIDTH_ID]):
-                for k in range(self.attributes[CHANNEL_ID]):
-                    image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i, j, k)
+                for k in range(self.attributes[NUM_CHANNEL_ID]):
+                    image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i + 1, j + 1, k + 1)
                         
                     if disp_flag:
                         print(ESTIMATE_RANGE_STAGE_OVER)
@@ -694,7 +694,7 @@ class ImageStar:
         self.attributes[IM_LB_ID] = image_lb
         self.attributes[IM_UB_ID] = image_ub
             
-        return [image_lb, image_ub]
+        return np.array([image_lb, image_ub])
             
     def update_ranges(self, *args):
         """
