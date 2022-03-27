@@ -82,6 +82,8 @@ LAST_ATTRIBUTE_ID = FLATTEN_ORDER_ID
 VERT_ID = 0
 HORIZ_ID = 1
 CHANNEL_ID = 2
+
+POINTS_ID = 0
 #####################
 
 ############################ PARAMETERS NUMBERS ############################
@@ -702,9 +704,14 @@ class ImageStar:
             
             points : np.array([*]) -> local points = [x1 y1 c1; x2 y2 c2; ...]
         """
+        updated_ranges = []
         
-        for i in range(args[POINTS_ID].shape[0]):
-            self.get_range(args[POINTS_ID][i, 0], args[POINTS_ID][i, 1], args[POINTS_ID][i, 2])
+        for i in range(len(args[POINTS_ID])):
+            updated_ranges.append(self.get_range(args[POINTS_ID][i][0], args[POINTS_ID][i][1], args[POINTS_ID][i][2]))
+                                  
+        return updated_ranges
+            
+        
             
     def get_num_attacked_pixels(self):
         """
