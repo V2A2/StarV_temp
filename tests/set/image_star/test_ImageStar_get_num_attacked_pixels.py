@@ -8,14 +8,14 @@ sys.path.insert(0, "../../../engine/set/")
 
 from imagestar import *
 
-class TestImageStarUpdateRanges(unittest.TestCase):
+class TestImageStarAttackedPixelsNum(unittest.TestCase):
     """
-        Tests the 'update_ranges' method
+        Tests the 'get_num_attacked_pixels' method
     """
 
-    def test_update_ranges(self):
+    def test_num_attacked_pixels(self):
         """
-            Tests the ImageStar's ranges calculation method
+            Tests the ImageStar's method that calculates the number of attacked pixels
             
             V -> Basis matrix
             C -> Predicate matrix
@@ -26,30 +26,19 @@ class TestImageStarUpdateRanges(unittest.TestCase):
             range_output -> valid output range
         """
         
-        test_V = np.reshape(read_csv_data(sources[UPDATE_RANGES_INIT][V_ID]), (28, 28, 1, 785))
-        test_C = np.reshape(read_csv_data(sources[UPDATE_RANGES_INIT][C_ID]), (1, 784))
-        test_d = read_csv_data(sources[UPDATE_RANGES_INIT][D_ID])
-        test_predicate_lb = read_csv_data(sources[UPDATE_RANGES_INIT][PREDICATE_LB_ID])
-        test_predicate_ub = read_csv_data(sources[UPDATE_RANGES_INIT][PREDICATE_UB_ID])
+        test_V = np.reshape(read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][V_ID]), (28, 28, 1, 785))
+        test_C = np.reshape(read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][C_ID]), (1, 784))
+        test_d = read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][D_ID])
+        test_predicate_lb = read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][PREDICATE_LB_ID])
+        test_predicate_ub = read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][PREDICATE_UB_ID])
         
         test_star = ImageStar(
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
             )
-        
-        ranges_input = [np.array([1, 1, 1])]
-        
-        ranges_output = np.array([read_csv_data(sources[UPDATE_RANGES_INIT][OUTPUT_ID])])
-                
-        ranges = test_star.update_ranges(ranges_input)
-                
-        res_flag = True
-        
-        for i in range(len(ranges)):
-            if ranges[i].all() != ranges_output[i].all():
-                res_flag = False
-                break
-                
-        self.assertEqual(res_flag, True)
+               
+        attacked_pixels_num_output = np.array([read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][OUTPUT_ID])])
+                                
+        self.assertEqual(test_star.get_num_attacked_pixels(), attacked_pixels_num_output)
 
     # def test_contains_fase(self):
     #     """

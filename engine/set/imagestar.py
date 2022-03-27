@@ -720,11 +720,11 @@ class ImageStar:
             return : int -> the number of pixels
         """
         
-        V1 = np.zeros(self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[CHANNEL_ID])
+        V1 = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
         V3 = V1
         
         for i in range(1, self.attributes[NUMPRED_ID] + 1):
-            V2 = (self.attributes[V_ID][:,:,i] != V1)
+            V2 = (self.attributes[V_ID][:,:,:,i] != V1)
             V3 = V3 + V2
             
         V4 = np.amax(V3, 2)
