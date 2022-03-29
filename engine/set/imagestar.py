@@ -84,6 +84,9 @@ HORIZ_ID = 1
 CHANNEL_ID = 2
 
 POINTS_ID = 0
+
+START_POINT_ID = 0
+POOL_SIZE_ID = 1
 #####################
 
 ############################ PARAMETERS NUMBERS ############################
@@ -745,23 +748,23 @@ class ImageStar:
         """
         
         points = self.get_local_points(args[START_POINT_ID], args[POOL_SIZE_ID])
-        points_num = leln(points)
+        points_num = len(points)
         
         if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
             image_lb, image_ub = self.get_ranges()
         else:
             image_lb = self.attributes[IM_LB_ID]
             image_ub = self.attributes[IM_UB_ID]
-            
-        lb = image_lb[points[0,0], points[0,1], args[CHANNEL_NUM_ID]]
-        lb = image_ub[points[0,0], points[0,1], args[CHANNEL_NUM_ID]]
+        
+        lb = image_lb[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNEL_ID] - 1]
+        ub = image_ub[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNEL_ID] - 1]
         
         for i in range(1, points_num):
-            if image_lb[points[i,0], points[i,1], args[CHANNEL_NUM_ID]] < lb:
-                lb = image_lb[points[i,0], points[i,1], args[CHANNEL_NUM_ID]]
+            if image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1] < lb:
+                lb = image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1]
             
-            if image_ub[points[i,0], points[i,1], args[CHANNEL_NUM_ID]] > ub:
-                ub = image_ub[points[i,0], points[i,1], args[CHANNEL_NUM_ID]]
+            if image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1] > ub:
+                ub = image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1]
                 
         return [lb, ub]
             
@@ -779,7 +782,7 @@ class ImageStar:
         x0 = start_point[0] # vertical index of the startpoint
         y0 = start_point[1] # horizontal index of the startpoint
         
-        h = pool_sizep[0] # height of the MaxPooling layer
+        h = pool_size[0] # height of the MaxPooling layer
         w = pool_size[1] # width of the MaxPooling layer
         
         assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 < self.attributes[HEIGHT_ID] \
@@ -800,9 +803,9 @@ class ImageStar:
                 else:
                     y1 = y1 + 1;
                     
-                points[(i - 1) * w + j, :] = np.array([x1, y1])
+                points[i * w + j, :] = np.array([x1, y1])
                 
-        return points
+        return points - 1
       
     def get_localMax_index(self, *args):
         """

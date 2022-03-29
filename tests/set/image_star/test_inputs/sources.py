@@ -12,6 +12,8 @@ ESTIMATE_RANGES_INIT = 10
 GET_RANGES_INIT = 11
 UPDATE_RANGES_INIT = 12
 GET_NUM_ATTACK_PIXELS_INIT = 13
+GET_LOCAL_POINTS_INIT = 14
+GET_LOCAL_BOUND_INIT = 15
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -37,6 +39,9 @@ OUTPUT_ID = 6
 OUTPUT_ID = 5
 
 OUTPUT_ID = 5
+
+INPUT_ID = 5
+OUTPUT_ID = 6
 
 import numpy as np
 import mat73
@@ -154,6 +159,26 @@ sources = {
                 "test_inputs/fmnist_img/test_predicate_ub.mat",
                 
                 "test_inputs/test_get_num_attacked_pixels_output.mat"
+            ],
+        GET_LOCAL_POINTS_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_get_local_points_input.mat",
+                "test_inputs/test_get_local_points_output.mat"
+            ],
+        GET_LOCAL_BOUND_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_get_local_bound_input.mat",
+                "test_inputs/test_get_local_bound_output.mat"
             ]
     }
 
