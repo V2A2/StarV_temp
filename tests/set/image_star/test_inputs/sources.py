@@ -14,6 +14,7 @@ UPDATE_RANGES_INIT = 12
 GET_NUM_ATTACK_PIXELS_INIT = 13
 GET_LOCAL_POINTS_INIT = 14
 GET_LOCAL_BOUND_INIT = 15
+GET_LOCAL_MAX_INDEX_INIT = 16
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -179,6 +180,16 @@ sources = {
                 
                 "test_inputs/test_get_local_bound_input.mat",
                 "test_inputs/test_get_local_bound_output.mat"
+            ],
+        GET_LOCAL_MAX_INDEX_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_get_local_max_index_input.mat",
+                "test_inputs/test_get_local_max_index_output.mat"
             ]
     }
 

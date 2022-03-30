@@ -4,6 +4,7 @@ import gurobipy as gp
 from gurobipy import GRB 
 
 import sys
+import operator
         
 sys.path.insert(0, "../../../engine/set/")
         
@@ -828,21 +829,21 @@ class ImageStar:
         width = args[POOL_SIZE_ID][0]
         size = height * width
         
-        lb = np.zeros((1, n))
-        ub = np.zeros((1, n))
+        lb = np.zeros((size, 1))
+        ub = np.zeros((size, 1))
         
         for i in range(size):
-            current_point = points[i, :]
+            current_point = points[i, :].astype(int)
             
-            lb[:, i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
-            ub[:, i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+            lb[i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID] - 1]
+            ub[i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID] - 1]
         
             
-        [max_lb_val, max_lb_id] = max(lb, 1)
+        [max_lb_id, max_lb_val] = max(enumerate(lb), key=operator.itemgetter(1))
         
-        a = (ub - max_lb_val) > 0
-        a1 = (ub - max_lb_val) >= 0
-        a[a==max_lb_id] = []
+        a = np.argwhere((ub - max_lb_val) > 0)[:,0]
+        a1 = np.argwhere((ub - max_lb_val) >= 0)[:,0]
+        a = np.delete(a, np.argwhere(a==max_lb_id)[:,0])
         
         if self.isempty(a):
             max_id = points[max_lb_id, :]
@@ -854,7 +855,7 @@ class ImageStar:
             new_points = np.zeros((candidates_num, 3))
             new_points1 = np.zeros((candidates_num, 2))
             
-            for i in range(m):
+            for i in range(candidates_num):
                 selected_points = points[candidates[i], :]
                 new_points = np.append(selected_points, p)
                 new_points1[i, :] = selected_points
@@ -887,7 +888,7 @@ class ImageStar:
                         
                 print('\nThe local image has %d max candidates: \t%d' % np.size(max_id, 0))
                 
-            return np.array([np.size(max_id, 0), args[CHANNEL_ID] * np.ones((np.size(max_id, 0), 1))])
+        return np.append(max_id, args[CHANNEL_ID] * np.zeros((len(max_id.shape)))).tolist()
           
     def get_localMax_index2(self, start_point, pool_size, channel_id):
         """
