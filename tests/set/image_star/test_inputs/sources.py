@@ -15,6 +15,8 @@ GET_NUM_ATTACK_PIXELS_INIT = 13
 GET_LOCAL_POINTS_INIT = 14
 GET_LOCAL_BOUND_INIT = 15
 GET_LOCAL_MAX_INDEX_INIT = 16
+GET_LOCAL_MAX_INDEX2_INIT = 17
+IS_P1_LARGER_P2_INIT = 18
 
 TEST_LB_ID = 0
 TEST_UB_ID = 1
@@ -43,6 +45,18 @@ OUTPUT_ID = 5
 
 INPUT_ID = 5
 OUTPUT_ID = 6
+
+V_CANDIDATES_ID = 7
+C_CANDIDATES_ID = 8
+D_CANDIDATES_ID = 9
+PREDICATE_LB_CANDIDATES_ID = 10
+PREDICATE_UB_CANDIDATES_ID = 11
+IM_LB_CANDIDATES_ID = 12
+IM_UB_CANDIDATES_ID = 13
+
+INPUT_CANDIDATES_ID = 14
+OUTPUT_CANDIDATES_ID = 15
+
 
 import numpy as np
 import mat73
@@ -189,8 +203,39 @@ sources = {
                 "test_inputs/fmnist_img/test_predicate_ub.mat",
                 
                 "test_inputs/test_get_local_max_index_input.mat",
-                "test_inputs/test_get_local_max_index_output.mat"
-            ]
+                "test_inputs/test_get_local_max_index_output.mat",
+                
+                "test_inputs/imgstar_local_max_index/test_V.mat",
+                "test_inputs/imgstar_local_max_index/test_C.mat",
+                "test_inputs/imgstar_local_max_index/test_d.mat",
+                "test_inputs/imgstar_local_max_index/test_predicate_lb.mat",
+                "test_inputs/imgstar_local_max_index/test_predicate_ub.mat",
+                "test_inputs/imgstar_local_max_index/test_im_lb.mat",
+                "test_inputs/imgstar_local_max_index/test_im_ub.mat",
+                
+                "test_inputs/test_get_local_max_index_input_candidates.mat",
+                "test_inputs/test_get_local_max_index_output_candidates.mat"
+            ],
+        GET_LOCAL_MAX_INDEX2_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_get_local_max_index2_input.mat",
+                "test_inputs/test_get_local_max_index2_output.mat",
+            ],
+        IS_P1_LARGER_P2_INIT : [
+                "test_inputs/fmnist_img/test_V.mat",
+                "test_inputs/fmnist_img/test_C.mat",
+                "test_inputs/fmnist_img/test_d.mat",
+                "test_inputs/fmnist_img/test_predicate_lb.mat",
+                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                
+                "test_inputs/test_is_p1_larger_p2_input.mat",
+                "test_inputs/test_is_p1_larger_p2_output.mat"
+                ]
     }
 
 

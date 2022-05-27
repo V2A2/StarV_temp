@@ -88,6 +88,9 @@ POINTS_ID = 0
 
 START_POINT_ID = 0
 POOL_SIZE_ID = 1
+
+P1_ID = 0
+P2_ID = 1
 #####################
 
 ############################ PARAMETERS NUMBERS ############################
@@ -272,7 +275,7 @@ class ImageStar:
                     if args[IM_LB_ID].shape[0] != 0 and (args[IM_LB_ID].shape[0] != self.attributes[HEIGHT_ID] or args[IM_LB_ID].shape[1] != self.attributes[WIDTH_ID]):
                         raise Exception('error: %s' % ERRMSG_INCONSISTENT_LB_DIM)
                     else:
-                        self.attributes[IM_LB_ID] = im_lb.astype('float64')      
+                        self.attributes[IM_LB_ID] = args[IM_LB_ID].astype('float64')      
                         
                     if args[IM_UB_ID].shape[0] != 0 and (args[IM_UB_ID].shape[0] != self.attributes[HEIGHT_ID] or args[IM_UB_ID].shape[1] != self.attributes[WIDTH_ID]):
                         raise Exception('error: %s' % ERRMSG_INCONSISTENT_UB_DIM)
@@ -342,7 +345,7 @@ class ImageStar:
                 ub = args[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 
                 #TODO: Star returns 'can't create Star set' error because StarV Star constructor initialization does not correspond to the implementation in NNV 
-                S = Star(lb=lb, ub=ub)
+                S = Star(lb, ub)
                     
                 self.copy_deep(S.toImageStar)
                     
@@ -539,11 +542,14 @@ class ImageStar:
         assert (len(args) == DEFAULT_SOLVER_ARGS_NUM or len(args) == CUSTOM_SOLVER_ARGS_NUM), 'error: %s' % ERRMSG_GETRANGES_INVALID_ARGS_NUM   
         assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
+        # TODO: THIS SHOULD BE ACCOUNTED FOR WHEN THE DATA IS PASSED
         input_args = np.array([
                 args[VERT_ID] - 1,
                 args[HORIZ_ID] - 1,
                 args[CHANNEL_ID] - 1
             ], dtype=int)
+        
+        input_args = input_args + 1
         
         # TODO: account for potential custom solver identifier
         args = input_args
@@ -852,18 +858,30 @@ class ImageStar:
             
             candidates_num = len(candidates)
             
-            new_points = np.zeros((candidates_num, 3))
+            new_points = []
             new_points1 = np.zeros((candidates_num, 2))
             
             for i in range(candidates_num):
                 selected_points = points[candidates[i], :]
-                new_points = np.append(selected_points, p)
+                new_points.append(np.append(selected_points, args[CHANNEL_ID] - 1))
                 new_points1[i, :] = selected_points
-                
-            [max_lb_val, max_lb_id] = max(lb, 1)
+               
+            self.update_ranges(new_points)
             
-            a = (ub - max_lb_val) > 0
-            a[a==max_lb_id] = []
+            lb = np.zeros((candidates_num,1))
+            ub = np.zeros((candidates_num,1))
+            
+            for i in range(candidates_num):
+                #TODO: THIS SHOULD BE INITIALLY INT
+                current_point = points[candidates[i], :]
+                
+                lb[i] = self.attributes[IM_LB_ID][int(current_point[0]), int(current_point[1]), int(args[CHANNEL_ID])]
+                ub[i] = self.attributes[IM_UB_ID][int(current_point[0]), int(current_point[1]), int(args[CHANNEL_ID])]
+                
+            [max_lb_id, max_lb_val] = max(enumerate(lb), key=operator.itemgetter(1))
+            
+            a = np.argwhere((ub - max_lb_val) > 0)[:,0]
+            a = np.delete(a, np.argwhere(a==max_lb_id)[:,0])
             
             if self.isempty(a):
                 max_id = new_points1[max_lb_val, :]
@@ -904,27 +922,25 @@ class ImageStar:
         
         points = self.get_local_points(start_point, pool_size)
         
-        height = args[POOL_SIZE_ID][0]
-        width = args[POOL_SIZE_ID][0]
+        height = pool_size[0]
+        width = pool_size[1]
         size = height * width
         
-        lb = np.zeros((1, n))
-        ub = np.zeros((1, n))
+        lb = np.zeros((size,1))
+        ub = np.zeros((size,1))
         
         for i in range(size):
-            current_point = points[i, :]
+            current_point = points[i, :].astype(int)
             
-            lb[:, i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
-            ub[:, i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+            lb[i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], channel_id]
+            ub[i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], channel_id]
         
             
-        [max_lb_val, max_lb_id] = max(lb, 1)
+        [max_lb_id, max_lb_val] = max(enumerate(lb), key=operator.itemgetter(1))
             
-        max_id = (ub - max_lb_val) > 0
-        size = np.size(max_id, 0)
-        channels = channel_id * np.onex((size, 1))
+        max_id = np.argwhere((ub - max_lb_val) > 0)[:,0]
         
-        return np.array([max_id, channels])
+        return np.append(max_id, channel_id * np.zeros((len(max_id.shape)))).tolist()
 
     def add_max_id(self, name, max_id):
         """
@@ -934,6 +950,7 @@ class ImageStar:
             max_id : np.array([*int]) -> max indices
         """
             
+        #TODO: WHAT IS 'A' in NNV?
         return Exception("unimplemented")
     
     def update_max_id(self, name, max_id, pos):
@@ -955,7 +972,7 @@ class ImageStar:
                 self.attributes[MAX_IDS][i].get_max_ids()[pos[0], pos[1], pos[2]] = max_id
                 break
             else:
-                unk_laye_num += 1
+                unk_layer_num += 1
                 
         if unk_laye_num == ids_num:
             raise Exception('error: %s' % ERRMSG_UNK_NAME_MAX_POOL_LAYER)
@@ -967,7 +984,8 @@ class ImageStar:
             name : string -> name of the max pooling layer
             input_size : np.array([*int]) -> input size of the original image
         """
-            
+         
+        #TODO: WHAT IS 'A' in NNV?    
         return Exception("unimplemented")
         
     def is_p1_larger_p2(self, *args):
@@ -984,19 +1002,20 @@ class ImageStar:
             
         """
         
-        C1 = np.zeros((1, self.attributes[NUM_PRED_ID]))
+        C1 = np.zeros(self.attributes[NUMPRED_ID])
         
-        for i in range(1, self.attributes[NUM_PRED_ID] + 1):
+        for i in range(1, self.attributes[NUMPRED_ID] + 1):
             C1[i-1] = self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], i] - \
                       self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], i]
                       
-        d1 = self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], 1] - \
-                 self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2]]
+        # TODO: WHY DOESN'T THE SUBTRAHEND HAVE THE 4-TH COMPONENT INDEXING IN NNV?
+        d1 = self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], 0] - \
+                 self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], 0]
                  
         new_C = np.vstack((self.attributes[C_ID], C1))
         new_d = np.vstack((self.attributes[D_ID], d1))
         
-        S = Star(obj.V, new_C, new_d, obj.predicate_lb, obj.predicate_ub)
+        S = Star(self.attributes[V_ID], new_C, new_d, self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
 
         if S.isEmptySet():
             return 0

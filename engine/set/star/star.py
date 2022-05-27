@@ -29,20 +29,57 @@ class Star:
     # author: Sung Woo Choi
     # date: 9/21/2021
 
-    def __init__(obj,
-                V = np.array([]),          # basic matrix
-                C = np.array([]),          # constraint matrix
-                d = np.array([]),          # constraint vector
-                pred_lb = np.array([]),    # lower bound vector of predicate variable
-                pred_ub = np.array([]),    # upper bound vector of predicate variable
-                state_lb = np.array([]),   # lower bound of state variables
-                state_ub = np.array([]),   # upper bound of state variables
-                outer_zono = np.array([]), # an outer zonotope covering this star, used for reachability of logsig and tansig networks
-                lb = np.array([]),
-                ub = np.array([])):
+    def __init__(obj, *args):
+                # V = np.array([]),          # basic matrix
+                # C = np.array([]),          # constraint matrix
+                # d = np.array([]),          # constraint vector
+                # pred_lb = np.array([]),    # lower bound vector of predicate variable
+                # pred_ub = np.array([]),    # upper bound vector of predicate variable
+                # state_lb = np.array([]),   # lower bound of state variables
+                # state_ub = np.array([]),   # upper bound of state variables
+                # outer_zono = np.array([]), # an outer zonotope covering this star, used for reachability of logsig and tansig networks
+                # lb = np.array([]),
+                # ub = np.array([])):
         
         #from engine.set.zono import Zono
         #from engine.set.box import Box
+
+        if len(args) == 5:
+            V = args[0]
+            C = args[1]
+            d = args[2]
+            pred_lb = args[3]
+            pred_ub = args[4]
+            
+            state_lb = np.array([])
+            state_ub = np.array([])
+            
+            lb = np.array([])
+            ub = np.array([])
+        elif len(args) == 7:
+            V = args[0]
+            C = args[1]
+            d = args[2]
+            pred_lb = args[3]
+            pred_ub = args[4]
+            
+            state_lb = args[5]
+            state_ub = args[6]
+            
+            lb = np.array([])
+            ub = np.array([])
+        elif len(args) == 2:
+            lb = args[0]
+            ub = args[1]
+            
+            V = np.array([])
+            C = np.array([])
+            d = np.array([])
+            pred_lb = np.array([])
+            pred_ub = np.array([])
+            
+            state_lb = np.array([])
+            state_ub = np.array([])
 
         assert isinstance(V, np.ndarray), 'error: basic matrix is not an ndarray'
         assert isinstance(C, np.ndarray), 'error: constraint matrix is not an ndarray'
