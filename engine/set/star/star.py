@@ -15,7 +15,8 @@ import matplotlib.colors as colors
 
 import sys
 
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/box/")
+sys.path.insert(0, "../../../engine/set/zono/")
 from zono import *
 from box import *
 

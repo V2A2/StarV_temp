@@ -6,7 +6,7 @@ from gurobipy import GRB
 import sys
 import operator
         
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/star/")
         
 from star import *
 
@@ -543,20 +543,20 @@ class ImageStar:
         assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
         # TODO: THIS SHOULD BE ACCOUNTED FOR WHEN THE DATA IS PASSED
-        input_args = np.array([
-                args[VERT_ID] - 1,
-                args[HORIZ_ID] - 1,
-                args[CHANNEL_ID] - 1
-            ], dtype=int)
+        # input_args = np.array([
+        #         args[VERT_ID] - 1,
+        #         args[HORIZ_ID] - 1,
+        #         args[CHANNEL_ID] - 1
+        #     ], dtype=int)
         
-        input_args = input_args + 1
+        #input_args = input_args + 1
         
         # TODO: account for potential custom solver identifier
-        args = input_args
+        #args = input_args
         
         assert (args[VERT_ID] > -1 and args[VERT_ID] < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
         assert (args[HORIZ_ID] > -1 and args[HORIZ_ID] < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
-        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INVALID_CHANNELNUM_ID
+        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM
         
         bounds = [np.array([]), np.array([])]
         
@@ -617,9 +617,9 @@ class ImageStar:
 
         assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
-        height_id = int(height_id - 1)
-        width_id = int(width_id - 1)
-        channel_id = int(channel_id - 1)
+        height_id = int(height_id)
+        width_id = int(width_id)
+        channel_id = int(channel_id)
         
         assert (height_id > -1 and height_id < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
         assert (width_id > -1 and width_id < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
@@ -664,7 +664,7 @@ class ImageStar:
             for i in range(self.attributes[HEIGHT_ID]):
                 for j in range(self.attributes[WIDTH_ID]):
                     for k in range(self.attributes[NUM_CHANNEL_ID]):
-                        image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i+1, j+1, k+1)
+                        image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i, j, k)
                         
                         if disp_flag:
                             print(ESTIMATE_RANGE_STAGE_OVER)
@@ -698,7 +698,7 @@ class ImageStar:
         for i in range(self.attributes[HEIGHT_ID]):
             for j in range(self.attributes[WIDTH_ID]):
                 for k in range(self.attributes[NUM_CHANNEL_ID]):
-                    image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i + 1, j + 1, k + 1)
+                    image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i, j, k)
                         
                     if disp_flag:
                         print(ESTIMATE_RANGE_STAGE_OVER)
@@ -812,7 +812,7 @@ class ImageStar:
                     
                 points[i * w + j, :] = np.array([x1, y1])
                 
-        return points - 1
+        return points
       
     def get_localMax_index(self, *args):
         """

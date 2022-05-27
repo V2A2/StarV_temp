@@ -4,9 +4,25 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
-
+sys.path.insert(0, "../../../engine/set/imagestar/")
 from imagestar import *
+
+sys.path.insert(0, "../../../tests/test_utils/")
+from utils import *
+
+def process_exception(ex): 
+    ex_type, ex_value, ex_traceback = sys.exc_info()
+    trace_back = traceback.extract_tb(ex_traceback)
+        
+    stack_trace = ""
+        
+    for trace in trace_back:
+        stack_trace = stack_trace + "File : %s ,\n Line : %d,\n Func.Name : %s,\n Message : %s\n" % (trace[0], trace[1], trace[2], trace[3])
+                
+    print("Exception type : %s " % ex_type.__name__)
+    print("Exception message : %s" %ex_value)
+    print("Stack trace : %s" %stack_trace)
+
 
 class TestImageStarContains(unittest.TestCase):
     """
@@ -38,7 +54,15 @@ class TestImageStarContains(unittest.TestCase):
         
         test_input = read_csv_data(sources[CONTAINS_INIT][TRUE_INPUT_ID])
         
-        self.assertEqual(test_star.contains(test_input), True)
+        test_result = None
+
+        try:
+            test_result = test_star.contains(test_input)
+        except Exception as ex:
+            completion_flag = False
+            process_exception(ex)
+        
+        self.assertEqual(test_result, True)
 
     # def test_contains_fase(self):
     #     """

@@ -4,7 +4,7 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/imagestar/")
 
 from imagestar import *
 
@@ -37,8 +37,8 @@ class TestImageStarEstimateRange(unittest.TestCase):
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
             )
         
-        range_input = np.array([read_csv_data(sources[ESTIMATE_RANGE_INIT][INPUT_ID])])[0]
-        range_output = np.array([read_csv_data(sources[ESTIMATE_RANGE_INIT][OUTPUT_ID])])
+        range_input = np.array(read_csv_data(sources[ESTIMATE_RANGE_INIT][INPUT_ID]))
+        range_output = np.array([read_csv_data(sources[ESTIMATE_RANGE_INIT][ESTIMATE_RANGE_OUTPUT_ID])])
         
         self.assertEqual(test_star.estimate_range(range_input[VERT_ID], range_input[HORIZ_ID], range_input[CHANNEL_ID]).all(), range_output.all())
 
