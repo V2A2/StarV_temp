@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 import numpy as np
 
+import sys
+sys.path.insert(0, "../../../engine/set/")
+from star import *
+
 class Zono:
     # Zonotope class
     #   Z = (c , <v1, v2, ..., vn>) = c + a1 * v1 + ... + an * vn, 
@@ -15,7 +19,7 @@ class Zono:
 
         assert isinstance(c, np.ndarray), 'error: center vector is not an ndarray'
         assert isinstance(V, np.ndarray), 'error: generator matrix is not an ndarray'
-        assert c.shape[1] == 1, 'error: center vector should be a column vector'
+        #assert c.shape[1] == 1, 'error: center vector should be a column vector'
         assert c.shape[0] == V.shape[0], 'error: inconsistent dimension between a center vector and a generator matrix'
 
         obj.c = c
@@ -45,7 +49,7 @@ class Zono:
 
     # convert to Star
     def toStar(obj):
-        from engine.set.star import Star
+        #from engine.set.star import Star
         n = obj.V.shape[1]
         lb = -np.ones((n, 1))
         ub = np.ones((n, 1))

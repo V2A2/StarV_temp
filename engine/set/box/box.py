@@ -1,6 +1,11 @@
 #!/usr/bin/python3
 import numpy as np
 
+import sys
+sys.path.insert(0, "../../../engine/set/")
+
+from zono import *
+
 class Box:
     # Hyper-rectangle class
     # Box and simple methods
@@ -14,7 +19,7 @@ class Box:
 
         assert isinstance(lb, np.ndarray), 'error: lower bound vector is not an ndarray'
         assert isinstance(ub, np.ndarray), 'error: upper bound vector is not an ndarray'
-        assert lb.shape[1] == ub.shape[1] == 1, 'error: lb and ub should be a column vector'
+        #assert lb.shape[1] == ub.shape[1] == 1, 'error: lb and ub should be a column vector'
         assert lb.shape[0] == ub.shape[0], 'error: inconsistent dimensions between lb and ub'
 
         obj.lb = lb
@@ -70,7 +75,7 @@ class Box:
 
     # transform box to zonotope
     def toZono(obj):
-        from engine.set.zono import Zono
+        #from engine.set.zono import Zono
         return Zono(obj.center, obj.generators)
 
     # get Range
