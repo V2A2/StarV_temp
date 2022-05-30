@@ -841,8 +841,8 @@ class ImageStar:
         for i in range(size):
             current_point = points[i, :].astype(int)
             
-            lb[i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID] - 1]
-            ub[i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID] - 1]
+            lb[i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+            ub[i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
         
             
         [max_lb_id, max_lb_val] = max(enumerate(lb), key=operator.itemgetter(1))

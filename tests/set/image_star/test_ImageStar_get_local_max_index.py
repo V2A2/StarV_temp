@@ -4,7 +4,7 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/imagestar/")
 
 from imagestar import *
 
@@ -43,8 +43,10 @@ class TestImageStarGetLocalMaxIndex(unittest.TestCase):
         test_local_index_input = np.array([int(item) for item in read_csv_data(sources[GET_LOCAL_MAX_INDEX_INIT][INPUT_ID])])
         test_local_index_output = (read_csv_data(sources[GET_LOCAL_MAX_INDEX_INIT][OUTPUT_ID])  - 1).tolist()
     
+        test_result = test_star.get_localMax_index(test_local_index_input[0:2] - 1, test_local_index_input[2:4], test_local_index_input[4] - 1)
     
-        self.assertEqual(test_star.get_localMax_index(test_local_index_input[0:2], test_local_index_input[2:4], test_local_index_input[4]), test_local_index_output)
+    
+        self.assertEqual(test_result, test_local_index_output)
 
     def test_get_local_max_index_candidates(self):
         """
@@ -73,9 +75,11 @@ class TestImageStarGetLocalMaxIndex(unittest.TestCase):
             )
                
         test_local_index_input = np.array([int(item) for item in read_csv_data(sources[GET_LOCAL_MAX_INDEX_INIT][INPUT_CANDIDATES_ID])])
-        test_local_index_output = (read_csv_data(sources[GET_LOCAL_MAX_INDEX_INIT][OUTPUT_CANDIDATES_ID])  - 1).tolist()
+        test_local_index_output = (read_csv_data(sources[GET_LOCAL_MAX_INDEX_INIT][OUTPUT_CANDIDATES_ID])).tolist()
+                        
+        test_result = test_star.get_localMax_index(test_local_index_input[0:2], test_local_index_input[2:4], test_local_index_input[4])
                                 
-        self.assertEqual(test_star.get_localMax_index(test_local_index_input[0:2], test_local_index_input[2:4], test_local_index_input[4]), test_local_index_output)
+        self.assertEqual(test_result, test_local_index_output)
 
 
 if __name__ == '__main__':
