@@ -508,9 +508,6 @@ class ImageStar:
         assert self.validate_point_dim(point1, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_FIRST_INPUT_POINT
         assert self.validate_point_dim(point2, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_SECOND_INPUT_POINT
         
-        point1 -= 1
-        point2 -= 1
-        
         n = self.attributes[NUMPRED_ID] + 1
         
         new_V = np.zeros((2, n))

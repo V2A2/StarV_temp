@@ -4,9 +4,11 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
-
+sys.path.insert(0, "../../../engine/set/imagestar/")
 from imagestar import *
+
+sys.path.insert(0, "../../../tests/test_utils/")
+from utils import *
 
 class TestImageStarToStar(unittest.TestCase):
     """
@@ -22,12 +24,19 @@ class TestImageStarToStar(unittest.TestCase):
         
         test_lb = read_csv_data(sources[TO_STAR_INIT][TEST_LB_ID])
         test_ub = read_csv_data(sources[TO_STAR_INIT][TEST_UB_ID])
-        
-        test_star = ImageStar(
-                test_lb, test_ub
-            )
     
-        converted = test_star.to_star()
+        try:
+            test_star = ImageStar(
+                    test_lb, test_ub
+                )
+            
+            converted = test_star.to_star()
+        except Exception as ex:
+            completion_flag = False
+            process_exception(ex)
+
+            
+        self.assertEqual(completion_flag, True)
 
 if __name__ == '__main__':
     unittest.main()

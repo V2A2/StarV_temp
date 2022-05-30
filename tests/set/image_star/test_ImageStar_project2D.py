@@ -4,9 +4,12 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
-
+sys.path.insert(0, "../../../engine/set/imagestar/")
 from imagestar import *
+
+sys.path.insert(0, "../../../tests/test_utils/")
+from utils import *
+
 
 class TestImageStarProject2D(unittest.TestCase):
     """
@@ -37,10 +40,18 @@ class TestImageStarProject2D(unittest.TestCase):
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
             )
         
-        test_point1 = np.array([5,5,1])#read_csv_data(sources[PROJECT2D_INIT][POINT1_ID])
-        test_point2 = np.array([4,7,1])#read_csv_data(sources[PROJECT2D_INIT][POINT2_ID])
+        test_point1 = np.array([4,4,0])#read_csv_data(sources[PROJECT2D_INIT][POINT1_ID])
+        test_point2 = np.array([3,6,0])#read_csv_data(sources[PROJECT2D_INIT][POINT2_ID])
         
-        self.assertEqual(test_star.project2D(test_point1, test_point2), True)
+        completion_flag = True
+        
+        try:
+            test_result = test_star.project2D(test_point1, test_point2)
+        except Exception as ex:
+            process_exception(ex)
+            completion_flag = False
+            
+        self.assertEqual(completion_flag, True)
 
     # def test_contains_fase(self):
     #     """

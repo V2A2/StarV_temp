@@ -4,9 +4,11 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
-
+sys.path.insert(0, "../../../engine/set/imagestar/")
 from imagestar import *
+
+sys.path.insert(0, "../../../tests/test_utils/")
+from utils import *
 
 class TestImageStarIsMax(unittest.TestCase):
     """
@@ -40,8 +42,17 @@ class TestImageStarIsMax(unittest.TestCase):
         test_points_input = np.array([int(item) for item in read_csv_data(sources[IS_P1_LARGER_P2_INIT][INPUT_ID])])
         test_points_output = (read_csv_data(sources[IS_P1_LARGER_P2_INIT][OUTPUT_ID])  - 1).tolist()
     
-
-        self.assertEqual(test_star.is_p1_larger_p2(test_points_input[0:3], test_points_input[3:6]), test_points_output)
+        completion_flag = True
+        
+        try:
+            test_result = test_star.is_p1_larger_p2(test_points_input[0:3], test_points_input[3:6])
+    
+            self.assertEqual(test_result, test_points_output)
+        except Exception as ex:
+            completion_flag = False
+            process_exception(ex)
+            
+        self.assertEqual(completion_flag, True)
 
 if __name__ == '__main__':
     unittest.main()
