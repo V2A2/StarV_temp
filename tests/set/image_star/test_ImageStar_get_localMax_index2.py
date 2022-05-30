@@ -4,7 +4,7 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/imagestar/")
 
 from imagestar import *
 
@@ -29,20 +29,24 @@ class TestImageStarGetLocalMaxIndex2(unittest.TestCase):
             local_index -> valid output bounds
         """
         
-        test_V = np.reshape(read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][V_ID]), (28, 28, 1, 785))
+        test_V = np.reshape(read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][V_ID]), (24, 24, 3, 785))
         test_C = np.reshape(read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][C_ID]), (1, 784))
         test_d = read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][D_ID])
         test_predicate_lb = read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][PREDICATE_LB_ID])
         test_predicate_ub = read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][PREDICATE_UB_ID])
+        test_im_lb = read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][IM_LB_ID])
+        test_im_ub = read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][IM_UB_ID])
         
         test_star = ImageStar(
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub, test_im_lb, test_im_ub
             )
                
-        test_local_index_input = np.array([int(item) for item in read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][INPUT_CANDIDATES_ID])])
-        test_local_index_output = (read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][OUTPUT_CANDIDATES_ID])  - 1).tolist()
+        test_local_index_input = np.array([int(item) for item in read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][INPUT_LOCAL_MAX_INDEX2_ID])])
+        test_local_index_output = (read_csv_data(sources[GET_LOCAL_MAX_INDEX2_INIT][OUTPUT_LOCAL_MAX_INDEX2_ID])).tolist()
+                         
+        test_result = test_star.get_localMax_index2(test_local_index_input[0:2], test_local_index_input[2:4], test_local_index_input[4])
                                 
-        self.assertEqual(test_star.get_localMax_index2(test_local_index_input[0:2], test_local_index_input[2:4], test_local_index_input[4]), test_local_index_output)
+        self.assertEqual(test_result, test_local_index_output)
 
 
 if __name__ == '__main__':

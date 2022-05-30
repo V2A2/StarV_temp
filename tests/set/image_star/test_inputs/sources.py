@@ -57,6 +57,9 @@ IM_UB_CANDIDATES_ID = 13
 INPUT_CANDIDATES_ID = 14
 OUTPUT_CANDIDATES_ID = 15
 
+INPUT_LOCAL_MAX_INDEX2_ID = 7
+OUTPUT_LOCAL_MAX_INDEX2_ID = 8
+
 
 import numpy as np
 import mat73
@@ -217,14 +220,16 @@ sources = {
                 "test_inputs/test_get_local_max_index_output_candidates.mat"
             ],
         GET_LOCAL_MAX_INDEX2_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "test_inputs/imgstar_local_max_index/test_V.mat",
+                "test_inputs/imgstar_local_max_index/test_C.mat",
+                "test_inputs/imgstar_local_max_index/test_d.mat",
+                "test_inputs/imgstar_local_max_index/test_predicate_lb.mat",
+                "test_inputs/imgstar_local_max_index/test_predicate_ub.mat",
+                "test_inputs/imgstar_local_max_index/test_im_lb.mat",
+                "test_inputs/imgstar_local_max_index/test_im_ub.mat",
                 
                 "test_inputs/test_get_local_max_index2_input.mat",
-                "test_inputs/test_get_local_max_index2_output.mat",
+                "test_inputs/test_get_local_max_index2_output.mat"
             ],
         IS_P1_LARGER_P2_INIT : [
                 "test_inputs/fmnist_img/test_V.mat",
