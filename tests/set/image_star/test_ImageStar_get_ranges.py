@@ -4,7 +4,7 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/imagestar")
 
 from imagestar import *
 
@@ -36,9 +36,11 @@ class TestImageStarGetRanges(unittest.TestCase):
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
             )
         
-        ranges_output = np.array([read_csv_data(sources[GET_RANGES_INIT][OUTPUT_ID])])
+        ranges_output = np.array([read_csv_data(sources[GET_RANGES_INIT][GETRANGES_OUTPUT_ID])])
         
-        self.assertEqual(test_star.get_ranges().all(), ranges_output.all())
+        test_result = test_star.get_ranges()
+        
+        self.assertEqual(test_result.all(), ranges_output.all())
 
     # def test_contains_fase(self):
     #     """
