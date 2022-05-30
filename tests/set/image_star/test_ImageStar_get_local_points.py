@@ -4,7 +4,7 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/imagestar/")
 
 from imagestar import *
 
@@ -41,7 +41,9 @@ class TestImageStarGetLocalPoints(unittest.TestCase):
         test_points_input = np.array([int(item) for item in read_csv_data(sources[GET_LOCAL_POINTS_INIT][INPUT_ID])])
         test_points_output = np.array(read_csv_data(sources[GET_LOCAL_POINTS_INIT][OUTPUT_ID]))
                                 
-        self.assertEqual(test_star.get_local_points(test_points_input[0:2], test_points_input[2:4]), test_points_output)
+        test_result = test_star.get_local_points(test_points_input[0:2], test_points_input[2:4])
+                                
+        self.assertEqual(test_result.all(), test_points_output.all())
 
     # def test_contains_fase(self):
     #     """
