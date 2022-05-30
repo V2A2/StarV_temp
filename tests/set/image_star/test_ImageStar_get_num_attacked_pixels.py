@@ -4,7 +4,7 @@ import sys
 
 from test_inputs.sources import *
 
-sys.path.insert(0, "../../../engine/set/")
+sys.path.insert(0, "../../../engine/set/imagestar/")
 
 from imagestar import *
 
@@ -36,9 +36,11 @@ class TestImageStarAttackedPixelsNum(unittest.TestCase):
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
             )
                
-        attacked_pixels_num_output = np.array([read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][OUTPUT_ID])])
+        attacked_pixels_num_output = np.array([read_csv_data(sources[GET_NUM_ATTACK_PIXELS_INIT][ATTACKPIXNUM_OUTPUT_ID])])
                                 
-        self.assertEqual(test_star.get_num_attacked_pixels(), attacked_pixels_num_output)
+        test_result = test_star.get_num_attacked_pixels()
+                                
+        self.assertEqual(test_result, attacked_pixels_num_output)
 
     # def test_contains_fase(self):
     #     """
