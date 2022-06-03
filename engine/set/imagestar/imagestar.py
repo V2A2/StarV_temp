@@ -51,7 +51,9 @@ ERRMSG_INVALID_VERT_ID = "Invalid veritical index"
 ERRMSG_INVALID_HORIZ_ID = "Invalid horizonal index"
 ERRMSG_INVALID_CHANNEL_ID = "Invalid channel index"
 
+ERRMSG_SHAPES_INCONSISTENCY = "New shape is inconsistent with the current shape"
 
+ERRMSG_INPUT_NOT_IMAGESTAR = "Input set is not an ImageStar"
 
 ESTIMATE_RANGE_STAGE_STARTED = "Ranges estimation started..."
 ESTIMATE_RANGE_STAGE_OVER = "Ranges estimation finished..."
@@ -1056,7 +1058,8 @@ class ImageStar:
         
         return C1, d1
     
-    def reshape(self, input, new_shape):
+    @staticmethod
+    def reshape(input, new_shape):
         """
             Reshapes the ImageStar
             
@@ -1068,18 +1071,19 @@ class ImageStar:
         
         size = np.size(new_shape)
         
-        assert size[1] == 3 and size[0] == 1, 'error: %s' % ERRMSG_INVALID_NEW_SHAPE
+        assert size == 3, 'error: %s' % ERRMSG_INVALID_NEW_SHAPE
         
-        assert np.multiply(new_shape[:]) == input.get_height() * input.get_width() * input.get_num_channel(), \
+        assert np.prod(new_shape[:]) == input.get_height() * input.get_width() * input.get_num_channel(), \
                'error: %s' % ERRMSG_SHAPES_INCONSISTENCY
                
-        new_V = np.reshape(input.get_V(), (new_shape, input.get_num_pred() + 1))
+        new_V = np.reshape(input.get_V(), np.append(new_shape, input.get_num_pred() + 1))
         
         return ImageStar(new_V, input.get_C(), input.get_d(), \
-                         input.get_pred_lb(), input.get_pred_ub,
-                         input.get_im_lb, input.get_im_ub)
+                         input.get_pred_lb(), input.get_pred_ub(),
+                         input.get_im_lb(), input.get_im_ub())
         
-    def add_constraints(self, input, p1, p2):
+    @staticmethod
+    def add_constraints(input, p1, p2):
         """
             Adds a new constraint to predicate variables of an ImageStar
             used for finding counter examples. Add a new constraint: p2 >= p1
@@ -1093,15 +1097,15 @@ class ImageStar:
             return -> [new_C, new_d] - a new predicate
         """
         
-        assert input is ImageStar, 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
+        assert input.__module__ is 'imagestar', 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
         
         new_d = input.get_V()[p2[0], p2[1], p2[2], 1] - input.get_V()[p2[0], p2[1], p2[2], 1]
         new_C = input.get_V()[p2[0], p2[1], p2[2], 1:input.get_num_pred() + 1]
         
-        new_C = np.reshape(new_c, (1, input.get_num_pred()))
+        new_C = np.reshape(new_C, (1, input.get_num_pred()))
         
-        new_C = np.vstack(input.get_C(), new_C)
-        new_C = np.vstack(input.get_d(), new_d)
+        new_C = np.vstack((input.get_C(), new_C))
+        new_d = np.vstack((input.get_d(), new_d))
         
         return new_C, new_d
         
@@ -1113,6 +1117,76 @@ class ImageStar:
         """
         
         return self.attributes[V_ID]
+        
+    def get_C(self):
+        """
+            return -> the predicate of the ImageStar
+        """
+        
+        return self.attributes[C_ID]
+        
+    def get_d(self):
+        """
+            return -> the free vector of the ImageStar
+        """
+        
+        return self.attributes[D_ID]
+        
+    def get_pred_lb(self):
+        """
+            return -> the predicate lowerbound of the ImageStar
+        """
+        
+        return self.attributes[PREDLB_ID]
+        
+    def get_pred_ub(self):
+        """
+            return -> the predicate upperbound of the ImageStar
+        """
+        
+        return self.attributes[PREDUB_ID]
+        
+    def get_im_lb(self):
+        """
+            return -> the lowerbound image of the ImageStar
+        """
+        
+        return self.attributes[IM_LB_ID]
+        
+    def get_im_ub(self):
+        """
+            return -> the upperbound image of the ImageStar
+        """
+        
+        return self.attributes[IM_UB_ID]
+    
+    def get_height(self):
+        """
+            return -> the height of the ImageStar
+        """
+        
+        return self.attributes[HEIGHT_ID]
+    
+    def get_width(self):
+        """
+            return -> the width of the ImageStar
+        """
+        
+        return self.attributes[WIDTH_ID]
+    
+    def get_num_channel(self):
+        """
+            return -> the channel of the ImageStar
+        """
+        
+        return self.attributes[NUM_CHANNEL_ID]
+    
+    def get_num_pred(self):
+        """
+            return -> the channel of the ImageStar
+        """
+        
+        return self.attributes[NUMPRED_ID]
         
 ########################## UTILS ##########################
 
