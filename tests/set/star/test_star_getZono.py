@@ -1,23 +1,36 @@
-#!/usr/bin/python3
+import unittest
+
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/star/")
+from star import *
 
-from engine.set.star import Star
-from engine.set.box import Box
-
-def main():
-    lb = np.matrix('-3; -3')
-    ub = np.matrix('2; 2')  
-
-    S = Star(lb = lb, ub = ub)
-    print('S: \n', S.__repr__())
+class TestStarGetZonot(unittest.TestCase):
+    """
+        Tests to find a zonotope bounding of a Star (an over-approximation of a Star using zonotope)
+    """
     
-    Z = S.getZono()
-    print('\nZ: \n', Z.__repr__())
+    def test_getZono(self):
+        """
+            Tests with initializing Star based on
+                lb : lower bound vector (1D numpy array)
+                ub : upper bound vector (1D numpy array)
+                
+            Output :
+                Zono ->
+                    c -> center vector (1D numpy array)
+                    V -> generator matrix (2D numpy array)
+        """
+        
+        lb = np.array([-3,  -3])
+        ub = np.array([2, 2])  
+
+        S = Star(lb, ub)
+        print('S: \n', S.__repr__())
+        
+        Z = S.getZono()
+        print('\nZ: \n', Z.__repr__())
     
 if __name__ == '__main__':
-    main()    
+    unittest.main()  

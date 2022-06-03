@@ -1,22 +1,37 @@
-#!/usr/bin/env python3
+import unittest
+
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/box")
+from box import *
 
-from engine.set.box import Box
+class TestBoxConstructor(unittest.TestCase):
+    """
+        Tests Box constructor
+    """
+    
+    def test_bounds_init(self):
+        """
+            Tests the initialization of Box with:
+                lb : lower bound vector (1D numpy array)
+                ub : upper bound vector (1D numpy array)
+            
+            Output :
+                Box ->
+                    dim -> dimension of a Box
+                    lb -> lower bound vector (1D numpy array)
+                    ub -> upper bound vector (1D numpy array)
+        """
+        dim = 2
+        lb = -np.ones(dim)
+        ub = np.ones(dim)
 
-def main():
-    lb = np.matrix('-1; -1')
-    ub = np.matrix('1; 1')
+        B = Box(lb, ub)
+        print(B.__repr__())
+        print(B.__str__())
+        B.plot()
 
-    print('lb: ', lb)
-    print('ub: ', ub)
-
-    B = Box(lb,ub)
-    print(B.__repr__())
 
 if __name__ == '__main__':
-    main()
+    unittest.main()

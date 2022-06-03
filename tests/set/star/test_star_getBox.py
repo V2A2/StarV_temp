@@ -1,29 +1,38 @@
-#!/usr/bin/python3
-"""
-Created on Tue Oct  5 16:35:49 2021
+import unittest
 
-@author: Apala
-"""
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/star")
+from star import *
 
-from engine.set.star import Star
-from engine.set.box import Box
-
-def main():
-    lb = np.matrix('49; 25; 9; 20')
-    ub = np.matrix('51; 25.2; 11; 20.2')
+class TestStarGetBox(unittest.TestCase):
+    """
+        Tests finding a box bound of a star set
+    """
     
-    S = Star(lb = lb, ub = ub)
-    print('S: \n', S.__repr__())
-    
-    B = S.getBox()
-    print('\nB: \n', B.__repr__())
-    
-    
+    def test_getBox(self):
+        """
+            Tests with initializing Star based on:
+                lb : lower bound vector (1D numpy array)
+                ub : upper bound vector (1D numpy array)
+            
+            Output :
+                Box ->
+                    dim -> dimension of a Box
+                    lb -> lower bound vector (1D numpy array)
+                    ub -> upper bound vector (1D numpy array)
+        """
+        lb = np.array([49, 25, 9, 20])
+        ub = np.array([51, 25.2, 11, 20.2])
+        
+        B1 = Box(lb, ub)
+        print(B1.__repr__())
+        
+        S = B1.toStar()
+        
+        B2 = S.getBox()
+        print(B2.__repr__())
+        
 if __name__ == '__main__':
-    main()
+    unittest.main()

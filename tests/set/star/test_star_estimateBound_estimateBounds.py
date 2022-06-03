@@ -1,43 +1,69 @@
-#!/usr/bin/python3
+import unittest
+
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/star")
+from star import *
 
-from engine.set.star import Star
-
-def main():
-    dim = 5
-    lb = -2*np.ones((dim, 1))
-    ub = 2*np.ones((dim, 1))
-
-    S = Star(lb = lb, ub = ub)
-
-    W = np.random.rand(dim, dim)
-    b = np.random.rand(dim, 1)
-
-    S1 = S.affineMap(W, b)
+class TestStarEstimateBoundEstimateBounds(unittest.TestCase):
+    """
+        Tests estimageBound() function and estimateBounds() function that 
+        estimate lower bound and upper bound vector of state variable
+    """
     
-    mins = np.empty((dim, 1))
-    maxs = np.empty((dim, 1))
-    print('estimateBound:\n')
-    for i in range(dim):
-        [mins[i], maxs[i]] = S1.estimateBound(i)
-    print('min:', mins)
-    print('max:', maxs)
+    def test_estimateBound_and_estimateBounds(self):
+        """
+            estimateBound(): 
+                Estimates lower bound and upper bound of state variable at specific index using clip method from Stanely Bak.
+            
+            estimateBounds():
+                Estimates lower bound vector and upper bound vector of state variable
+            
+            Tests with initializing Star based on:
+                lb : lower bound vector (1D numpy array)
+                ub : upper bound vector (1D numpy array)
+                
+            Output:
+                > estimateBound():
+                    np.array([
+                        lb -> lower bound
+                        ub -> upper bound
+                    ])
+                > estimateBounds():
+                    np.array([
+                        lb -> lower bound vector (1D numpy array)
+                        ub -> upper bound vector (1D numpy array)
+                    ])
+        """
+        dim = 5
+        lb = -2*np.ones(dim)
+        ub = 2*np.ones(dim)
 
-    print('\nestimateBounds:')
-    [xmin, xmax] = S1.estimateBounds()
-    print('min:', xmin)
-    print('max:', xmax)
+        S = Star(lb, ub)
 
-    if (mins != xmin).all():
-        print('(min) estimateBound() is not equivalent to estimateBounds()')
-    if (maxs != xmax).all():
-        print('(max) estimateBound() is not equivalent to estimateBounds()')
+        W = np.random.rand(dim, dim)
+        b = np.random.rand(dim)
 
+        S1 = S.affineMap(W, b)
+        
+        mins = np.empty(dim)
+        maxs = np.empty(dim)
+        print('estimateBound:\n')
+        for i in range(dim):
+            [mins[i], maxs[i]] = S1.estimateBound(i)
+        print('min:', mins)
+        print('max:', maxs)
+
+        print('\nestimateBounds:')
+        [xmin, xmax] = S1.estimateBounds()
+        print('min:', xmin)
+        print('max:', xmax)
+
+        if (mins != xmin).all():
+            print('(min) estimateBound() is not equivalent to estimateBounds()')
+        if (maxs != xmax).all():
+            print('(max) estimateBound() is not equivalent to estimateBounds()')
 
 if __name__ == '__main__':
-    main()   
+    unittest.main()

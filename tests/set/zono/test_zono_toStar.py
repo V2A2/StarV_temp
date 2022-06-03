@@ -1,37 +1,43 @@
-#!/usr/bin/python3
-"""
-Created on Fri Oct  8 17:31:53 2021
-
-@author: Apala
-"""
+import unittest
 
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/zono/")
+from zono import *
 
 
+class TestZonoToStar(unittest.TestCase):
+    """
+        Tests conversion from Zono to Star set
+    """
 
-from engine.set.zono import Zono
-
-
-def main():
+    def test_toStar(self):
+        """
+            Tests with initializing Zono (zonotope) based on:
+                c : center vector (1D numpy array)
+                V : generator matrix (2D numpy array)
+                
+            Output :
+                Star ->
+                    V -> Basis matrix (2D numpy array)
+                    C -> Predicate matrix (2D numpy array)
+                    d -> Predicate vector (1D numpy array)
+                    predicate_lb -> predicate lower bound (1D numpy array)
+                    predicate_ub -> predicate upper bound (1D numpy array)
+        """
+        c = np.array([0, 0])
+        V = np.array([[1, -1], [1, 1]])
+        
+        Z = Zono(c,V)
+        print("Initial zonotope\n")
+        print(Z.__repr__())
+        print(Z.__str__())
     
-   
-    
-    C = np.matrix('0;0')
-    V = np.matrix('1 -1; 1 1')  
-    S = Zono(C,V)
-    
-  
-    Z = S.toStar()
- 
-    print(Z)  
-   
-    
-
+        S = Z.toStar()
+        print("Star converted from zonotope\n")
+        print(S.__repr__())
+        print(S.__str__())
 
 if __name__ == '__main__':
-    main()   
+    unittest.main()

@@ -1,43 +1,35 @@
-#!/usr/bin/python3
-"""
-Created on Tue Oct  5 16:32:18 2021
-
-@author: Apala
-"""
+import unittest
 
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/star/")
+from star import *
 
-
-from engine.set.star import Star
-from engine.set.box import Box
-
-def main():
-    
-    lb = np.matrix('1;1')
-    ub = np.matrix('2;2')
-    
-   
-
-    S = Star(lb=lb, ub=ub)
-    print(S)
-    
-    E = S.isEmptySet()
-    print("Is star set empty?",E)
-    
+class TestStarIsEmptySet(unittest.TestCase):
     """
-     V = S.V
-    C = S.C
-    d = S.d
+        Tests to check if the Star set is an empty set, which refers it is an infeasible set.
+    """
 
-    S2 = Star(V, C, d)
-    print(S2)"""
-    
-    
+    def test_isEmptySet(self):
+        """
+            Tests with initializing Star based on:
+                lb : lower bound vector (1D numpy array)
+                ub : upper bound vector (1D numpy array)
+                
+            Output:
+                True -> star is an empty set
+                False -> star is a feasible set
+                else -> error code from Gurobi LP solver
+        """
+        lb = np.array([1, 1])
+        ub = np.array([2, 2])
+
+        S = Star(lb, ub)
+        print(S.__repr__())
+        print(S.__str__())
+
+        print("Is Star an empty set?", S.isEmptySet())
     
 if __name__ == '__main__':
-    main()
+    unittest.main()
