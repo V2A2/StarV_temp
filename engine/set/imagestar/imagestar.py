@@ -6,7 +6,7 @@ from gurobipy import GRB
 import sys
 import operator
         
-sys.path.insert(0, "../../../engine/set/star/")
+sys.path.insert(0, "engine/set/star/")
         
 from star import *
 
@@ -239,7 +239,7 @@ class ImageStar:
                 
                 assert (np.size(args[D_ID]) == 1) or (len(np.shape(args[D_ID])) == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
                 
-                self.attributes[NUMPRED_ID] = args[C_ID].shape[1];
+                self.attributes[NUMPRED_ID] = args[C_ID].shape[1]
                 self.attributes[C_ID] = args[C_ID].astype('float64')
                 self.attributes[D_ID] = args[D_ID].astype('float64')
                 
@@ -351,7 +351,7 @@ class ImageStar:
                     
                 self.copy_deep(S.toImageStar)
                     
-                self.attributes[IM_LB_ID] = lb_im.astype('float64')
+                self.attributes[IM_LB_ID] = im_lb.astype('float64')
                 self.attributes[IM_UB_ID] = im_ub.astype('float64')
         elif self.isempty_init(args):
             self.init_empty_imagestar()

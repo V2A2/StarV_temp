@@ -15,161 +15,188 @@ import matplotlib.colors as colors
 
 import sys
 
-sys.path.insert(0, "../../../engine/set/box/")
-sys.path.insert(0, "../../../engine/set/zono/")
+sys.path.insert(0, "engine/set/zono")
+sys.path.insert(0, "engine/set/box")
 from zono import *
 from box import *
 
 class Star:
-    # Star set class
-    # Star set defined by x = c + a[1]*v[1] + a[2]*v[2] + ... + a[n]*v[n]
-    #                       = V * b,
-    #                     V = [c v[1] v[2] ... v[n]]
-    #                     b = [1 a[1] a[2] ... a[n]]^T
-    #                     where C*a <= d, constraints on a[i]
+    # Class for representing a convex set using Star  set
     # author: Sung Woo Choi
     # date: 9/21/2021
+    
+    # Representation of a Star
+    # ====================================================================
+    # Star set defined by 
+    #   x = c + a[1]*v[1] + a[2]*v[2] + ... + a[n]*v[n]
+    #     = V * b,
+    #   where V = [c v[1] v[2] ... v[n]],
+    #         b = [1 a[1] a[2] ... a[n]]^T,
+    #         C*a <= d, constraints on a[i]
+    # ====================================================================
 
-    def __init__(obj, *args):
-                # V = np.array([]),          # basic matrix
-                # C = np.array([]),          # constraint matrix
-                # d = np.array([]),          # constraint vector
-                # pred_lb = np.array([]),    # lower bound vector of predicate variable
-                # pred_ub = np.array([]),    # upper bound vector of predicate variable
-                # state_lb = np.array([]),   # lower bound of state variables
-                # state_ub = np.array([]),   # upper bound of state variables
-                # outer_zono = np.array([]), # an outer zonotope covering this star, used for reachability of logsig and tansig networks
-                # lb = np.array([]),
-                # ub = np.array([])):
+    def __init__(self, *args):
+        """
+            Star is a tuple consisting <C, V, d>.
+            V is a basis matrix (2D numpy array) 
+            C is a constraint vector (2D numpy array)
+            d is a constraint vector (1D numpy array)
+            dim is dimension of star set (non-negative number)
+            nVar is number of variables in the constraints (non-negative number)
+            predicate_lb is lower bound vector of predicate variables (1D numpy array)
+            predicate_ub is upper bound vector of predicate variables (1D numpy array)
+            state_lb is lower bound vector of state variables (1D numpy array)
+            state_ub is upper bound vector of state variables (1D numpy array)
+            Z is an outer Zonotope convering the current star. It is used for reachability of logsig and tansig networks (Zono set)
+        """
+        from box import Box
+        from zono import Zono
         
-        #from engine.set.zono import Zono
-        #from engine.set.box import Box
+        # Initialize Star properties with empty numpy sets and zero values.
+        [self.V, self.C, self.d] = [np.array([]), np.array([]), np.array([])]
+        [self.dim, self.nVar] = [0, 0]
+        [self.predicate_lb, self.predicate_ub] = [np.array([]), np.array([])]
+        [self.state_lb, self.state_ub] = [np.array([]), np.array([])]
+        self.Z = np.array([])
 
-        if len(args) == 5:
-            V = args[0]
-            C = args[1]
-            d = args[2]
-            pred_lb = args[3]
-            pred_ub = args[4]
+        length_args = len(args)
+        if length_args != 6:
+            args = [element.astype('float64') for element in args]
             
-            state_lb = np.array([])
-            state_ub = np.array([])
+        if length_args == 7:
+            [V, C, d, pred_lb, pred_ub, state_lb, state_ub] = args
+            self.check_essential_properties(V, C, d)
+            self.check_predicate_bounds(pred_lb, pred_ub, C, d)
+            self.check_state_bounds(state_lb, state_ub, V)
             
-            lb = np.array([])
-            ub = np.array([])
-        elif len(args) == 7:
-            V = args[0]
-            C = args[1]
-            d = args[2]
-            pred_lb = args[3]
-            pred_ub = args[4]
+        elif length_args == 6:
+            [V, C, d, pred_lb, pred_ub, outer_zono] = args
+            self.check_essential_properties(V, C, d)
+            self.check_predicate_bounds(pred_lb, pred_ub, C, d)
+            self.check_outer_zono(outer_zono, V)
             
-            state_lb = args[5]
-            state_ub = args[6]
+        elif length_args == 5:
+            [V, C, d, pred_lb, pred_ub] = args
+            self.check_essential_properties(V, C, d)
+            self.check_predicate_bounds(pred_lb, pred_ub, C, d)
             
-            lb = np.array([])
-            ub = np.array([])
-        elif len(args) == 2:
-            lb = args[0]
-            ub = args[1]
+        elif length_args == 3:
+            [V, C, d] = args
+            self.check_essential_properties(V, C, d)
             
-            V = np.array([])
-            C = np.array([])
-            d = np.array([])
-            pred_lb = np.array([])
-            pred_ub = np.array([])
-            
-            state_lb = np.array([])
-            state_ub = np.array([])
-
-        assert isinstance(V, np.ndarray), 'error: basic matrix is not an ndarray'
-        assert isinstance(C, np.ndarray), 'error: constraint matrix is not an ndarray'
-        assert isinstance(d, np.ndarray), 'error: constraint vector is not an ndarray'
-        assert isinstance(pred_lb, np.ndarray), ' error: predicate lower bound is not an ndarray'
-        assert isinstance(pred_ub, np.ndarray), 'error: predicate upper bound is not an ndarray'
-        assert isinstance(state_lb, np.ndarray), 'error: state lower bound is not an ndarray'
-        assert isinstance(state_ub, np.ndarray), 'error: state upper bound is not an ndarray'
-        assert isinstance(lb, np.ndarray), 'error: lower bound vector is not an ndarray'
-        assert isinstance(ub, np.ndarray), 'error: upper bound vector is not an ndarray'
-
-        V = V.astype('float64')
-        C = C.astype('float64')
-        d = d.astype('float64')
-        lb = lb.astype('float64')
-        ub = ub.astype('float64')
-
-        if V.size and C.size and d.size:
-            assert V.shape[1] == C.shape[1] + 1, 'error: inconsistency between basic matrix and constraint matrix'
-            assert C.shape[0] == d.shape[0], 'error: inconsistency between constraint matrix and constraint vector'
-            assert d.shape[1] == 1, 'error: constraint vector should have one column'
-
-            if isinstance(outer_zono, Zono):
-                assert outer_zono.V.shape[0] == V.shape[0], 'error: inconsistent dimension between outer zonotope and star set'
-                obj.Z = outer_zono
-            else:
-                obj.Z = np.array([])
-
-            obj.V = V
-            obj.C = C
-            obj.d = d
-            obj.dim = V.shape[0]    # dimension of star set
-            obj.nVar = C.shape[1]   # number of variable in the constraints
-
-            if state_lb.size and state_ub.size:
-                assert state_lb.shape[0] == state_ub.shape[0] == V.shape[0], 'error: inconsistent dimension between lower bound and upper bound vector of state variables and matrix V'
-                assert state_lb.shape[1] == state_ub.shape[1] == 1, 'error: invalid lower bound or upper bound vector of state variables'
-                obj.state_lb = state_lb
-                obj.state_ub = state_ub
-            else:
-                obj.state_lb = np.matrix([])
-                obj.state_ub = np.matrix([])
-
-            if pred_lb.size and pred_ub.size:
-                assert pred_lb.shape[1] == pred_ub.shape[1] == 1, 'error: predicate lower- or upper-bounds vector should have one column'
-                assert pred_lb.shape[0] == pred_ub.shape[0] == C.shape[1], 'error: inconsistency between number of predicate variables and predicate lower- or upper-bounds vector'
-                obj.predicate_lb = pred_lb
-                obj.predicate_ub = pred_ub
-            else:
-                obj.predicate_lb, obj.predicate_ub = -np.ones((obj.nVar, 1)), np.ones((obj.nVar, 1))
-            return
-
-        if lb.size and ub.size:
-            assert lb.shape[0] == ub.shape[0], 'error: inconsistency between upper and lower bounds'
+        elif length_args == 2:
+            [lb, ub] = args
+            assert lb.shape == ub.shape, 'error: Inconsistent dimension between upper- and lower- bound vectors'
+            assert len(lb.shape) == len(ub.shape) == 1, 'error: Lower- and upper-bound vectors should be 1D numpy array'
             
             B = Box(lb, ub)
             S = B.toStar()
-            obj.V = S.V
-            obj.C = np.zeros((1, S.nVar)) # initiate an obvious constraint
-            obj.d = np.zeros((1, 1))
-            obj.dim = S.dim
-            obj.nVar = S.nVar
-            obj.state_lb = lb
-            obj.state_ub = ub
-            obj.predicate_lb = -np.ones((S.nVar, 1))
-            obj.predicate_ub = np.ones((S.nVar, 1))
-            obj.Z = B.toZono()
-            return
+            self.V = S.V
+            self.C = np.zeros([1, S.nVar])
+            self.d = np.zeros(1)
+            self.dim = S.dim
+            self.nVar = S.nVar
+            self.state_lb = lb
+            self.state_ub = ub
+            
+            self.predicate_lb = -np.ones(S.nVar)
+            self.predicate_ub = np.ones(S.nVar)
+            self.Z = B.toZono()         
+            
+        elif length_args == 0:
+            # create empty Star (for preallocation an array of Star)
+            pass
+        
+        else:
+            raise Exception('error: Invalid number of input arguments (should be 0, 2, 3, 5, 6, or 7)')
+        
+    def check_essential_properties(self, V, C, d):
+        """
+            Checks essential properties of star (V, C, d) before insearting to Star
+            
+            return:
+                V -> a basis matrix (2D numpy array) 
+                C -> a constraint vector (2D numpy array)
+                d -> a constraint vector (1D numpy array)
+        """
+        assert len(V.shape) == 2, 'error: Basis matrix should be 2D numpy array'
+        assert len(C.shape) == 2, 'error: Constraint matrix should be 2D numpy array'
+        assert len(d.shape) == 1, 'error: Constraint vector should be 1D numpy array'
+        
+        [nV, mV] = V.shape
+        [nC, mC] = C.shape
+        [nd] = d.shape
+        assert mV == mC + 1, 'error: Inconsistency between basic matrix and constraint matrix'
+        assert nC == nd, 'error: Inconsistency between constraint matrix and constraint vector'
+        
+        [self.V, self.C, self.d] = [V, C, d]
+        self.dim = nV
+        self.nVar = mC
+    
+    def check_predicate_bounds(self, pred_lb, pred_ub, C, d):
+        """
+            Checks predicate bounds before insearting into Star
+        """
+        if pred_lb.size > 0 and pred_ub.size > 0:
+            assert len(pred_ub.shape) == len(pred_lb.shape) == 1, \
+                'error: Predicate lower- and upper-bound vectors should be 1D numpy array'
 
-        raise Exception('error: failed to create Star set')
+            [nC, mC] = C.shape
+            [nd, n1, n2] = [d.shape[0], pred_lb.shape[0], pred_ub.shape[0]]          
+            assert n1 == n2 and n1 == mC, 'error: Inconsistency between number of predicate variables and predicate lower- or upper-bound vectors'
 
-    # check is empty set
-    def isEmptySet(obj):
+        [self.predicate_lb, self.predicate_ub] = [pred_lb, pred_ub]
+    
+    def check_state_bounds(self, state_lb, state_ub, V):
+        """
+            Checks states bounds before insearting into Star
+        """
+        if state_lb.size > 0 and state_ub.size > 0:
+            assert state_lb.size > 0 and state_ub.size > 0 and len(state_ub.shape) == len(state_lb.shape) == 1, \
+                    'error: State lower- and upper-bound vectors should be 1D numpy array'
+            [nV, mV] = V.shape
+            [n1, n2] = [state_lb.shape[0], state_ub.shape[0]]  
+            assert n1 == n2 and n1 == nV, 'error: Inconsistent dimension between lower- and upper- bound vectors of state variables and matrix V'
+        
+        [self.state_lb, self.state_ub] = [state_lb, state_ub]
+        
+    def check_outer_zono(self, outer_zono, V):
+        """
+            Checks outer zonotope before insearting into Star
+        """  
+        from zono import Zono
+        if isinstance(outer_zono, Zono):
+            assert outer_zono.V.shape[0] == V.shape[0], 'error: Inconsistent dimension between outer zonotope and star set'
+            self.Z = outer_zono
+        else:
+            assert outer_zono.size == 0, 'error: Outer zonotope is not a Zono class'
+            
+    def isEmptySet(self):
+        """
+            Checks if Star set is an empty set.
+            A Star set is an empty if and only if the predicate P(a) is infeasible.
+            
+            return:
+                2 -> True; star is an empty set
+                3 -> False; star is a feasible set
+                else -> error code from Gurobi LP solver
+        """
         # error code (m.status) description avaliable at
         # https://www.gurobi.com/documentation/9.1/refman/optimization_status_codes.html
         # parameter settings: https://www.gurobi.com/documentation/9.1/refman/parameters.html
-
-        f = np.zeros((1, obj.nVar))
+        
+        f = np.zeros(self.nVar)
         m = gp.Model()
         # prevent optimization information
         m.Params.LogToConsole = 0
         m.Params.OptimalityTol = 1e-9
-        if obj.predicate_lb.size and obj.predicate_ub.size:
-            x = m.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+        if self.predicate_lb.size and self.predicate_ub.size:
+            x = m.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
         else:
-            x = m.addMVar(shape=obj.nVar)
+            x = m.addMVar(shape=self.nVar)
         m.setObjective(f @ x, GRB.MINIMIZE)
-        A = sp.csr_matrix(obj.C)
-        b = np.array(obj.d).flatten()
+        A = sp.csr_matrix(self.C)
+        b = self.d
         m.addConstr(A @ x <= b)     
         m.optimize()
 
@@ -180,27 +207,33 @@ class Star:
         else:
             raise Exception('error: exitflat = %d' % (m.status))
 
-    # check if a star set contain a point
-    def contains(obj, s):
-        # @s: a star point (column vector)
-        # return: = 1 star set contains s; = 0 star set does not contain s; else error code
-        assert s.shape[0] == obj.dim, 'error: dimension mismatch'
-        assert s.shape[1] == 1, 'error: invalid star point'
-        f = np.zeros((1, obj.nVar))
+    def contains(self, s):
+        """
+            Checks if a Star set contains a point.
+            s : a star point (1D numpy array)
+            
+            return :
+                1 -> a star set contains a point, s 
+                0 -> a star set does not contain a point, s
+                else -> error code from Gurobi LP solver
+        """
+        assert len(s.shape) == 1, 'error: Invalid star point. It should be 1D numpy array'
+        assert s.shape[0] == self.dim, 'error: Dimension mismatch'     
+        
+        f = np.zeros(self.nVar)
         m = gp.Model()
         # prevent optimization information
         m.Params.LogToConsole = 0
         m.Params.OptimalityTol = 1e-9
-        if obj.predicate_lb.size and obj.predicate_ub.size:
-            x = m.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+        if self.predicate_lb.size and self.predicate_ub.size:
+            x = m.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
         else:
-            x = m.addMVar(shape=obj.nVar)
+            x = m.addMVar(shape=self.nVar)
         m.setObjective(f @ x, GRB.MINIMIZE)
-        A = sp.csr_matrix(obj.C)
-        b = np.array(obj.d).flatten()
-        m.addConstr(A @ x <= b)
-        Ae = sp.csr_matrix(obj.V[:, 1:obj.nVar + 1])
-        be = s.flatten() - obj.V[:, 0]
+        C = sp.csr_matrix(self.C)
+        m.addConstr(C @ x <= self.d)
+        Ae = sp.csr_matrix(self.V[:, 1 : self.nVar + 1])
+        be = s - self.V[:, 0]
         m.addConstr(Ae @ x == be)
         m.optimize()
 
@@ -210,287 +243,377 @@ class Star:
             return False
         else:
             raise Exception('error: exitflat = %d' % (m.status))
-
         
-    # sampling a star set
-    def sample(obj, N):
-        # @N: number of points in the sample
-        # return: V: a set of at most N sampled points in the star set
-        from engine.set.box import Box
-        assert N >= 1, 'error: invalid number of samples'
+    def sample(self, N):
+        """
+            Samples number of points in the feasible Star set 
+            N : number of points in the sample
+            
+            return :
+                V -> a set of at most N sampled points in the star set 
+        """
+        from box import Box
+        assert N >= 1, 'error: Invalid number of samples'
 
-        B = obj.getBox()
+        B = self.getBox()
         if not isinstance(B, Box):
             V = np.array([])
         else:
-            lb = B.lb
-            ub = B.ub
+            [lb, ub] = B.getRanges()
+
             V1 = np.array([])
-            for i in range(obj.dim):
+            for i in range(self.dim):
                 X = (ub[i] - lb[i]) * np.random.rand(2*N, 1) + lb[i]
-                V1 = np.hstack((V1, X)) if V1.size else X
+                V1 = np.hstack([V1, X]) if V1.size else X
 
-            V = np.array([])
+            V = np.array([]).reshape(0, self.dim)
             for i in range(2*N):
-                v1 = V1[i,:].reshape(-1,1)
-                if obj.contains(v1):
-                    V = np.hstack((V, v1)) if V.size else v1
+                v1 = V1[i,:]
+                if self.contains(v1):
+                    V = np.vstack([V, v1])
 
+            V = V.T
             if V.shape[1] >= N:
                 V = V[:, 0:N]
+
         return V
 
-    # affine mapping of star set S = Wx + b
-    def affineMap(obj, W, b = np.array([])):
-        # @W: mapping matrix
-        # @b: mapping vector
-        # return a new star set
+    def affineMap(self, W, b = np.array([])):
+        """
+            Performs affine mapping of a Star: S = W * x + b
 
-        assert isinstance(W, np.ndarray), 'error: weight matrix is not an matrix'
-        assert isinstance(b, np.ndarray), 'error: bias vector is not an matrix'
-        assert W.shape[1] == obj.dim, 'error: inconsistent dimension between weight matrix with the zonotope dimension'
-
-        W = np.matrix(W.astype('float64'))
-        b = np.matrix(b.astype('float64'))
+            W : affine mapping matrix, 2D numpy array
+            b : affine mapping vector, 1D numpy array
+            return -> a new Star
+        """
+        assert isinstance(W, np.ndarray), 'error: Weight matrix is not a numpy ndarray'
+        assert isinstance(b, np.ndarray), 'error: Bias vector is not a numpy ndarray'
+        assert W.shape[1] == self.dim, 'error: Inconsistent dimension between weight matrix with the Star dimension'
+        assert len(W.shape) == 2, 'error: Weight matrix should be 2D numpy array'
 
         if b.size:
-            assert b.shape[1] == 1, 'error: bias vector should be a column vector'
-            assert W.shape[0] == b.shape[0], 'error: inconsistency between weight matrix and bias vector'
-
-            new_V = W @ obj.V
+            assert len(b.shape) == 1, 'error: Bias vector should be 1D numpy array'
+            assert W.shape[0] == b.shape[0], 'error: Inconsistency between weight matrix and bias vector'
+            new_V = W @ self.V
             new_V[:, 0] += b
         else:
-            new_V = W @ obj.V
+            new_V = W @ self.V
 
-        if obj.Z:
-            new_Z = obj.Z.affineMap(W, b)
+        if self.Z:
+            from zono import Zono
+            if isinstance(self.Z, Zono):
+                new_Z = self.Z.affineMap(W, b)
+            else:
+                raise Exception('error: Outter zono is not Zono set')
         else:
             new_Z = np.array([])
 
-        return Star(new_V, obj.C, obj.d, obj.predicate_lb, obj.predicate_ub, outer_zono = new_Z)
+        return Star(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
 
-    # New Minkowski Sum
-    def Sum(obj, X):
-        # @X: another star with the same dimension
-        # return: new star = (obj (+) X), where (+) is Minkowski Sum
+    def MinkowskiSum(self, X):
+        """
+            Operates Minkowski Sum
+            X : another Star with smake dimension
+            
+            return -> new Star = (self (+) X), where (+) is Minkowski Sum
+        """
+        assert self.dim == X.dim, 'error: Inconsistent dimension between current Star and input Star (X)'
+        
+        V1 = self.V[:, 1:]
+        V2 = X.V[:, 1:]
+        new_c = self.V[:, 0] + X.V[:, 1]
+        
+        # check if two Star have the same number of constraints
+        if self.C.shape == X.C.shape and np.linalg.norm(self.C - X.C) + np.linalg.norm(self.d - X.d) < 0.0001 :
+            V3 = V1 + V2
+            new_V = np.hstack([new_c, V3])
+            return Star(new_V, self.C, self.d)
+        
+        else:
+            V3 = np.hstack([V1, V2])
+            new_V = np.hstack([new_c, V3])
+            new_C = scipy.linalg.block_diag(self.C, X.C)
+            new_d = np.hstack([self.d, X.d])
+            return Star(new_V, new_C, new_d)
+        
+    def Sum(self, X):
+        """
+            Operates new Minkowski Sum (used for Recurrent Layer reachability)
+            X : another star with same dimension
+            
+            return -> new Star = (self (+) X), where (+) is Minkowski Sum
+        """
+        assert isinstance(X, Star), 'error: Input variable X is not a Star'
 
-        assert isinstance(X, Star), 'error: input set X is not a Star'
-        assert X.dim == obj.dim, 'error: inconsistent dimension between object star and input star X'
-
-        V1 = obj.V[:, 1:]
+        V1 = self.V[:, 1:]
         V2 = X.V[:, 1:]
 
-        V3 = np.hstack((V1, V2))
-        new_c = (obj.V[:, 0] + X.V[:, 0]).reshape(-1, 1)
-        new_V = np.hstack((new_c, V3))
-        new_C = scipy.linalg.block_diag(obj.C, X.C)
-        new_d = np.vstack((obj.d, X.d))
+        V3 = np.hstack([V1, V2])
+        new_c = (self.V[:, 0] + X.V[:, 0]).reshape(-1, 1)
+        new_V = np.hstack([new_c, V3])
+        new_C = scipy.linalg.block_diag(self.C, X.C)
+        new_d = np.hstack([self.d, X.d])
 
-        if obj.predicate_lb.size and X.predicate_lb.size:
-            new_predicate_lb = np.vstack((obj.predicate_lb, X.predicate_lb))
-            new_predicate_ub = np.vstack((obj.predicate_ub, X.predicate_ub))
+        if self.predicate_lb.size and X.predicate_lb.size:
+            new_predicate_lb = np.hstack([self.predicate_lb, X.predicate_lb])
+            new_predicate_ub = np.hstack([self.predicate_ub, X.predicate_ub])
             return Star(new_V, new_C, new_d, new_predicate_lb, new_predicate_ub)
         return Star(new_V, new_C, new_d)
 
-#------------------check if this function is working--------------------------------------------
-    # intersection with a half space: H(x) := Hx <= g
-    def intersectHalfSpace(obj, H, g):
-        # @H: HalfSpace matrix
-        # @g: HalfSpace vector
-        # return a new star set with more constraints
-
-        assert isinstance(H, np.matrix), 'error: halfspace matrix is not an matrix'
-        assert isinstance(g, np.matrix), 'error: halfspace vector is not an matrix'
-        assert g.shape[1] == 1, 'error: halfspace vector should have one column'
-        assert H.shape[0] == g.shape[0], 'inconsistent dimension between halfspace matrix and halfspace vector'
-        assert H.shape[1] == obj.dim, 'inconsistent dimension between halfspace and star set'
-
+    def intersectHalfSpace(self, H, g):
+        """
+            Computes intersection of a Star with a half space:
+            H(x) := Hx <= g
+            
+            H : halfspace matrix
+            g : halfspace vector
+            
+            return -> a new Star set with more constraints
+        """
+        assert isinstance(H, np.ndarray), 'error: Halfspace matrix is not a numpy ndarray'
+        assert isinstance(g, np.ndarray), 'error: Halfspace vector is not a numpy ndarray'
+        assert len(g.shape) == 1, 'error: Halfspace vector should be 1D numpy array'
+        assert H.shape[0] == g.shape[0], 'error: Inconsistent dimension between halfspace matrix and halfspace vector'
+        assert H.shape[1] == self.dim, 'error: Inconsistent dimension between halfspace and star set'
+        
         H = H.astype('float64')
         g = g.astype('float64')
 
-        m = obj.V.shape[1]
-        C1 = H @ obj.V[:, 1:m]
-        d1 = g - H @ obj.V[:, 0]
+        m = self.V.shape[1]
+        C1 = H @ self.V[:, 1:m]
+        d1 = g - H @ self.V[:, 0]
 
-        new_C = np.vstack((obj.C, C1))
-        new_d = np.vstack((obj.d, d1))
+        new_C = np.vstack([self.C, C1])
+        new_d = np.hstack([self.d, d1])
 
-        S = Star(obj.V, new_C, new_d, obj.predicate_lb, obj.predicate_ub)
+        S = Star(self.V, new_C, new_d, self.predicate_lb, self.predicate_ub)
 
-        if S.isEmptySet:
-            S = np.matrix([])
+        if S.isEmptySet():
+            S = np.array([])
         return S
+    
+    # def scalarMap(self, alp_max)
+    # def convexHull(self, X)
+    # def convexHull_with_linearTransform(self, L)
+    # def orderReduction_box(self, n_max)
 
     # convert to ImageStar set
-    def toImageStar(obj, height, width, numChannel):
+    def toImageStar(self, height, width, numChannel):
         # @height: height of ImageStar
         # @width: width of ImageStar
         # @numChannel: number of channels in ImageStar
         # return: ImageStar
         from engine.set.imagestar import ImageStar
 
-        assert obj.dim == height*width*numChannel, 'error: inconsistent dimension in the ImageStar and the original Star set'
+        assert self.dim == height*width*numChannel, 'error: inconsistent dimension in the ImageStar and the original Star set'
 
-        new_V = np.array(obj.V).reshape(obj.nVar + 1, numChannel, height, width)
-        return ImageStar(new_V, obj.C, obj.d, obj.predicate_lb, obj.predicate_ub)
+        new_V = np.array(self.V).reshape(self.nVar + 1, numChannel, height, width)
+        return ImageStar(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
 
-    # find a box bounding a star
-    def getBox(obj):
-        from engine.set.box import Box
+    def getBox(self):
+        """
+            Finds a box bound of a star set
+            
+            return -> created Box
+        """
+        from box import Box
 
-        if obj.C.size == 0 or obj.d.size == 0 :
+        if self.C.size == 0 or self.d.size == 0 :
             # star set is just a vector (one point)
-            lb = obj.V[:, 0]
-            ub = obj.V[:, 0]
+            lb = self.V[:, 0]
+            ub = self.V[:, 0]
             return Box(lb, ub)
         else:
             # star set is a set
-            if obj.state_lb.size and obj.state_ub.size:
-                return Box(obj.state_lb, obj.state_ub)
+            if self.state_lb.size and self.state_ub.size:
+                return Box(self.state_lb, self.state_ub)
             else:
-                lb = np.zeros((obj.dim, 1))
-                ub = np.zeros((obj.dim, 1))
+                lb = np.zeros(self.dim)
+                ub = np.zeros(self.dim)
 
-                for i in range(obj.dim):
-                    f = obj.V[i, 1:obj.nVar + 1]
+                for i in range(self.dim):
+                    f = self.V[i, 1:self.nVar + 1]
                     if (f == 0).all():
-                        lb[i] = obj.V[i, 0]
-                        ub[i] = obj.V[i, 0]
+                        lb[i] = self.V[i, 0]
+                        ub[i] = self.V[i, 0]
                     else:
                         lb_ = gp.Model()
                         lb_.Params.LogToConsole = 0
                         lb_.Params.OptimalityTol = 1e-9
-                        if obj.predicate_lb.size and obj.predicate_ub.size:
-                            x = lb_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+                        if self.predicate_lb.size and self.predicate_ub.size:
+                            x = lb_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
                         else:
-                            x = lb_.addMVar(shape=obj.nVar)
+                            x = lb_.addMVar(shape=self.nVar)
                         lb_.setObjective(f @ x, GRB.MINIMIZE)
-                        C = sp.csr_matrix(obj.C)
-                        d = np.array(obj.d).flatten()
-                        lb_.addConstr(C @ x <= d)
+                        C = sp.csr_matrix(self.C)
+                        lb_.addConstr(C @ x <= self.d)
                         lb_.optimize()
 
                         if lb_.status == 2:
-                            lb[i] = lb_.objVal + obj.V[i, 0]
+                            lb[i] = lb_.objVal + self.V[i, 0]
                         else:
-                            raise Exception('error: cannot find an optimal solution, exitflag = %d' % (lb_.status))
+                            raise Exception('error: Cannot find an optimal solution, exitflag = %d' % (lb_.status))
 
                         ub_ = gp.Model()
                         ub_.Params.LogToConsole = 0
                         ub_.Params.OptimalityTol = 1e-9
-                        if obj.predicate_lb.size and obj.predicate_ub.size:
-                            x = ub_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+                        if self.predicate_lb.size and self.predicate_ub.size:
+                            x = ub_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
                         else:
-                            x = ub_.addMVar(shape=obj.nVar)
+                            x = ub_.addMVar(shape=self.nVar)
                         ub_.setObjective(f @ x, GRB.MAXIMIZE)
-                        C = sp.csr_matrix(obj.C)
-                        d = np.array(obj.d).flatten()
-                        ub_.addConstr(C @ x <= d)
+                        C = sp.csr_matrix(self.C)
+                        ub_.addConstr(C @ x <= self.d)
                         ub_.optimize()
 
                         if ub_.status == 2:
-                            ub[i] = ub_.objVal + obj.V[i, 0]
+                            ub[i] = ub_.objVal + self.V[i, 0]
                         else:
-                            raise Exception('error: cannot find an optimal solution, exitflag = %d' % (ub_.status))
+                            raise Exception('error: Cannot find an optimal solution, exitflag = %d' % (ub_.status))
 
                 if lb.size == 0 or ub.size == 0:
                     return np.array([])
                 else:
                     return Box(lb, ub)
+                
+    # def getMaxIndexes(self):
+    # def getBoxFast(self):
+    
+    #------------------------------- Need to Test this function ---------------------------------#
+    def getPredicateBounds(self):
+        """
+            Gets bounds of predicate variables
+            
+            return:
+                np.array([
+                    pred_lb -> predicate lower bound vector (1D numpy array)
+                    pred_ub -> predicate upper bound vector (1D numpy array)
+                ])
+        """
+        if self.predicate_lb.size and self.predicate_ub.size:
+            return np.array([self.predicate_lb, self.predicate_ub.size])
+        
+        else:
+            center = np.zeros([self.dim, 1])
+            I = np.eye(self.dim)
+            V = np.hstack([center, I])
+            S = Star(V, self.C, self.d)
+            return S.getRanges()
 
-    #find range of a state at specific position
-    def getRange(obj, index):
-        # @index: position of the state
-        # range: min and max values of x[index]
+    def getRange(self, index):
+        """
+            Finds range of a state at specific position
+            
+            return: 
+                np.array([
+                    xmin -> min value of x[index]
+                    xmax -> max value of x[index]
+                ])
+        """
         assert isinstance(index, int), 'error: index is not an integer'
-        if index < 0 or index >= obj.dim:
+        if index < 0 or index >= self.dim:
             raise Exception('error: invalid index')
 
-        f = obj.V[index, 1:obj.nVar + 1]
+        f = self.V[index, 1:self.nVar + 1]
         if (f == 0).all():
-            xmin = obj.V[index, 0]
-            xmax = obj.V[index, 0]
+            xmin = self.V[index, 0]
+            xmax = self.V[index, 0]
         else:
             min_ = gp.Model()
             min_.Params.LogToConsole = 0
             min_.Params.OptimalityTol = 1e-9
-            if obj.predicate_lb.size and obj.predicate_ub.size:
-                x = min_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+            if self.predicate_lb.size and self.predicate_ub.size:
+                x = min_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
             else:
-                x = min_.addMVar(shape=obj.nVar)
+                x = min_.addMVar(shape=self.nVar)
             min_.setObjective(f @ x, GRB.MINIMIZE)
-            C = sp.csr_matrix(obj.C)
-            d = np.array(obj.d).flatten()
-            min_.addConstr(C @ x <= d)
+            C = sp.csr_matrix(self.C)
+            min_.addConstr(C @ x <= self.d)
             min_.optimize()
 
             if min_.status == 2:
-                xmin = min_.objVal + obj.V[index, 0]
+                xmin = min_.objVal + self.V[index, 0]
             else:
                 raise Exception('error: cannot find an optimal solution, exitflag = %d' % (min_.status))
 
             max_ = gp.Model()
             max_.Params.LogToConsole = 0
             max_.Params.OptimalityTol = 1e-9
-            if obj.predicate_lb.size and obj.predicate_ub.size:
-                x = max_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+            if self.predicate_lb.size and self.predicate_ub.size:
+                x = max_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
             else:
-                x = max_.addMVar(shape=obj.nVar)
+                x = max_.addMVar(shape=self.nVar)
             max_.setObjective(f @ x, GRB.MAXIMIZE)
-            C = sp.csr_matrix(obj.C)
-            d = np.array(obj.d).flatten()
-            max_.addConstr(C @ x <= d)
+            C = sp.csr_matrix(self.C)
+            max_.addConstr(C @ x <= self.d)
             max_.optimize()
 
             if max_.status == 2:
-                xmax = max_.objVal + obj.V[index, 0]
+                xmax = max_.objVal + self.V[index, 0]
             else:
                 raise Exception('error: cannot find an optimal solution, exitflag = %d' % (max_.status))
 
-        return [xmin, xmax]
+        return np.array([xmin, xmax])
 
-    # get min
-    def getMin(obj, index, lp_solver = 'gurobi'):
-        # @index: position of the state
-        # xmin: min value of x[index]
-
+    def getMin(self, index, lp_solver = 'gurobi'):
+        """
+            Finds lower bound state variable using LP solver
+            index : position of the state
+            lp_solver :
+                - 'gurobi' : Gurobi linear programming solver
+                
+            return : 
+                xmin -> min value of x[index]
+                    
+        """
         # assert isinstance(index, int), 'error: index is not an integer'
         assert isinstance(lp_solver, str), 'error: lp_solver is not a string'
 
-        if index < 0 or index >= obj.dim:
+        if index < 0 or index >= self.dim:
             raise Exception('error: invalid index')
 
-        f = obj.V[index, 1:obj.nVar + 1]
+        f = self.V[index, 1:self.nVar + 1]
         if (f == 0).all():
-            xmin = obj.V[index, 0]
+            xmin = self.V[index, 0]
         else:
             if lp_solver == 'gurobi':
                 min_ = gp.Model()
                 min_.Params.LogToConsole = 0
                 min_.Params.OptimalityTol = 1e-9
-                if obj.predicate_lb.size and obj.predicate_ub.size:
-                    x = min_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+                if self.predicate_lb.size and self.predicate_ub.size:
+                    x = min_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
                 else:
-                    x = min_.addMVar(shape=obj.nVar)
+                    x = min_.addMVar(shape=self.nVar)
                 min_.setObjective(f @ x, GRB.MINIMIZE)
-                C = sp.csr_matrix(obj.C)
-                d = np.array(obj.d).flatten()
-                min_.addConstr(C @ x <= d)
+                C = sp.csr_matrix(self.C)
+                min_.addConstr(C @ x <= self.d)
                 min_.optimize()
 
                 if min_.status == 2:
-                    xmin = min_.objVal + obj.V[index, 0]
+                    xmin = min_.objVal + self.V[index, 0]
                 else:
                     raise Exception('error: cannot find an optimal solution, exitflag = %d' % (min_.status))
             else:
                 raise Exception('error: unknown lp solver, should be gurobi')
         return xmin
 
-#------------------check if this function is working--------------------------------------------
-    # get mins
-    def getMins(obj, map, par_option = 'single', dis_option = '', lp_solver = 'gurobi'):
-        # @map: an array of indexes
-        # xmin: min values of x[indexes]
+    def getMins(self, map, par_option = 'single', dis_option = '', lp_solver = 'gurobi'):
+        """
+            Finds lower bound vector of state variable using LP solver
+            map : an array of indexes
+            par_option :
+                - 'single' : normal for loop
+                - 'parallel' : parallel computation of for loop
+            dis_option :
+                - 'display' : display the process comments
+                - else : no comments
+            lp_solver :
+                - 'gurobi' : Gurobi linear programming solver
+                
+            return : 
+                xmin : min values of x[map]
+                    -> lower bound vector (1D numpy array)
+        """
 
         assert isinstance(map, np.ndarray), 'error: map is not a numpy ndarray'
         assert isinstance(par_option, str), 'error: par_option is not a string'
@@ -498,11 +621,11 @@ class Star:
         assert isinstance(lp_solver, str), 'error: lp_solver is not a string'
 
         n = len(map)
-        xmin = np.zeros((n, 1))
+        xmin = np.zeros(n)
         if not len(par_option) or par_option == 'single':   # get Mins using single core
             reverseStr = ''
             for i in range(n):
-                xmin[i] = obj.getMin(map[i], lp_solver)
+                xmin[i] = self.getMin(map[i], lp_solver)
 # implement display option----------------------------------------------------------------------------------------
                 # if dis_option = 'display':
 
@@ -513,8 +636,9 @@ class Star:
                 # reverseStr = repmat(sprintf('\b'), 1, length(msg));
 # implement multiprogramming for parallel computation of bounds----------------------------------------------------
         elif par_option == 'parallel':  # get Mins using multiple cores
-            f = obj.V[map, 1:obj.nVar + 1]
-            V1 = obj.V[map, 0]
+            print('warning: Parallel computation is not implemented yet!!! => computing with normal for loop')
+            f = self.V[map, 1:self.nVar + 1]
+            V1 = self.V[map, 0]
             for i in range (n):
                 if f[i, :].sum() == 0:
                     xmin[i] = V1[i, 0]
@@ -523,77 +647,91 @@ class Star:
                         min_ = gp.Model()
                         min_.Params.LogToConsole = 0
                         min_.Params.OptimalityTol = 1e-9
-                        if obj.predicate_lb.size and obj.predicate_ub.size:
-                            x = min_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+                        if self.predicate_lb.size and self.predicate_ub.size:
+                            x = min_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
                         else:
-                            x = min_.addMVar(shape=obj.nVar)
+                            x = min_.addMVar(shape=self.nVar)
                         min_.setObjective(f[i, :] @ x, GRB.MINIMIZE)
-                        C = sp.csr_matrix(obj.C)
-                        d = np.array(obj.d).flatten()
-                        min_.addConstr(C @ x <= d)
+                        C = sp.csr_matrix(self.C)
+                        min_.addConstr(C @ x <= self.d)
                         min_.optimize()
 
                         if min_.status == 2:
-                            xmin[i] = min_.objVal + V1[i, 0]
+                            xmin[i] = min_.objVal + V1[i]
                         else:
                             raise Exception('error: cannot find an optimal solution, exitflag = %d' % (min_.status))
         else:
             raise Exception('error: unknown lp solver, should be gurobi')
         return xmin
 
-    # get max
-    def getMax(obj, index, lp_solver = 'gurobi'):
-        # @index: position of the state
-        # xmax: max value of x[index]
-
+    def getMax(self, index, lp_solver = 'gurobi'):
+        """
+            Finds upper bound state variable using LP solver
+            index : position of the state
+            lp_solver :
+                - 'gurobi' : Gurobi linear programming solver
+                
+            return : 
+                xmax -> max value of x[index]
+        """
         # assert isinstance(index, int), 'error: index is not an integer'
         assert isinstance(lp_solver, str), 'error: lp_solver is not a string'
 
-        if index < 0 or index >= obj.dim:
+        if index < 0 or index >= self.dim:
             raise Exception('error: invalid index')
 
-        f = obj.V[index, 1:obj.nVar + 1]
+        f = self.V[index, 1:self.nVar + 1]
         if (f == 0).all():
-            xmax = obj.V[index, 0]
+            xmax = self.V[index, 0]
         else:
             if lp_solver == 'gurobi':
                 max_ = gp.Model()
                 max_.Params.LogToConsole = 0
                 max_.Params.OptimalityTol = 1e-9
-                if obj.predicate_lb.size and obj.predicate_ub.size:
-                    x = max_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+                if self.predicate_lb.size and self.predicate_ub.size:
+                    x = max_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
                 else:
-                    x = max_.addMVar(shape=obj.nVar)
+                    x = max_.addMVar(shape=self.nVar)
                 max_.setObjective(f @ x, GRB.MAXIMIZE)
-                C = sp.csr_matrix(obj.C)
-                d = np.array(obj.d).flatten()
-                max_.addConstr(C @ x <= d)
+                C = sp.csr_matrix(self.C)
+                max_.addConstr(C @ x <= self.d)
                 max_.optimize()
                 if max_.status == 2:
-                    xmax = max_.objVal + obj.V[index, 0]
+                    xmax = max_.objVal + self.V[index, 0]
                 else:
                     raise Exception('error: cannot find an optimal solution, exitflag = %d' % (max_.status))
             else:
                 raise Exception('error: unknown lp solver, should be gurobi')
         return xmax
 
-#------------------check if this function is working--------------------------------------------
-    # get maxs
-    def getMaxs(obj, map, par_option = 'single', dis_option = '', lp_solver = 'gurobi'):
-        # @map: an array of indexes
-        # xmax: max values of x[indexes]
-
+    def getMaxs(self, map, par_option = 'single', dis_option = '', lp_solver = 'gurobi'):
+        """
+            Finds upper bound vector of state variable using LP solver
+            map : an array of indexes
+            par_option :
+                - 'single' : normal for loop
+                - 'parallel' : parallel computation of for loop
+            dis_option :
+                - 'display' : display the process comments
+                - else : no comments
+            lp_solver :
+                - 'gurobi' : Gurobi linear programming solver
+                
+            return : 
+                xmax : max values of x[map]
+                    -> lower bound vector (1D numpy array)
+        """
         assert isinstance(map, np.ndarray), 'error: map is not a ndarray'
         assert isinstance(par_option, str), 'error: par_option is not a string'
         assert isinstance(dis_option, str), 'error: dis_option is not a string'
         assert isinstance(lp_solver, str), 'error: lp_solver is not a string'
 
         n = len(map)
-        xmax = np.zeros((n, 1))
+        xmax = np.zeros(n)
         if not len(par_option) or par_option == 'single':   # get Mins using single core
             reverseStr = ''
             for i in range(n):
-                xmax[i] = obj.getMax(map[i], lp_solver)
+                xmax[i] = self.getMax(map[i], lp_solver)
 # implement display option----------------------------------------------------------------------------------------
                 # if dis_option = 'display':
 
@@ -604,8 +742,9 @@ class Star:
                 # reverseStr = repmat(sprintf('\b'), 1, length(msg));
 # implement multiprogramming for parallel computation of bounds----------------------------------------------------
         elif par_option == 'parallel':  # get Mins using multiple cores
-            f = obj.V[map, 1:obj.nVar + 1]
-            V1 = obj.V[map, 0]
+            print('warning: Parallel computation is not implemented yet!!! => computing with normal for loop')
+            f = self.V[map, 1:self.nVar + 1]
+            V1 = self.V[map, 0]
             for i in range (n):
                 if f[i, :].sum() == 0:
                     xmax[i] = V1[i, 0]
@@ -614,172 +753,274 @@ class Star:
                         max_ = gp.Model()
                         max_.Params.LogToConsole = 0
                         max_.Params.OptimalityTol = 1e-9
-                        if obj.predicate_lb.size and obj.predicate_ub.size:
-                            x = max_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+                        if self.predicate_lb.size and self.predicate_ub.size:
+                            x = max_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
                         else:
-                            x = max_.addMVar(shape=obj.nVar)
+                            x = max_.addMVar(shape=self.nVar)
                         max_.setObjective(f[i, :] @ x, GRB.MAXIMIZE)
-                        C = sp.csr_matrix(obj.C)
-                        d = np.array(obj.d).flatten()
-                        max_.addConstr(C @ x <= d)
+                        C = sp.csr_matrix(self.C)
+                        max_.addConstr(C @ x <= self.d)
                         max_.optimize()
                         if max_.status == 2:
-                            xmax[i] = max_.objVal + V1[i, 0]
+                            xmax[i] = max_.objVal + V1[i]
                         else:
                             raise Exception('error: cannot find an optimal solution, exitflag = %d' % (max_.status))
         else:
             raise Exception('error: unknown lp solver, should be gurobi')
         return xmax
-
-    # get lower bound and upper bound vector of the state variables
-    def getRanges(obj):
-        if not obj.isEmptySet():
-            n = obj.dim
-            lb = np.zeros((n, 1))
-            ub = np.zeros((n, 1))
-            for i in range(n):
-                [lb[i], ub[i]] = obj.getRange(i)
+    
+    #------------------------------- Need to Test this function ---------------------------------#
+    def resetRow(self, map):
+        """
+            Resets a row of a star set to zero
+            map : an array of indexes
+            
+            return: 
+                xmax -> max values of x[indexes] 
+        """
+        from zono import zono
+        
+        V1 = self.V
+        V1[map, :] = 0
+        if isinstance(self.Z, Zono):
+            c2 = self.Z.c
+            c2[map] = 0
+            V2 = self.Z.V
+            V2[map, :] = 0
+            new_Z = Zono(c2, V2)
         else:
-            lb = np.matrix([])
-            ub = np.matrix([])
-        return [lb, ub]
+            new_Z = []
+        return Star(V1, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
+    
+    #------------------------------- Need to Test this function ---------------------------------#
+    def sclaeRow(self, map, gamma):
+        """
+            Scales a row of a star set
+            map : an array of indexes
+            gamma : scale value
+        """
+        from zono import Zono
+        
+        V1 = self.V
+        V1[map, :] = gamma*V1[map, :]
+        if isinstance(self.Z, Zono):
+            c2 = self.Z.c
+            c2[map] = gamma*c2
+            V2 = self.Z.V
+            V2[map, :] = gamma*V2[map, :]
+            new_Z = Zono(c2, V2)
+        else:
+            new_Z = []
+        return Star(V1, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
 
-    # find range of a state at specific position
-    def estimateRange(obj, index):
-        # @index: estimateRange(obj, index)
-        # range: min and max values of x[index]
+    def getRanges(self):
+        """
+            Computes lower bound vector and upper bound vector of the state variables
+            
+            return: 
+                np.array([
+                    lb -> lower bound vector of x[index]
+                    ub -> upper bound vector of x[index]
+                ])
+        """
+        if not self.isEmptySet():
+            n = self.dim
+            lb = np.zeros(n)
+            ub = np.zeros(n)
+            for i in range(n):
+                [lb[i], ub[i]] = self.getRange(i)
+        else:
+            lb = np.array([])
+            ub = np.array([])
+        return np.array([lb, ub])
 
-        if index < 0 or index >= obj.dim:
+    def estimateRange(self, index):
+        """
+            Estimates range of a state variable at specific position
+            index : position of the state
+            
+            return: 
+                    np.array([
+                        min -> min values of x[index]
+                        max -> max values of x[index]
+                    ])
+        """
+        if index < 0 or index >= self.dim:
             raise Exception('error: invalid index')
             
-        if obj.predicate_lb.size and obj.predicate_ub.size:
-            f = obj.V[index, :]
+        if self.predicate_lb.size and self.predicate_ub.size:
+            f = self.V[index, :]
             xmin = f.item(0)
             xmax = f.item(0)
-            for i in range(obj.nVar+1):
+            for i in range(1, self.nVar+1):
                 if f.item(i) >= 0:
-                    xmin = xmin + f.item(i) * obj.predicate_lb[i-1]
-                    xmax = xmax + f.item(i) * obj.predicate_ub[i-1]
+                    xmin = xmin + f.item(i) * self.predicate_lb[i-1]
+                    xmax = xmax + f.item(i) * self.predicate_ub[i-1]
                 else:
-                    xmin = xmin + f.item(i) * obj.predicate_ub[i-1]
-                    xmax = xmax + f.item(i) * obj.predicate_lb[i-1]
+                    xmin = xmin + f.item(i) * self.predicate_ub[i-1]
+                    xmax = xmax + f.item(i) * self.predicate_lb[i-1]
         else:
             print('The ranges of predicate variables are unknown to estimate the ranges of the states, we solve LP optimization to get the exact range')
-            [xmin, xmax] = obj.getRange(index)
-        return [xmin, xmax]
+            [xmin, xmax] = self.getRange(index)
+        return np.array([xmin, xmax])
 
-    # estimate ranges using clip method from Stanley Bak
-    # it is slower than the for-loop method
-    def estimateRanges(obj):
-        # return: lb: lower bound vector
-        #         ub: upper bound vector
+    def estimateRanges(self):
+        """
+            Estimates ranges of a state variable using clip method from Stanley Bak
+            It is slower than the for-loop method
+            
+            index : position of the state
+            
+            return: 
+                    np.array([
+                        lb -> lower bound vector of x[index]
+                        ub -> upper bound vector of x[index]
+                    ])
+        """
+        pos_mat = np.where(self.V > 0, self.V, 0)
+        neg_mat = np.where(self.V < 0, self.V, 0)
 
-        pos_mat = np.where(obj.V > 0, obj.V, 0)
-        neg_mat = np.where(obj.V < 0, obj.V, 0)
+        xmin1 = pos_mat @ np.hstack([0, self.predicate_lb])
+        xmax1 = pos_mat @ np.hstack([0, self.predicate_ub])
+        xmin2 = neg_mat @ np.hstack([0, self.predicate_ub])
+        xmax2 = neg_mat @ np.hstack([0, self.predicate_lb])
+        
+        lb = self.V[:, 0] + xmin1 + xmin2
+        ub = self.V[:, 0] + xmax1 + xmax2
+        return np.array([lb, ub])
 
-        xmin1 = pos_mat @ np.vstack((0, obj.predicate_lb))
-        xmax1 = pos_mat @ np.vstack((0, obj.predicate_ub))
-        xmin2 = neg_mat @ np.vstack((0, obj.predicate_ub))
-        xmax2 = neg_mat @ np.vstack((0, obj.predicate_lb))
-
-        lb = obj.V[:, 0] + xmin1 + xmin2
-        ub = obj.V[:, 0] + xmax1 + xmax2
-        return [lb, ub]
-
-    # estimate range using clip
-    # from Stanley Bak
-    def estimateBound(obj, index):
-        # @index: position of the state
-        # range: min and max values of x[index]
-
-        if index < 0 or index >= obj.dim:
+    def estimateBound(self, index):
+        """
+            Estimates lower bound and upper bound vector of state variable at specific index using clip method from Stanely Bak.
+            index : position of the state
+            
+            return : 
+                np.array([
+                    xmin -> lower bound vector of x[index]
+                    xmax -> lower bound vector of x[index]
+                ])
+        """
+        if index < 0 or index >= self.dim:
             raise Exception('error: invalid index')
 
-        f = obj.V[index, 1:obj.nVar + 1]
+        f = self.V[index, 1:self.nVar + 1]
 
-        pos_mat = np.matrix(np.where(f > 0, f, 0))
-        neg_mat = np.matrix(np.where(f < 0, f, 0))
+        pos_mat = np.array(np.where(f > 0, f, 0))
+        neg_mat = np.array(np.where(f < 0, f, 0))
 
-        xmin1 = pos_mat @ obj.predicate_lb
-        xmax1 = pos_mat @ obj.predicate_ub
-        xmin2 = neg_mat @ obj.predicate_ub
-        xmax2 = neg_mat @ obj.predicate_lb
+        xmin1 = pos_mat @ self.predicate_lb
+        xmax1 = pos_mat @ self.predicate_ub
+        xmin2 = neg_mat @ self.predicate_ub
+        xmax2 = neg_mat @ self.predicate_lb
 
-        xmin = obj.V[index, 0] + xmin1 + xmin2
-        xmax = obj.V[index, 0] + xmax1 + xmax2
-        return [xmin, xmax]
+        xmin = self.V[index, 0] + xmin1 + xmin2
+        xmax = self.V[index, 0] + xmax1 + xmax2
+        return np.array([xmin, xmax])
 
-    # quickly estimate lower bound and upper bound vector of state variable
-    def estimateBounds(obj):
-        from engine.set.zono import Zono
-        if isinstance(obj.Z, Zono):
-            [lb, ub] = obj.Z.getBounds()
+    def estimateBounds(self):
+        """
+            Quickly estimates lower bound and upper bound vector of state variable
+            
+            return : 
+                np.array([
+                    lb -> lower bound vector of x[index]
+                    ub -> lower bound vector of x[index]
+                ])
+        """
+        from zono import Zono
+        if isinstance(self.Z, Zono):
+            [lb, ub] = self.Z.getBounds()
         else:
-            n = obj.dim
-            lb = np.zeros((n,1))
-            ub = np.zeros((n,1))
+            n = self.dim
+            lb = np.zeros(n)
+            ub = np.zeros(n)
 
             for i in range(n):
-                [lb[i], ub[i]] = obj.estimateRange(i)
-        return [lb, ub]
+                [lb[i], ub[i]] = self.estimateRange(i)
+        return np.array([lb, ub])
+    
+    #------------------------------- Need to Test this function ---------------------------------#
+    def get_max_point_candidates(self):
+        """
+            Estimates quickly max-point candidates
+            
+            return:
+                an array of indexes of max-point candidates
+        """
+        
+        [lb, ub] = self.estimateRanges()
+        # [a, id] = max(lb);
+        # b = (ub >= a);
+        # if sum(b) == 1
+        #     max_cands = id;
+        # else
+        #     max_cands = find(b);
+        # end
+        
 
-#------------------check if this function is working--------------------------------------------
-    # check if an index is larger than other
-    def is_p1_larger_than_p2(obj, p1_id, p2_id):
-        # @p1_id: index of point 1
-        # @p2_id: index of point 2
-        # return = 1 if there exists the case that p1 >= p2
-        #          2 if there is no case that p1 >= p2
+    def is_p1_larger_than_p2(self, p1_id, p2_id):
+        """
+            Checks if an index of a point in Star is larger than an index of other point.
+            This function is based on Star.is_p1_larger_than_p2() function.
+        
+            p1_id : index of point 1
+            p2_id : index of point 2
+            
+            return:
+                True -> if there exists the case that p1 >= p2
+                False -> if there is no case that p1 >= p2
+        """
+        if p1_id < 0 or p1_id >= self.dim:
+            raise Exception('error: Invalid index for point 1')
 
-        if p1_id < 0 or p1_id >= obj.dim:
-            raise Exception('error: invalid index for point 1')
+        if p2_id < 0 or p2_id >= self.dim:
+            raise Exception('error: Invalid index for point 2')
 
-        if p2_id < 0 or p2_id >= obj.dim:
-            raise Exception('error: invalid index for point 2')
+        d1 = self.V[p1_id, 0] - self.V[p2_id, 0]
+        C1 = self.V[p2_id, 1:self.nVar+1] - self.V[p1_id, 1:self.nVar+1]
 
-        d1 = obj.V[p1_id, 0] - obj.V[p2_id, 0]
-        C1 = obj.V[p2_id, 1:obj.nVar+1] - obj.V[p1_id, 1:obj.nVar+1]
-
-        new_C = np.vstack((obj.C, C1))
-        new_d = np.vstack((obj.d, d1))
-        S = Star(obj.V, new_C, new_d, obj.predicate_lb, obj.predicate_ub)
+        new_C = np.vstack([self.C, C1])
+        new_d = np.hstack([self.d, d1])
+        S = Star(self.V, new_C, new_d, self.predicate_lb, self.predicate_ub)
 
         if S.isEmptySet():
-            return 0
+            return False
         else:
-            return 1
+            return True
 
 #------------------check if this function is working--------------------------------------------
     # find a oriented box bound a star
-    def getOrientedBox(obj):
+    def getOrientedBox(self):
         # !!! the sign of SVD result is different compared to Matalb
-        # problem in shape=obj.dim => obj.nVar
-        # bounds are correct but cannot getRanges
-        [Q, sdiag, vh] = np.linalg.svd(obj.V[:, 1:obj.nVar + 1])
-        Z = np.zeros((len(sdiag), obj.nVar))
-        np.fill_diagonal(Z, sdiag)
-        S = Z * vh
-        print('Q: ', Q)
-        print('Z: ', Z)
+        # The sign of U and V is different from Matlab
+        # bounds are correct from Gurobi
+        # [Q, sdiag, vh] = np.linalg.svd(self.V[:, 1:])
+        U, S, V = np.linalg.svd(self.V[:, 1:])
+        print('U: ', U)
         print('S: ', S)
-        print('P: ', vh)
+        print('V: ', V)
+        Z = np.zeros([len(S), self.nVar])
+        print('Z: ', Z)
+        np.fill_diagonal(Z, S)
+        print('Z: ', Z)
+        
+        S = Z @ V
+        print('S: ', S)
+        
+        lb = np.zeros(self.dim)
+        ub = np.zeros(self.dim)
 
-        lb = np.zeros((obj.dim, 1))
-        ub = np.zeros((obj.dim, 1))
-
-        for i in range(obj.dim):
+        for i in range(self.dim):
             f = S[i, :]
 
             min_ = gp.Model()
             min_.Params.LogToConsole = 0
             min_.Params.OptimalityTol = 1e-9
-            x = min_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+            x = min_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
             min_.setObjective(f @ x, GRB.MINIMIZE)
-            C = sp.csr_matrix(obj.C)
-            d = np.array(obj.d).flatten()
-            min_.addConstr(C @ x <= d)
+            C = sp.csr_matrix(self.C)
+            min_.addConstr(C @ x <= self.d)
             min_.optimize()
-
 
             if min_.status == 2:
                 lb[i] = min_.objVal
@@ -789,11 +1030,10 @@ class Star:
             max_ = gp.Model()
             max_.Params.LogToConsole = 0
             max_.Params.OptimalityTol = 1e-9
-            x = max_.addMVar(shape=obj.nVar, lb=obj.predicate_lb, ub=obj.predicate_ub)
+            x = max_.addMVar(shape=self.nVar, lb=self.predicate_lb, ub=self.predicate_ub)
             max_.setObjective(f @ x, GRB.MAXIMIZE)
-            C = sp.csr_matrix(obj.C)
-            d = np.array(obj.d).flatten()
-            max_.addConstr(C @ x <= d)
+            C = sp.csr_matrix(self.C)
+            max_.addConstr(C @ x <= self.d)
             max_.optimize()
 
             if max_.status == 2:
@@ -803,36 +1043,55 @@ class Star:
 
         print('lb: ', lb)
         print('ub: ', ub)
-        new_V = np.hstack((obj.V[:, 0], Q))
-        new_C = np.vstack((np.eye(obj.dim), -np.eye(obj.dim)))
-        new_d = np.vstack((ub, -lb))
+        print('self.V[:, 0]: ', self.V[:, 0])
+        print('U: ', U)
+        print('-U: ', -U)
+        new_V = np.hstack([self.V[:, 0].reshape(-1, 1), -U])
+        new_C = np.vstack([np.eye(self.dim), -np.eye(self.dim)])
+        new_d = np.hstack([ub, -lb])
+        
+        print('new_V: ', new_V)
+        print('new_C: ', new_C)
+        print('new_d: ', new_d)
         return Star(new_V, new_C, new_d)
 
-    def getZono(obj):
-        from engine.set.box import Box
-        B = obj.getBox()
+    def getZono(self):
+        """
+            Finds a zonotope bounding of a Star (an over-approximation of a Star using zonotope)
+            
+            return -> created Zono
+        """   
+        from box import Box
+        B = self.getBox()
         if isinstance(B, Box):
             return B.toZono()
         else:
             return np.array([])
 
-    # def plot(obj):
-    #     assert obj.dim <= 2 and obj.dim > 0, 'error: only 2D star can be plotted'
+    # def concatenate(self, X):
+    # def concatenate_with_vector(self, v):
+    # def get_hypercube_hull():
+    # def get_convex_hull():
+    # def concatenateStars():
+    # def merge_stars()
+    
+    # def plot(self):
+    #     assert self.dim <= 2 and self.dim > 0, 'error: only 2D star can be plotted'
 
-    #     P = pc.Polytope(obj.C, obj.d)
-    # def plot(obj):
-    #     # A = obj.V[:, 1:]
-    #     A = np.vstack((obj.C, obj.V[:, 1:]))
-    #     b = np.vstack((obj.d, obj.V[:, 0]))
+    #     P = pc.Polytope(self.C, self.d)
+    # def plot(self):
+    #     # A = self.V[:, 1:]
+    #     A = np.vstack((self.C, self.V[:, 1:]))
+    #     b = np.vstack((self.d, self.V[:, 0]))
     #     # halfspaces
-    #     # H = np.hstack((obj.C, -obj.d))
+    #     # H = np.hstack((self.C, -self.d))
     #     H = np.hstack((A, -b))
     #     print('H: \n', H)
     #     # feasible point
-    #     p = np.array(obj.V[:, 0]).flatten()
+    #     p = np.array(self.V[:, 0]).flatten()
     #     p = np.zeros(3)
     #     print('p: ', p)
-    #     print('V: \n', obj.V)
+    #     print('V: \n', self.V)
     #     hs = scipy.spatial.HalfspaceIntersection(H, p)
     #     verts = hs.intersections
     #     hull = scipy.spatial.ConvexHull(verts)
@@ -860,37 +1119,38 @@ class Star:
     #         ax.add_collection3d(f)
     #     plt.show()
 
-    def __str__(obj):
-        from engine.set.zono import Zono
-        print('class: %s' % obj.__class__)
-        print('V: [%sx%s %s]' % (obj.V.shape[0], obj.V.shape[1], obj.V.dtype))
-        print('C: [%sx%s %s]' % (obj.C.shape[0], obj.C.shape[1], obj.C.dtype))
-        print('dim: %s' % obj.dim)
-        print('nVar: %s' % obj.nVar)
-        if obj.predicate_lb.size:
-            print('predicate_lb: [%sx%s %s]' % (obj.predicate_lb.shape[0], obj.predicate_lb.shape[1], obj.predicate_lb.dtype))
+    def __str__(self):
+        from zono import Zono
+        print('class: %s' % self.__class__)
+        print('V: [shape: %s | type: %s]' % (self.V.shape, self.V.dtype))
+        print('C: [shape: %s | type: %s]' % (self.C.shape, self.C.dtype))
+        print('dim: %s' % self.dim)
+        print('nVar: %s' % self.nVar)
+        if self.predicate_lb.size:
+            print('predicate_lb: [shape: %s | type: %s]' % (self.predicate_lb.shape, self.predicate_lb.dtype))
         else:
             print('predicate_lb: []')
-        if obj.predicate_ub.size:
-            print('predicate_ub: [%sx%s %s]' % (obj.predicate_ub.shape[0], obj.predicate_ub.shape[1], obj.predicate_ub.dtype))
+        if self.predicate_ub.size:
+            print('predicate_ub: [shape: %s | type: %s]' % (self.predicate_ub.shape, self.predicate_ub.dtype))
         else:
             print('predicate_ub: []')
-        if obj.state_lb.size:
-            print('state_lb: [%sx%s %s]' % (obj.state_lb.shape[0], obj.state_lb.shape[1], obj.state_lb.dtype))
+        if self.state_lb.size:
+            print('state_lb: [shape: %s | type: %s]' % (self.state_lb.shape, self.state_lb.dtype))
         else:
             print('state_lb: []')
-        if obj.state_ub.size:
-            print('state_ub: [%sx%s %s]' % (obj.state_ub.shape[0], obj.state_ub.shape[1], obj.state_ub.dtype))
+        if self.state_ub.size:
+            print('state_ub: [shape: %s | type: %s]' % (self.state_ub.shape, self.state_ub.dtype))
         else:
             print('state_ub: []')
-        if isinstance(obj.Z, Zono):
+        if isinstance(self.Z, Zono):
             print('Z: [1x1 Zono]')
         else:
             print('Z: []')
         return '\n'
 
-    def __repr__(obj):
-        from engine.set.zono import Zono
-        if isinstance(obj.Z, Zono):
-            return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npred_lb: %s \npred_ub: %s \nstate_lb: %s \nstate_ub: %s\nZ: %s" % (obj.__class__, obj.V, obj.C, obj.d, obj.dim, obj.nVar, obj.predicate_lb, obj.predicate_ub, obj.state_lb, obj.state_ub, obj.Z.__class__)
-        return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npred_lb: %s \npred_ub: %s \nstate_lb: %s \nstate_ub: %s" % (obj.__class__, obj.V, obj.C, obj.d, obj.dim, obj.nVar, obj.predicate_lb, obj.predicate_ub, obj.state_lb, obj.state_ub)
+    def __repr__(self):
+        from zono import Zono
+        if isinstance(self.Z, Zono):
+            return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npred_lb: %s \npred_ub: %s \nstate_lb: %s \nstate_ub: %s\nZ: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub, self.Z.__class__)
+        else:
+            return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npred_lb: %s \npred_ub: %s \nstate_lb: %s \nstate_ub: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub)

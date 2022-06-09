@@ -1,38 +1,48 @@
-#!/usr/bin/python3
-"""
-Created on Tue Oct  5 16:35:49 2021
+import unittest
 
-@author: Apala
-"""
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/star/")
+from star import *
 
-from engine.set.star import Star
-
-def main():
-    lb = np.matrix('1; 1')
-    ub = np.matrix('2; 2')
+class TestStarAffineMap(unittest.TestCase):
+    """
+        Tests affine mapping of Star
+    """
     
-    S = Star(lb = lb, ub = ub)
-    print('S: ', S.__repr__())
+    def test_affineMap(self):
+        """
+            Test affine mapping -> W * Star + b
+        
+            W : affine maping scale (weight matrix)
+            b : affine maping offset (bias vector)
+            
+            Tests with initializing Star based on:
+                lb : lower bound vector (1D numpy array)
+                ub : upper bound vector (1D numpy array)
+                
+            Output:
+                Star ->
+                    V -> basis matrix (2D numpy array)
+                    C -> predicate matrix (2D numpy array)
+                    d -> predicate vector (1D numpy array)
+                    predicate_lb -> predicate lower bound vector (1D numpy array)
+                    predicate_ub -> predicate upper bound vector (1D numpy array)
+        """
+        lb = np.array([1, 1])
+        ub = np.array([2, 2])
+    
+        S = Star(lb, ub)
+        print("Initial Star set\n")
+        print(S.__repr__())
      
-    V = S.V
-    C = S.C
-    d = S.d
+        W = np.array([[1, -1], [1, 1]])
+        b = np.array([0.5, 0.5])
+        
+        am_S = S.affineMap(W, b)
+        print("Affine mapped Star set\n")
+        print(am_S.__repr__())    
 
-    S2 = Star(V, C, d)
-    print('\nS2: ', S2.__repr__())
-    
-    W = np.matrix('1 -1; 1 1')
-    b = np.matrix('0.5; 0.5')
-    
-    Sa = S2.affineMap(W, b)
-    print('\nSa: ', Sa.__repr__())    
-
-    
 if __name__ == '__main__':
-    main()
+    unittest.main()
