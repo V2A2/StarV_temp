@@ -346,10 +346,9 @@ class ImageStar:
                 lb = args[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 ub = args[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 
-                #TODO: Star returns 'can't create Star set' error because StarV Star constructor initialization does not correspond to the implementation in NNV 
                 S = Star(lb, ub)
                     
-                self.copy_deep(S.toImageStar)
+                self.copy_deep(S.toImageStar(lb_shape[0], lb_shape[1], (lb_shape[2] if len(lb_shape) == 3 else 1)))
                     
                 self.attributes[IM_LB_ID] = im_lb.astype('float64')
                 self.attributes[IM_UB_ID] = im_ub.astype('float64')
@@ -1014,6 +1013,8 @@ class ImageStar:
         new_C = np.vstack((self.attributes[C_ID], C1))
         new_d = np.vstack((self.attributes[D_ID], d1))
         
+        print(self.attributes[V_ID].shape)
+        
         S = Star(self.attributes[V_ID], new_C, new_d, self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
 
         if S.isEmptySet():
@@ -1240,3 +1241,6 @@ class ImageStar:
     
     def is_scalar_attribute(self, attribute_id):
         return attribute_id in self.scalar_attributes_ids
+    
+    def get_attribute(self, i):
+        return self.attributes[i]

@@ -1,14 +1,6 @@
 import unittest
 
-import sys
-
 from test_inputs.sources import *
-
-sys.path.insert(0, "../../../engine/set/imagestar/")
-from imagestar import *
-
-sys.path.insert(0, "../../../tests/test_utils/")
-from utils import *
 
 import numpy as np
 import mat73

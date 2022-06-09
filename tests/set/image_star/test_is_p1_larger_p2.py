@@ -1,12 +1,6 @@
 import unittest
 
-import sys
-
 from test_inputs.sources import *
-
-sys.path.insert(0, "../../../engine/set/")
-
-from imagestar import *
 
 class TestImageStarIsP1LargerP2(unittest.TestCase):
     """
@@ -26,6 +20,8 @@ class TestImageStarIsP1LargerP2(unittest.TestCase):
             input -> valid input
             local_index -> valid output bounds
         """
+    
+        raise NotImplementedError
     
         test_V = np.reshape(read_csv_data(sources[IS_P1_LARGER_P2_INIT][V_ID]), (28, 28, 1, 785))
         test_C = np.reshape(read_csv_data(sources[IS_P1_LARGER_P2_INIT][C_ID]), (1, 784))

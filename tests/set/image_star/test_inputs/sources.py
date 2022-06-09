@@ -64,185 +64,193 @@ ATTACKPIXNUM_OUTPUT_ID = 5
 GETRANGES_OUTPUT_ID = 5
 UPDATERANGES_OUTPUT_ID = 5
 
+import sys
+
+sys.path.insert(0, "engine/set/imagestar/")
+from imagestar import *
+
+sys.path.insert(0, "tests/test_utils/")
+from utils import *
+
 import numpy as np
 import mat73
 
 sources = {
         CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
             ],
         CONSTRUCTOR_BOUNDS_INIT : [
-                "test_inputs/fmnist_img/test_lb.mat",
-                "test_inputs/fmnist_img/test_ub.mat"
+                "tests/set/image_star/test_inputs/fmnist_img/test_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_ub.mat"
             ],
         EVALUATION_INIT : [
-                "test_inputs/test_eval_input.mat",
-                "test_inputs/test_eval_output.mat"
+                "tests/set/image_star/test_inputs/test_eval_input.mat",
+                "tests/set/image_star/test_inputs/test_eval_output.mat"
             ],
         AFFINEMAP_INIT : [
-                "test_inputs/imgstar_input/test_V.mat",
-                "test_inputs/imgstar_input/test_C.mat",
-                "test_inputs/imgstar_input/test_d.mat",
-                "test_inputs/imgstar_input/test_predicate_lb.mat",
-                "test_inputs/imgstar_input/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/imgstar_input/test_V.mat",
+                "tests/set/image_star/test_inputs/imgstar_input/test_C.mat",
+                "tests/set/image_star/test_inputs/imgstar_input/test_d.mat",
+                "tests/set/image_star/test_inputs/imgstar_input/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/imgstar_input/test_predicate_ub.mat",
                 
-                "test_inputs/test_affineMap_scale.mat",
-                "test_inputs/test_affineMap_offset.mat",
+                "tests/set/image_star/test_inputs/test_affineMap_scale.mat",
+                "tests/set/image_star/test_inputs/test_affineMap_offset.mat",
                 
-                "test_inputs/test_affineMap_output.mat"
+                "tests/set/image_star/test_inputs/test_affineMap_output.mat"
             ],
         TO_STAR_INIT : [
-                "test_inputs/fmnist_img/test_lb.mat",
-                "test_inputs/fmnist_img/test_ub.mat"
+                "tests/set/image_star/test_inputs/fmnist_img/test_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_ub.mat"
             ],
         IS_EMPTY_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat"
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat"
             ],
         CONTAINS_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_contains_true_input.mat"
+                "tests/set/image_star/test_inputs/test_contains_true_input.mat"
             ],
         PROJECT2D_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_point1.mat",
-                "test_inputs/test_point2.mat"
+                "tests/set/image_star/test_inputs/test_point1.mat",
+                "tests/set/image_star/test_inputs/test_point2.mat"
             ],
         GETRANGE_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_get_range_input.mat",
-                "test_inputs/test_get_range_output.mat"
+                "tests/set/image_star/test_inputs/test_get_range_input.mat",
+                "tests/set/image_star/test_inputs/test_get_range_output.mat"
             ],
         ESTIMATE_RANGE_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_estimate_range_input.mat",
-                "test_inputs/test_estimate_range_output.mat"
+                "tests/set/image_star/test_inputs/test_estimate_range_input.mat",
+                "tests/set/image_star/test_inputs/test_estimate_range_output.mat"
             ],
         ESTIMATE_RANGES_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_estimate_ranges_output.mat"
+                "tests/set/image_star/test_inputs/test_estimate_ranges_output.mat"
             ],
         GET_RANGES_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_get_ranges_output.mat"
+                "tests/set/image_star/test_inputs/test_get_ranges_output.mat"
             ],
         UPDATE_RANGES_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_update_ranges_output.mat"
+                "tests/set/image_star/test_inputs/test_update_ranges_output.mat"
             ],
         GET_NUM_ATTACK_PIXELS_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_get_num_attacked_pixels_output.mat"
+                "tests/set/image_star/test_inputs/test_get_num_attacked_pixels_output.mat"
             ],
         GET_LOCAL_POINTS_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_get_local_points_input.mat",
-                "test_inputs/test_get_local_points_output.mat"
+                "tests/set/image_star/test_inputs/test_get_local_points_input.mat",
+                "tests/set/image_star/test_inputs/test_get_local_points_output.mat"
             ],
         GET_LOCAL_BOUND_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_get_local_bound_input.mat",
-                "test_inputs/test_get_local_bound_output.mat"
+                "tests/set/image_star/test_inputs/test_get_local_bound_input.mat",
+                "tests/set/image_star/test_inputs/test_get_local_bound_output.mat"
             ],
         GET_LOCAL_MAX_INDEX_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_get_local_max_index_input.mat",
-                "test_inputs/test_get_local_max_index_output.mat",
+                "tests/set/image_star/test_inputs/test_get_local_max_index_input.mat",
+                "tests/set/image_star/test_inputs/test_get_local_max_index_output.mat",
                 
-                "test_inputs/imgstar_local_max_index/test_V.mat",
-                "test_inputs/imgstar_local_max_index/test_C.mat",
-                "test_inputs/imgstar_local_max_index/test_d.mat",
-                "test_inputs/imgstar_local_max_index/test_predicate_lb.mat",
-                "test_inputs/imgstar_local_max_index/test_predicate_ub.mat",
-                "test_inputs/imgstar_local_max_index/test_im_lb.mat",
-                "test_inputs/imgstar_local_max_index/test_im_ub.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_V.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_C.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_d.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_im_lb.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_im_ub.mat",
                 
-                "test_inputs/test_get_local_max_index_input_candidates.mat",
-                "test_inputs/test_get_local_max_index_output_candidates.mat"
+                "tests/set/image_star/test_inputs/test_get_local_max_index_input_candidates.mat",
+                "tests/set/image_star/test_inputs/test_get_local_max_index_output_candidates.mat"
             ],
         GET_LOCAL_MAX_INDEX2_INIT : [
-                "test_inputs/imgstar_local_max_index/test_V.mat",
-                "test_inputs/imgstar_local_max_index/test_C.mat",
-                "test_inputs/imgstar_local_max_index/test_d.mat",
-                "test_inputs/imgstar_local_max_index/test_predicate_lb.mat",
-                "test_inputs/imgstar_local_max_index/test_predicate_ub.mat",
-                "test_inputs/imgstar_local_max_index/test_im_lb.mat",
-                "test_inputs/imgstar_local_max_index/test_im_ub.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_V.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_C.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_d.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_im_lb.mat",
+                "tests/set/image_star/test_inputs/imgstar_local_max_index/test_im_ub.mat",
                 
-                "test_inputs/test_get_local_max_index2_input.mat",
-                "test_inputs/test_get_local_max_index2_output.mat"
+                "tests/set/image_star/test_inputs/test_get_local_max_index2_input.mat",
+                "tests/set/image_star/test_inputs/test_get_local_max_index2_output.mat"
             ],
         IS_P1_LARGER_P2_INIT : [
-                "test_inputs/fmnist_img/test_V.mat",
-                "test_inputs/fmnist_img/test_C.mat",
-                "test_inputs/fmnist_img/test_d.mat",
-                "test_inputs/fmnist_img/test_predicate_lb.mat",
-                "test_inputs/fmnist_img/test_predicate_ub.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_V.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_C.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_d.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_lb.mat",
+                "tests/set/image_star/test_inputs/fmnist_img/test_predicate_ub.mat",
                 
-                "test_inputs/test_is_p1_larger_p2_input.mat",
-                "test_inputs/test_is_p1_larger_p2_output.mat"
+                "tests/set/image_star/test_inputs/test_is_p1_larger_p2_input.mat",
+                "tests/set/image_star/test_inputs/test_is_p1_larger_p2_output.mat"
                 ]
     }
 
