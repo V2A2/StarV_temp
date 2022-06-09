@@ -15,8 +15,10 @@ import matplotlib.colors as colors
 
 import sys
 
+sys.path.insert(0, "engine/set/imagestar")
 sys.path.insert(0, "engine/set/zono")
 sys.path.insert(0, "engine/set/box")
+from imagestar import *
 from zono import *
 from box import *
 
@@ -184,6 +186,9 @@ class Star:
         # error code (m.status) description avaliable at
         # https://www.gurobi.com/documentation/9.1/refman/optimization_status_codes.html
         # parameter settings: https://www.gurobi.com/documentation/9.1/refman/parameters.html
+        
+        if not (self.V.size and self.C.size and self.d.size):
+            return 2
         
         f = np.zeros(self.nVar)
         m = gp.Model()
@@ -397,17 +402,20 @@ class Star:
     # def convexHull_with_linearTransform(self, L)
     # def orderReduction_box(self, n_max)
 
-    # convert to ImageStar set
     def toImageStar(self, height, width, numChannel):
-        # @height: height of ImageStar
-        # @width: width of ImageStar
-        # @numChannel: number of channels in ImageStar
-        # return: ImageStar
-        from engine.set.imagestar import ImageStar
+        """
+            Converts current Star to ImageStar set
+            height : height of ImageStar
+            width : width of ImageStar
+            numChannel : number of channels in ImageStar
+            
+            return -> ImageStar
+        """
+        from imagestar import ImageStar
 
         assert self.dim == height*width*numChannel, 'error: inconsistent dimension in the ImageStar and the original Star set'
-
-        new_V = np.array(self.V).reshape(self.nVar + 1, numChannel, height, width)
+        
+        new_V = np.reshape(self.V, (height, width, self.nVar + 1))
         return ImageStar(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
 
     def getBox(self):

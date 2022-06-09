@@ -1098,7 +1098,8 @@ class ImageStar:
             return -> [new_C, new_d] - a new predicate
         """
         
-        assert input.__module__ is 'imagestar', 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
+        # assert input.__module__ is 'imagestar', 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
+        assert isinstance(input, ImageStar), 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
         
         new_d = input.get_V()[p2[0], p2[1], p2[2], 1] - input.get_V()[p2[0], p2[1], p2[2], 1]
         new_C = input.get_V()[p2[0], p2[1], p2[2], 1:input.get_num_pred() + 1]
