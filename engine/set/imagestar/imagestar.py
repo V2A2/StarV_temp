@@ -117,73 +117,73 @@ CUSTOM_SOLVER_ARGS_NUM = 4
 
 
 class ImageStar:
-    # Class for representing set of images using Star set
-    # An image can be attacked by bounded noise. An attacked image can
-    # be represented using an ImageStar Set
-    # author: Mykhailo Ivashchenko
-    # date: 2/14/2022
-
-    #=================================================================%
-    #   a 3-channels color image is represented by 3-dimensional array 
-    #   Each dimension contains a h x w matrix, h and w is the height
-    #   width of the image. h * w = number of pixels in the image.
-    #   *** A gray image has only one channel.
-    #
-    #   Problem: How to represent a disturbed(attacked) image?
-    #   
-    #   Use a center image (a matrix) + a disturbance matrix (positions
-    #   of attacks and bounds of corresponding noises)
-    #
-    #   For example: Consider a 4 x 4 (16 pixels) gray image 
-    #   The image is represented by 4 x 4 matrix:
-    #               IM = [1 1 0 1; 0 1 0 0; 1 0 1 0; 0 1 1 1]
-    #   This image is attacked at pixel (1,1) (1,2) and (2,4) by bounded
-    #   noises:     |n1| <= 0.1, |n2| <= 0.2, |n3| <= 0.05
-    #
-    #
-    #   Lower and upper noises bounds matrices are: 
-    #         LB = [-0.1 -0.2 0 0; 0 0 0 -0.05; 0 0 0 0; 0 0 0 0]
-    #         UB = [0.1 0.2 0 0; 0 0 0 0.05; 0 0 0 0; 0 0 0 0]
-    #   The lower and upper bounds matrices also describe the position of 
-    #   attack.
-    #
-    #   Under attack we have: -0.1 + 1 <= IM(1,1) <= 1 + 0.1
-    #                         -0.2 + 1 <= IM(1,2) <= 1 + 0.2
-    #                            -0.05 <= IM(2,4) <= 0.05
-    #
-    #   To represent the attacked image we use IM, LB, UB matrices
-    #   For multi-channel image we use multi-dimensional array IM, LB, UB
-    #   to represent the attacked image. 
-    #   For example, for an attacked color image with 3 channels we have
-    #   IM(:, :, 1) = IM1, IM(:,:,2) = IM2, IM(:,:,3) = IM3
-    #   LB(:, :, 1) = LB1, LB(:,:,2) = LB2, LB(:,:,3) = LB3
-    #   UB(:, :, 1) = UB1, UB(:,:,2) = UB2, UB(:,:,3) = UB3
-    #   
-    #   The image object is: image = ImageStar(IM, LB, UB)
-    #=================================================================
-
-    # 2D representation of an ImageStar
-    # ====================================================================
-    #                   Definition of Star2D
-    # 
-    # A 2D star set S is defined by: 
-    # S = {x| x = V[0] + a[1]*V[1] + a[2]*V[2] + ... + a[n]*V[n]
-    #           = V * b, V = {c V[1] V[2] ... V[n]}, 
-    #                    b = [1 a[1] a[2] ... a[n]]^T                                   
-    #                    where C*a <= d, constraints on a[i]}
-    # where, V[0], V[i] are 2D matrices with the same dimension, i.e., 
-    # V[i] \in R^{m x n}
-    # V[0] : is called the center matrix and V[i] is called the basic matrix 
-    # [a[1]...a[n] are called predicate variables
-    # C: is the predicate constraint matrix
-    # d: is the predicate constraint vector
-    # 
-    # The notion of Star2D is more general than the original Star set where
-    # the V[0] and V[i] are vectors. 
-    # 
-    # Dimension of Star2D is the dimension of the center matrix V[0]
-    # 
-    # ====================================================================
+    """Class for representing set of images using Star set
+     An image can be attacked by bounded noise. An attacked image can
+     be represented using an ImageStar Set
+     author: Mykhailo Ivashchenko
+     date: 2/14/2022
+    
+    =================================================================\n
+       A 3-channels color image is represented by 3-dimensional array 
+       Each dimension contains a h x w matrix, h and w is the height
+       width of the image. h * w = number of pixels in the image.
+       *A gray image has only one channel.
+    
+       Problem: How to represent a disturbed(attacked) image?
+       
+       Use a center image (a matrix) + a disturbance matrix (positions
+       of attacks and bounds of corresponding noises)
+    
+       For example: Consider a 4 x 4 (16 pixels) gray image 
+       The image is represented by 4 x 4 matrix:
+                   IM = [1 1 0 1; 0 1 0 0; 1 0 1 0; 0 1 1 1]
+       This image is attacked at pixel (1,1) (1,2) and (2,4) by bounded
+       noises:     |n1| <= 0.1, |n2| <= 0.2, |n3| <= 0.05
+    
+    
+       Lower and upper noises bounds matrices are: 
+             LB = [-0.1 -0.2 0 0; 0 0 0 -0.05; 0 0 0 0; 0 0 0 0]
+             UB = [0.1 0.2 0 0; 0 0 0 0.05; 0 0 0 0; 0 0 0 0]
+       The lower and upper bounds matrices also describe the position of 
+       attack.
+    
+       Under attack we have: -0.1 + 1 <= IM(1,1) <= 1 + 0.1
+                             -0.2 + 1 <= IM(1,2) <= 1 + 0.2
+                                -0.05 <= IM(2,4) <= 0.05
+    
+       To represent the attacked image we use IM, LB, UB matrices
+       For multi-channel image we use multi-dimensional array IM, LB, UB
+       to represent the attacked image. 
+       For example, for an attacked color image with 3 channels we have
+       IM(:, :, 1) = IM1, IM(:,:,2) = IM2, IM(:,:,3) = IM3
+       LB(:, :, 1) = LB1, LB(:,:,2) = LB2, LB(:,:,3) = LB3
+       UB(:, :, 1) = UB1, UB(:,:,2) = UB2, UB(:,:,3) = UB3
+       
+       The image object is: image = ImageStar(IM, LB, UB)
+    =================================================================\n
+    
+    **2D representation of an ImageStar**
+    =================================================================\n
+                       Definition of Star2D
+     
+     A 2D star set S is defined by: 
+     S = {x| x = V[0] + a[1]*V[1] + a[2]*V[2] + ... + a[n]*V[n]
+               = V * b, V = {c V[1] V[2] ... V[n]}, 
+                        b = [1 a[1] a[2] ... a[n]]^T                                   
+                        where C*a <= d, constraints on a[i]}
+     where, V[0], V[i] are 2D matrices with the same dimension, i.e., 
+     V[i] \in R^{m x n}
+     V[0] : is called the center matrix and V[i] is called the basic matrix 
+     [a[1]...a[n] are called predicate variables
+     C: is the predicate constraint matrix
+     d: is the predicate constraint vector
+     
+     The notion of Star2D is more general than the original Star set where
+     the V[0] and V[i] are vectors. 
+     
+     Dimension of Star2D is the dimension of the center matrix V[0]
+     
+    =================================================================\n"""
 
 
     def __init__(self, *args):
