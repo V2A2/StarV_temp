@@ -1,81 +1,75 @@
 # ---------------- test for stepReach function -------------------
-from engine.nn.funcs.poslin import PosLin
-import copy
+import sys
 import numpy as np
+import copy
 
-lb = np.matrix('-1;-1')
-ub = np.matrix('1;1')
-lb = np.matrix('-0.5; -0.5')
-ub = np.matrix('0.5; 0.5')
+sys.path.insert(0, "engine/nn/funcs/poslin/")
+sys.path.insert(0, "engine/set/star/")
+sys.path.insert(0, "engine/set/zono/")
+sys.path.insert(0, "engine/set/box/")
 
-#lb = np.ndarray([[-1],[-1]])
-#print("lb------------\n ",lb)
+from poslin import PosLin
+from zono import Zono
+from star import Star
 
-#ub = np.ndarray([[1],[1]])
-#print("\nub------------\n ",ub)
+# lb = np.array([-0.5, -0.5])
+# ub = np.array([0.5, 0.5])
+lb = np.array([-1, -1])
+ub = np.array([1, 1])
+# print("lb------------\n ",lb)
+# print("ub------------\n ",ub)
 
-from engine.set.star import Star
-I = Star(lb=lb, ub=ub)
-#print("\nI-----------\n ",I.__repr__())
+I = Star(lb, ub)
+# print("\nI-----------\n ",I.__repr__())
 
-# W = np.ndarray([[2, l],[1, -1]])
-W = np.matrix('2 1; 1 -1')
-#print("\nW-----------\n ",W)
+W = np.array([[2, 1], [1, -1]])
+# print("\nW-----------\n ",W)
 
-I = I.affineMap(W, np.matrix([]))
-print("\nI A ----------\n", I)
+I = I.affineMap(W, np.array([]))
+# print("\nI Affine ----------\n", I)
+# print('I.v -----------\n', I.V)
+# print('I.c -----------\n', I.C)
+# print('I.d -----------\n', I.d)
+# print('I.dim -----------\n', I.dim)
+# print('I.nVar -----------\n', I.nVar)
+# print('I.pre_lb -----------\n', I.predicate_lb)
+# print('I.pre_ub -----------\n', I.predicate_ub)
+# print('I.state_lb -----------\n', I.state_lb)
+# print('I.state_ub -----------\n', I.state_ub)
+# print('I.Z -----------\n', I.Z, I.Z.V, I.Z.c, I.Z.dim)
 
-index = 0
+S = PosLin.stepReach(I, 0)
+print("\nS----------\n", S)
 
-#S1 = PosLin.stepReach(I, index)
-S1 = []
-S2 = PosLin.stepReach(I, index)
-print('S1 ---------- \n', S1)
-print('S2 ---------- \n', S2)
+# index = 0
+# c = copy.deepcopy(I.V[index, 0])
+# print("\nc -----------\n", c)
 
-S = []
-if len(S1):
-   S.append(S1)
-   S.append(S2)
-else:
-   S.extend(S2)
+# V = copy.deepcopy(I.V[index, 1:I.nVar + 1])
+# print("\nV ---------------- \n", V)
 
-print('S ---------- \n', S)
+# new_C = np.vstack([I.C, V])
+# print('\nnew_C -----------\n', new_C)
 
-xmin = I.getMin(0, 'gurobi')
-print("\nxmin ---------------\n", xmin)
+# new_d = np.hstack([I.d, -c])
+# print('\nnew_d -----------\n', new_d)
+# print('\nnew_d -----------\n', len(new_d.shape))
 
-xmax = I.getMax(0, 'gurobi')
-print("\nxmax ---------------\n", xmax)
+# new_V = copy.deepcopy(I.V)
+# new_V[index, :] = np.zeros([1, I.nVar + 1])
 
-c = copy.deepcopy(I.V[index, 0])
-print("\nc -----------\n", c)
+# c1 = copy.deepcopy(I.Z.c)
+# c1[index] = 0
+# print('\nc1 ----------\n', c1)
 
-V = copy.deepcopy(I.V[index, 1:I.nVar + 1])
-print("\nV ---------------- \n", V)
+# V1 = copy.deepcopy(I.Z.V)
+# V1[index, :] = 0
+# print('\nV1 -----------\n', V1)
 
-new_C = np.vstack([I.C, V])
-print('\nnew_C -----------\n', new_C)
+# new_Z = Zono(c1, V1)
+# print('\nnew_Z -----------\n', new_Z, new_Z.c, new_Z.V, new_Z.dim)
 
-new_d = np.vstack([I.d, -c])
-print('\nnew_d -----------\n', new_d)
-
-new_V = copy.deepcopy(I.V)
-new_V[index, :] = np.zeros([1, I.nVar + 1])
-
-c1 = copy.deepcopy(I.Z.c)
-c1[index] = 0
-print('\nc1 ----------\n', c1)
-
-V1 = copy.deepcopy(I.Z.V)
-V1[index, :] = 0
-print('\nV1 -----------\n', V1)
-
-from engine.set.zono import Zono
-new_Z = Zono(c1, V1)
-print('\nnew_Z -----------\n', new_Z, new_Z.c, new_Z.V, new_Z.dim)
-
-S1 = Star(V=new_V, C=new_C, d=new_d, pred_lb=I.predicate_lb, pred_ub=I.predicate_ub, outer_zono=new_Z)
+# S1 = Star(new_V, new_C, new_d, I.predicate_lb, I.predicate_ub, new_Z)
 # S1.Z = new_Z
 # print('S1 -----------\n', S1)
 # print('S1.v -----------\n', S1.V)
@@ -89,13 +83,13 @@ S1 = Star(V=new_V, C=new_C, d=new_d, pred_lb=I.predicate_lb, pred_ub=I.predicate
 # print('S1.state_ub -----------\n', S1.state_ub)
 # print('S1.Z -----------\n', S1.Z, S1.Z.V, S1.Z.c, S1.Z.dim)
 
-new_C1 = np.vstack([I.C, -V])
-print('\nnew_C1 ------------\n', new_C1)
+# new_C1 = np.vstack([I.C, -V])
+# print('\nnew_C1 ------------\n', new_C1)
 
-new_d1 = np.vstack([I.d, c])
-print('\nnew_d ------------\n', new_d)
+# new_d1 = np.hstack([I.d, c])
+# print('\nnew_d ------------\n', new_d)
 
-S2 = Star(V=I.V, C=new_C1, d=new_d1, pred_lb=I.predicate_lb, pred_ub=I.predicate_ub, outer_zono=I.Z)
+# S2 = Star(I.V, new_C1, new_d1, I.predicate_lb, I.predicate_ub, I.Z)
 # S2.Z = I.Z
 # print('S2 -----------\n', S2)
 # print('S2.v -----------\n', S2.V)
@@ -109,39 +103,37 @@ S2 = Star(V=I.V, C=new_C1, d=new_d1, pred_lb=I.predicate_lb, pred_ub=I.predicate
 # print('S2.state_ub -----------\n', S2.state_ub)
 # print('S2.Z -----------\n', S2.Z)
 
-S = np.column_stack([S1, S2])
-print('\nS ----------- \n', S)
+# S = np.column_stack([S1, S2])
+# S = []
+# S.append(S1)
+# S.append(S2)
+# print('\nS ----------- \n', S)
+# ---------------- end of the test for stepReach function -------------------
 
-S = PosLin.stepReach(I, 0)
-print("\nS----------\n", S)
+# ----------------- the test for stepReach2 function ------------------
+# x1 = I.V[index, 0] + I.V[index, 1:I.nVar + 1] * I.predicate_lb
+# print('\nx1 --------------\n', x1)
+# x2 = I.V[index, 0] + I.V[index, 1:I.nVar + 1] * I.predicate_ub
+# print('\nx2 --------------\n', x2)
 
-#---------------- end of the test for stepReach function -------------------
+# c = copy.deepcopy(I.V[index, 0])
+# print('\nc -------------\n', c)
 
+# V = copy.deepcopy(I.V[index, 1:I.nVar + 1])
+# print('\nV -------------\n', V)
 
-#----------------- the test for stepReach2 function ------------------
-x1 = I.V[index, 0] + I.V[index, 1:I.nVar + 1] * I.predicate_lb
-print('\nx1 --------------\n', x1)
-x2 = I.V[index, 0] + I.V[index, 1:I.nVar + 1] * I.predicate_ub
-print('\nx2 --------------\n', x2)
+# new_C = np.vstack([I.C, V])
+# print('\nnew_C -------------\n', new_C)
 
-c = copy.deepcopy(I.V[index, 0])
-print('\nc -------------\n', c)
+# new_d = np.vstack([I.d, -c])
+# print('\nnew_d -------------\n', new_d)
 
-V = copy.deepcopy(I.V[index, 1:I.nVar + 1])
-print('\nV -------------\n', V)
+# new_V = copy.deepcopy(I.V)
+# print('\nnew_V -------------\n', new_V)
 
-new_C = np.vstack([I.C, V])
-print('\nnew_C -------------\n', new_C)
+# new_V[index, :] = np.zeros([1, I.nVar + 1])
+# print('\nnew_V -------------\n', new_V)
 
-new_d = np.vstack([I.d, -c])
-print('\nnew_d -------------\n', new_d)
-
-new_V = copy.deepcopy(I.V)
-print('\nnew_V -------------\n', new_V)
-
-new_V[index, :] = np.zeros([1, I.nVar + 1])
-print('\nnew_V -------------\n', new_V)
-
-S = PosLin.stepReach2(I, 0)
-print("\nS----------\n", S)
+# S = PosLin.stepReach2(I, 0)
+# print("\nS----------\n", S)
 # ----------------- end of the test for stepReach2 function ------------------
