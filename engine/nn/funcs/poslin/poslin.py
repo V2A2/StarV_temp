@@ -12,10 +12,9 @@ sys.path.insert(0, "engine/set/box/")
 # the data. It takes an array in as an input and normalizes its values
 # between 00 and 11. It then returns an output array with the same
 # dimensions as the input.
-from sklearn import preprocessing
-from numba import njit, prange
+# from sklearn import preprocessing
+# from numba import njit, prange
 from zono import Zono
-
 
 class PosLin:
     # PosLin class contains method for reachability analysis for Layer with
@@ -481,11 +480,14 @@ class PosLin:
         assert isinstance(I, Star), "error: input set is not a star set"
 
         # using estimateRange function to get lb and ub for now
-        [lb, ub] = I.estimateRange(index)
+        # Call get Mins Maxs
+        # [lb, ub] = I.estimateRange(index)
+        lb = I.getMin(index);
+        ub = I.getMax(index);
 
         # Check for Eitimate Range
-        # print("\nlb ---------- \n", lb)
-        # print("\nub ---------- \n", ub)
+        print("\nlb ---------- \n", lb)
+        print("\nub ---------- \n", ub)
         # lb = I.getMin(index)
 
         if lb > 0:
