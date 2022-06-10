@@ -372,7 +372,7 @@ class ImageStar:
         else:
             new_V = np.hstack((np.zeros((self.attributes[NUMPRED_ID], 1)), np.eye(self.attributes[NUMPRED_ID])))
             #TODO: Star returns an error when checking the dimensions even though they match
-            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID])
+            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
             pred_samples = S.sample(N)
             
             images = []

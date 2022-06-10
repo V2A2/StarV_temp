@@ -32,9 +32,9 @@ class TestImageStarSample(unittest.TestCase):
         test_star = ImageStar(
                 test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
             )
-        
         try:
             images = test_star.sample(test_N)
+            
         except Exception as ex:
             completion_flag = False
             process_exception(ex)
