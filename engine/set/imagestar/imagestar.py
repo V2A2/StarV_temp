@@ -350,8 +350,8 @@ class ImageStar:
                     
                 self.copy_deep(S.toImageStar(lb_shape[0], lb_shape[1], (lb_shape[2] if len(lb_shape) == 3 else 1)))
                     
-                self.attributes[IM_LB_ID] = im_lb.astype('float64')
-                self.attributes[IM_UB_ID] = im_ub.astype('float64')
+                self.attributes[IM_LB_ID] = args[IM_LB_ID].astype('float64')
+                self.attributes[IM_UB_ID] = args[IM_UB_ID].astype('float64')
         elif self.isempty_init(args):
             self.init_empty_imagestar()
         else:
@@ -445,9 +445,15 @@ class ImageStar:
             # TODO: error: failed to create Star set
             return Star()
         else:
-            for j in range(self.attributes[NUMPRED_ID] + 1):
-                #new_V[:, j] = np.reshape(self.attributes[V_ID][:, :, :, j], (pixel_num, 0))
-                new_V[:, j] = self.attributes[V_ID][:, :, :, j].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+                    
+            v_shape = self.attributes[V_ID].shape
+                    
+            if(len(v_shape) == 3):
+                 self.attributes[V_ID] = np.reshape(self.attributes[V_ID], (v_shape[0], v_shape[1], 1, v_shape[2]))
+                 
+            for i in range(self.attributes[NUM_CHANNEL_ID]):
+                for j in range(self.attributes[NUMPRED_ID] + 1):        
+                    new_V[:, j] = self.attributes[V_ID][:, :, i, j].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 
             if not self.isempty(self.attributes[IM_LB_ID]) and not self.isempty(self.attributes[IM_UB_ID]):
                 state_lb = self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
@@ -1220,6 +1226,12 @@ class ImageStar:
     def copy_deep(self, imagestar):
         for i in range(len(self.attributes)):
             self.attributes[i] = imagestar.get_attribute(i)
+            
+        v_shape = self.attributes[V_ID].shape
+            
+        if len(v_shape) == 3:
+            self.attributes[V_ID] = np.reshape(self.attributes[V_ID], (v_shape[0], v_shape[1], 1, v_shape[2]))
+            self.attributes[NUM_CHANNEL_ID] = 1
 
     def validate_point_dim(self, point, height, width):
         return (point[0] > -1) and (point[0] <= self.attributes[HEIGHT_ID]) and \

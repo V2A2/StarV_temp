@@ -20,7 +20,7 @@ class TestImageStarIsEmpty(unittest.TestCase):
         
         test_V = np.reshape(read_csv_data(sources[IS_EMPTY_INIT][V_ID]), (28,28,1,785))
         test_C = np.reshape(read_csv_data(sources[IS_EMPTY_INIT][C_ID]), (1, 784))
-        test_d = read_csv_data(sources[IS_EMPTY_INIT][D_ID])
+        test_d = np.array([read_csv_data(sources[IS_EMPTY_INIT][D_ID])])
         test_predicate_lb = read_csv_data(sources[IS_EMPTY_INIT][PREDICATE_LB_ID])
         test_predicate_ub = read_csv_data(sources[IS_EMPTY_INIT][PREDICATE_UB_ID])
         

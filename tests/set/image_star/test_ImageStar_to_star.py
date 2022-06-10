@@ -17,6 +17,8 @@ class TestImageStarToStar(unittest.TestCase):
         test_lb = read_csv_data(sources[TO_STAR_INIT][TEST_LB_ID])
         test_ub = read_csv_data(sources[TO_STAR_INIT][TEST_UB_ID])
     
+        completion_flag = True
+    
         try:
             test_star = ImageStar(
                     test_lb, test_ub
