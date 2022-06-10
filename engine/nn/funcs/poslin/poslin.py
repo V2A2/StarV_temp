@@ -484,6 +484,7 @@ class PosLin:
         # [lb, ub] = I.estimateRange(index)
         lb = I.getMin(index);
         ub = I.getMax(index);
+        # Test for this
 
         # Check for Eitimate Range
         print("\nlb ---------- \n", lb)
