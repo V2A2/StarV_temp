@@ -76,7 +76,7 @@ UB_ID = 9
 NUMPRED_ID = 10
 HEIGHT_ID = 11
 WIDTH_ID = 12
-NUM_CHANNEL_ID = 13
+NUM_CHANNELS_ID = 13
 FLATTEN_ORDER_ID = 14
 
 LAST_ATTRIBUTE_ID = FLATTEN_ORDER_ID
@@ -227,7 +227,7 @@ class ImageStar:
             self.attributes.append(np.array([]))
         
         self.scalar_attributes_ids = [
-                NUMPRED_ID, HEIGHT_ID, WIDTH_ID, NUM_CHANNEL_ID
+                NUMPRED_ID, HEIGHT_ID, WIDTH_ID, NUM_CHANNELS_ID
             ]
         
         self.attributes[FLATTEN_ORDER_ID] = COLUMN_FLATTEN
@@ -263,15 +263,15 @@ class ImageStar:
                     if len(n) == 4:
                         assert n[3] == self.attributes[NUMPRED_ID] + 1, 'error: %s' % ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM
                         
-                        self.attributes[NUM_CHANNEL_ID] = n[2]
+                        self.attributes[NUM_CHANNELS_ID] = n[2]
                     else:
                         # TODO: ASK WHY THIS HAPPENS AFTER THE ASSIGNMENT IN LINE 205
                         #self.attributes[NUMPRED_ID] = 0
                         
                         if len(n) == 3:
-                            self.attributes[NUM_CHANNEL_ID] = n[2]
+                            self.attributes[NUM_CHANNELS_ID] = n[2]
                         elif len(n) == 2:
-                            self.attributes[NUM_CHANNEL_ID] = 1
+                            self.attributes[NUM_CHANNELS_ID] = 1
                 
                 if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM: 
                     if args[IM_LB_ID].shape[0] != 0 and (args[IM_LB_ID].shape[0] != self.attributes[HEIGHT_ID] or args[IM_LB_ID].shape[1] != self.attributes[WIDTH_ID]):
@@ -303,9 +303,9 @@ class ImageStar:
                 self.attributes[WIDTH_ID] = n[1]
                 
                 if len(n) == 2:
-                    self.attributes[NUM_CHANNEL_ID] = 2
+                    self.attributes[NUM_CHANNELS_ID] = 2
                 elif len(n) == 3:
-                    self.attributes[NUM_CHANNEL_ID] = 3
+                    self.attributes[NUM_CHANNELS_ID] = 3
                 else:
                     raise Exception('error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM)
                 
@@ -396,9 +396,9 @@ class ImageStar:
         
         assert pred_val.shape[0] == self.attributes[NUMPRED_ID], 'error: %s' % ERRMSG_INCONSISTENT_PREDVEC_PREDNUM
         
-        image = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
+        image = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
         
-        for i in range(self.attributes[NUM_CHANNEL_ID]):
+        for i in range(self.attributes[NUM_CHANNELS_ID]):
             image[:, :, i] = self.attributes[V_ID][:, :, i, 1]
             
             for j in range(2, self.attributes[NUMPRED_ID] + 1):
@@ -415,7 +415,7 @@ class ImageStar:
             return -> a new ImageStar
         """
  
-        assert (self.isempty(scale) or self.is_scalar(scale) or len(scale.shape) == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
+        assert (self.isempty(scale) or self.is_scalar(scale) or len(scale.shape) == self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
         
         new_V = 0
         
@@ -437,7 +437,7 @@ class ImageStar:
             return -> created Star
         """
  
-        pixel_num = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNEL_ID]
+        pixel_num = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
         
         new_V = np.zeros((pixel_num, self.attributes[NUMPRED_ID] + 1))
         
@@ -451,7 +451,7 @@ class ImageStar:
             if(len(v_shape) == 3):
                  self.attributes[V_ID] = np.reshape(self.attributes[V_ID], (v_shape[0], v_shape[1], 1, v_shape[2]))
                  
-            for i in range(self.attributes[NUM_CHANNEL_ID]):
+            for i in range(self.attributes[NUM_CHANNELS_ID]):
                 for j in range(self.attributes[NUMPRED_ID] + 1):        
                     new_V[:, j] = self.attributes[V_ID][:, :, i, j].flatten(order=self.attributes[FLATTEN_ORDER_ID])
                 
@@ -489,9 +489,9 @@ class ImageStar:
         img_size = image.shape
         
         if len(img_size) == 2: # one channel image
-            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and self.attributes[NUM_CHANNEL_ID] == 1), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
+            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and self.attributes[NUM_CHANNELS_ID] == 1), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
         elif len(img_size) == 3:
-            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and img_size[2] == self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
+            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and img_size[2] == self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
         else:
             raise Exception('error: %s' % ERRMSG_INVALID_INPUT_IMG)
             
@@ -560,7 +560,7 @@ class ImageStar:
         
         assert (args[VERT_ID] > -1 and args[VERT_ID] < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
         assert (args[HORIZ_ID] > -1 and args[HORIZ_ID] < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
-        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM
+        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM
         
         bounds = [np.array([]), np.array([])]
         
@@ -627,7 +627,7 @@ class ImageStar:
         
         assert (height_id > -1 and height_id < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
         assert (width_id > -1 and width_id < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
-        assert (channel_id > -1 and channel_id < self.attributes[NUM_CHANNEL_ID]), 'error: %s' % ERRMSG_INVALID_CHANNEL_ID 
+        assert (channel_id > -1 and channel_id < self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INVALID_CHANNEL_ID 
         
         f = self.attributes[V_ID][height_id, width_id, channel_id, 0:self.attributes[NUMPRED_ID] + 1]
         xmin = f[0]
@@ -655,10 +655,10 @@ class ImageStar:
         assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
         if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
-            image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
-            image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
+            image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
+            image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
             
-            size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNEL_ID]
+            size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
             
             disp_flag = False
             if dis_opt == DISPLAY_ON_OPTION:
@@ -667,7 +667,7 @@ class ImageStar:
                 
             for i in range(self.attributes[HEIGHT_ID]):
                 for j in range(self.attributes[WIDTH_ID]):
-                    for k in range(self.attributes[NUM_CHANNEL_ID]):
+                    for k in range(self.attributes[NUM_CHANNELS_ID]):
                         image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i, j, k)
                         
                         if disp_flag:
@@ -689,10 +689,10 @@ class ImageStar:
                        image_ub : np.array([]) -> upper bound image]
         """
                 
-        image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
-        image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
+        image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
+        image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
 
-        size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNEL_ID]
+        size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
             
         disp_flag = False
         if dis_opt == DISPLAY_ON_OPTION:
@@ -701,7 +701,7 @@ class ImageStar:
                 
         for i in range(self.attributes[HEIGHT_ID]):
             for j in range(self.attributes[WIDTH_ID]):
-                for k in range(self.attributes[NUM_CHANNEL_ID]):
+                for k in range(self.attributes[NUM_CHANNELS_ID]):
                     image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i, j, k)
                         
                     if disp_flag:
@@ -734,7 +734,7 @@ class ImageStar:
             return : int -> the number of pixels
         """
         
-        V1 = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNEL_ID]))
+        V1 = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
         V3 = V1
         
         for i in range(1, self.attributes[NUMPRED_ID] + 1):
@@ -767,15 +767,15 @@ class ImageStar:
             image_lb = self.attributes[IM_LB_ID]
             image_ub = self.attributes[IM_UB_ID]
         
-        lb = image_lb[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNEL_ID] - 1]
-        ub = image_ub[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNEL_ID] - 1]
+        lb = image_lb[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNELS_ID] - 1]
+        ub = image_ub[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNELS_ID] - 1]
         
         for i in range(1, points_num):
-            if image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1] < lb:
-                lb = image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1]
+            if image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1] < lb:
+                lb = image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1]
             
-            if image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1] > ub:
-                ub = image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNEL_ID] - 1]
+            if image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1] > ub:
+                ub = image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1]
                 
         return [lb, ub]
             
@@ -1187,7 +1187,7 @@ class ImageStar:
             return -> the channel of the ImageStar
         """
         
-        return self.attributes[NUM_CHANNEL_ID]
+        return self.attributes[NUM_CHANNELS_ID]
     
     def get_num_pred(self):
         """
@@ -1231,12 +1231,12 @@ class ImageStar:
             
         if len(v_shape) == 3:
             self.attributes[V_ID] = np.reshape(self.attributes[V_ID], (v_shape[0], v_shape[1], 1, v_shape[2]))
-            self.attributes[NUM_CHANNEL_ID] = 1
+            self.attributes[NUM_CHANNELS_ID] = 1
 
     def validate_point_dim(self, point, height, width):
         return (point[0] > -1) and (point[0] <= self.attributes[HEIGHT_ID]) and \
                (point[1] > -1) and (point[1] <= self.attributes[WIDTH_ID]) and \
-               (point[2] > -1) and (point[2] <= self.attributes[NUM_CHANNEL_ID])
+               (point[2] > -1) and (point[2] <= self.attributes[NUM_CHANNELS_ID])
 
     def offset_args(self, args, offset):
         result = []
