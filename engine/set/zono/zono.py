@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-from zipfile import ZIP_BZIP2
 import numpy as np
 import polytope as pc
 import matplotlib.pyplot as plt

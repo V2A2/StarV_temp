@@ -1,12 +1,30 @@
 #!/usr/bin/python3
 import numpy as np
 
-class TanSig:
-    # TanSig class contains method for reachability analysis for Layer with
-    # Tanh activation function.
+import sys
 
+sys.path.insert(0, "engine/set/box")
+sys.path.insert(0, "engine/set/star")
+from box import *
+from star import *
+
+class TanSig:
+    """
+        TanSig class contains method for reachability analysis for Layer with
+        Tanh activation function.
+    """
     def evaluate(x):
         return np.tanh(x)
+    
+    def tansig(x):
+        return np.tanh(x)
+    
+    def dtansig(x):
+        """ 
+            Derivative of tansig(x)
+        """
+        return 1 - np.tanh(x)**2
+    
 
     # main method
     def reach_star_approx(I,                                # input star set
@@ -14,7 +32,7 @@ class TanSig:
                         relaxFactor = 0,                    # for relaxed approx-star method
                         disp_opt = '',                      # display option
                         lp_solver = 'gurobi'):              # lp solver option
-        from engine.set.star import Star
+        from star import Star
         
         assert isinstance(I, Star), 'error: input set is not a star set'
 
@@ -34,7 +52,7 @@ class TanSig:
     def reach_star_approx_split(I):
         # @I: the input star set
         # return: an array of star set output
-        from engine.set.star import Star
+        from star import Star
 
         n = I.dim
         S = I
@@ -54,14 +72,15 @@ class TanSig:
         # @I: input star set
         # @i: index of the neuron
         # return: output star set
-        from engine.set.star import Star
-        from engine.set.zono import Zono
+        from star import Star
+        from zono import Zono
 
         [l, u] = I.getRange(index)
         y_l = np.tanh(l)
         y_u = np.tanh(u)
-        dy_l = 1 - y_l**2
-        dy_u = 1 - y_u**2
+            
+        dy_l = TanSig.dtansig(l)
+        dy_u = TanSig.dtansig(u)
 
         if l == u:
             new_V = I.V
@@ -84,28 +103,28 @@ class TanSig:
             n = I.nVar + 1
             # over-approximation constraints
             # constraint 1: y <= y'(l) * (x - l) + y(l)
-            C1 = np.column_stack((-dy_l*I.V[index, 1:n], 1))
+            C1 = np.hstack([-dy_l*I.V[index, 1:n], 1])
             d1 = dy_l * I.V[index, 0] - dy_l*l + y_l
             # constarint 2: y <= y'(u) * (x - u) + y(u)
-            C2 = np.column_stack((-dy_u*I.V[index, 1:n], 1))
+            C2 = np.hstack([-dy_u*I.V[index, 1:n], 1])
             d2 = dy_u * I.V[index, 0] - dy_u*u + y_u
             # constraint 3: y >= (y(u) - y(l)) * (x - l) / (u - l) + y(l)
             a = (y_u - y_l)/(u - l)
-            C3 = np.column_stack((a*I.V[index, 1:n], -1))
+            C3 = np.hastack([a*I.V[index, 1:n], -1])
             d3 = a*l - y_l - a*I.V[index, 0]
 
             m = I.C.shape[0]
-            C0 = np.column_stack((I.C, np.zeros((m,1))))
+            C0 = np.hstack([I.C, np.zeros([m,1])])
             d0 = I.d
-            new_C = np.row_stack((C0,C1,C2,C3))
-            new_d = np.row_stack((d0,d1,d2,d3))
-            new_V = np.column_stack((I.V, np.zeros((I.dim, 1))))
-            new_V[index,:] = np.zeros((1, n+1))
+            new_C = np.vstack([C0,C1,C2,C3])
+            new_d = np.vstack([d0,d1,d2,d3])
+            new_V = np.hstack([I.V, np.zeros([I.dim, 1])])
+            new_V[index,:] = 0
             new_V[index, n] = 1
 
             # update predicate bound
-            new_predicate_lb = np.row_stack((I.predicate_lb, y_l))
-            new_predicate_ub = np.row_stack((I.predicate_ub, y_u))
+            new_predicate_lb = np.vstack([I.predicate_lb, y_l])
+            new_predicate_ub = np.vstack([I.predicate_ub, y_u])
 
             # update outer-zonotope
             if isinstance(I.Z, Zono):
@@ -116,9 +135,9 @@ class TanSig:
                 mu2 = 0.5*(y_u - y_l - lamda*(u - l))
                 c[index] = lamda * c[index] + mu1
                 V[index, :] = lamda * V[index, :]
-                I1 = np.zeros((I.dim, 1))
+                I1 = np.zeros([I.dim, 1])
                 I1[index] = mu2
-                V = np.row_stack((V, I1))
+                V = np.hstack([V, I1])
                 new_Z = Zono(c, V)
             else:
                 new_Z = np.array([])
@@ -133,28 +152,28 @@ class TanSig:
             n = I.nVar + 1
             # over-approximation constraints
             # constraint 1: y >= y'(l) * (x - l) + y(l)
-            C1 = np.column_stack((dy_l*I.V[index, 1:n]),-1)
+            C1 = np.hstack([dy_l*I.V[index, 1:n], -1])
             d1 = -dy_l * I.V[index, 0] + dy_l*l - y_l
             # constraint 2: y >= y'(u) * (x - u) + y(u)
-            C2 = np.column_stack((dy_u*I.V[index, 1:n]),-1)
+            C2 = np.hstack([dy_u*I.V[index, 1:n], -1])
             d2 = -dy_u * I.V[index, 0] + dy_u*u - y_u
             # constraint 3: y <= (y(u) - y(l)) * (x -l) / (u - l) + y(l);
             a = (y_u - y_l)/(u - l)
-            C3 = np.column_stack((-a*I.V[index, 1:n], 1))
+            C3 = np.hstack([-a*I.V[index, 1:n], 1])
             d3 = -a*l +y_l + a*I.V[index, 0]
 
             m = I.C.shape[0]
-            C0 = np.column_stack((I.C, np.zeros((m, 1))))
+            C0 = np.hstack([I.C, np.zeros([m, 1])])
             d0 = I.d
-            new_C = np.row_stack((C0, C1, C2, C3))
-            new_d = np.row_stack((d0, d1, d2, d3))
-            new_V = np.column_stack((I.V, np.zeros((I.dim, 1))))
-            new_V[index, :] = np.zeros(1, n+1)
+            new_C = np.vstack([C0, C1, C2, C3])
+            new_d = np.vstack([d0, d1, d2, d3])
+            new_V = np.hstack([I.V, np.zeros([I.dim, 1])])
+            new_V[index, :] = 0
             new_V[index, n] = 1
 
             # update predicate bound
-            new_predicate_lb = np.row_stack((I.predicate_lb, y_l))
-            new_predicate_ub = np.row_stack((I.predicate_ub, y_u))
+            new_predicate_lb = np.vstack([I.predicate_lb, y_l])
+            new_predicate_ub = np.vstack([I.predicate_ub, y_u])
 
             # update outer-zonotope
             if isinstance(I.Z, Zono):
@@ -165,9 +184,9 @@ class TanSig:
                 mu2 = 0.5*(y_u - y_l - lamda*(u - l))
                 c[index] = lamda * c[index] + mu1
                 V[index, :] = lamda * V[index, :]
-                I1 = np.zeros((I.dim, 1))
+                I1 = np.zeros([I.dim, 1])
                 I1[index] = mu2
-                V = np.hstack((V, I1))
+                V = np.hstack([V, I1])
                 new_Z = Zono(c, V)
             else:
                 new_Z = np.array([])
@@ -188,28 +207,28 @@ class TanSig:
             n = I.nVar + 1
             # over-approximation constraints
             # constraint 1: y >= y'(l) * (x - l) + y(l)
-            C1 = np.column_stack((dy_l*I.V[index, 1:n]),-1)
+            C1 = np.hstack([dy_l*I.V[index, 1:n], -1])
             d1 = -dy_l * I.V[index, 0] + dy_l*l - y_l
             # constraint 2: y >= y'(0) * (x) + y(0)
-            C2 = np.column_stack((I.V[index, 1:n], -1))
+            C2 = np.hstack([I.V[index, 1:n], -1])
             d2 = -I.V[index, 0]
             # constraint 3: y <= (y(0) - y(l)) * (x -l) / (0 - l) + y(l);
             a = (0 - y_l)/(0 - l)
-            C3 = np.column_stack((-a*I.V[index, 1:n], 1))
+            C3 = np.hstack([-a*I.V[index, 1:n], 1])
             d3 = -a*l +y_l + a*I.V[index, 0]
 
             m = I.C.shape[0]
-            C0 = np.column_stack((I.C, np.zeros((m, 1))))
+            C0 = np.hstack([I.C, np.zeros([m, 1])])
             d0 = I.d
-            new_C = np.row_stack((C0, C1, C2, C3))
-            new_d = np.row_stack((d0, d1, d2, d3))
-            new_V = np.column_stack((I.V, np.zeros((I.dim, 1))))
-            new_V[index, :] = np.zeros(1, n+1)
+            new_C = np.vstack([C0, C1, C2, C3])
+            new_d = np.vstack([d0, d1, d2, d3])
+            new_V = np.hstack([I.V, np.zeros([I.dim, 1])])
+            new_V[index, :] = 0
             new_V[index, n] = 1
 
             # update predicate bound
-            new_predicate_lb = np.row_stack((I.predicate_lb, y_l))
-            new_predicate_ub = np.row_stack((I.predicate_ub, 0.0))
+            new_predicate_lb = np.vstack([I.predicate_lb, y_l])
+            new_predicate_ub = np.vstack([I.predicate_ub, 0.0])
             
             # update outer-zonotope
             if isinstance(I.Z, Zono):
@@ -236,25 +255,25 @@ class TanSig:
             
             # over-approximation constraints 
             # constraint 1: y <= y'(0) * (x - 0) + y(0) = x
-            C1 = np.column_stack((-I.V[index, 1:n], 1))
+            C1 = np.hstack((-I.V[index, 1:n], 1))
             d1 = I.V[index, 0]
             # constarint 2: y <= y'(u) * (x - u) + y(u) 
-            C2 = np.column_stack((-dy_u*I.V[index, 1:n], 1))
+            C2 = np.hstack((-dy_u*I.V[index, 1:n], 1))
             d2 = dy_u * I.V[index, 0] - dy_u*u + y_u
             # constraint 3: y >= (y(u) - y(0)) * (x - 0) / (u - 0) + y(0);
             a = y_u / u
-            C3 = np.column_stack((a*I.V[index, 1:n], -1))
+            C3 = np.hstack((a*I.V[index, 1:n], -1))
             d3 = -a*I.V[index, 0]
 
-            new_C = np.row_stack((C0,C1,C2,C3))
-            new_d = np.row_stack((d0,d1,d2,d3))
-            new_V = np.column_stack((I.V, np.zeros((I.dim, 1))))
-            new_V[index,:] = np.zeros((1, n+1))
+            new_C = np.vstack([C0,C1,C2,C3])
+            new_d = np.vstack([d0,d1,d2,d3])
+            new_V = np.hstack([I.V, np.zeros(I.dim)])
+            new_V[index,:] = 0
             new_V[index, n] = 1
 
             # update predicate bound
-            new_predicate_lb = np.row_stack((I.predicate_lb, 0.0))
-            new_predicate_ub = np.row_stack((I.predicate_ub, y_u))
+            new_predicate_lb = np.vstack([I.predicate_lb, 0.0])
+            new_predicate_ub = np.vstack([I.predicate_ub, y_u])
 
             # update outer-zonotope
             if isinstance(I.Z, Zono):
@@ -273,7 +292,7 @@ class TanSig:
                 new_Z = np.array([])
             S2 = Star(new_V, new_C, new_d, new_predicate_lb, new_predicate_ub, new_Z)
 
-            return np.array((S1, S2))
+            return np.array([S1, S2])
 
     # multiStepTanSig at one
     def multiStepTanSig_NoSplit(I, disp_opt = '', lp_solver = 'gurobi'):
@@ -285,7 +304,7 @@ class TanSig:
         # @dyl: derivative of TanSig at the lower bound
         # @dyu: derivative of TanSig at the upper bound
         # return: output star set
-        from engine.set.star import Star
+        from star import Star
 
         assert isinstance(I, Star), 'error: input set is not a star'
 
@@ -301,21 +320,21 @@ class TanSig:
     
         yl = np.tanh(l)
         yu = np.tanh(u)
-        dyl = (1 - yl*yl)
-        dyu = (1 - yu*yu)
+        dyl = TanSig.dtansig(l)
+        dyu = TanSig.dtansig(u)
 
         # l ~= u
-        map2 = np.argwhere(l.flatten() != u.flatten())
+        map2 = np.argwhere(l != u)
         m = len(map2)
-        V2 = np.zeros((N,m))
+        V2 = np.zeros([N, m])
         for i in range(m):
             V2[map2[i], i] = 1
 
         # new basis matrix
-        new_V = np.hstack((np.zeros((N, I.nVar+1)), V2))
+        new_V = np.hstack([np.zeros([N, I.nVar+1]), V2])
     
         # l == u
-        map1 = np.argwhere(l.flatten() == u.flatten())
+        map1 = np.argwhere(l == u)
         if len(map1):
             yl1 = yl[map1]
             new_V[map1, 0] = yl1
@@ -325,72 +344,71 @@ class TanSig:
         
         # C0, d0
         n = I.C.shape[0]
-        C0 = np.hstack((I.C, np.zeros((n,m))))
+        C0 = np.hstack([I.C, np.zeros([n,m])])
         d0 = I.d
 
-        nv = I.nVar+1
+        nv = I.nVar + 1
 
         # C1, d1, x >= 0
         # constraint 1: y <= y'(l) * (x - l) + y(l)
         # constarint 2: y <= y'(u) * (x - u) + y(u) 
         # constraint 3: y >= (y(u) - y(l)) * (x - l) / (u - l) + y(l)
-        map1 = np.argwhere((l.flatten() >= 0) & (l.flatten() != u.flatten()))
+        map1 = np.argwhere((l >= 0) & (l != u)).flatten()
         if len(map1):
             a = yl[map1]
             b = yu[map1]
             da = dyl[map1]
             db = dyu[map1]
             # constraint 1: y <= y'(l) * (x - l) + y(l)
-            C11 = np.hstack((np.multiply(-da, I.V[map1, 1:nv]), V2[map1, :]))
-            d11 = np.multiply(da, I.V[map1, 0] - l[map1]) + a
+            C11 = np.hstack([-da * I.V[map1, 1:nv], V2[map1, :]])
+            d11 = da * (I.V[map1, 0] - l[map1]) + a
             # constarint 2: y <= y'(u) * (x - u) + y(u)
-            C12 = np.hstack((np.multiply(-db, I.V[map1, 1:nv]), V2[map1, :]))
-            d12 = np.multiply(db, I.V[map1, 0] - u[map1]) + b
+            C12 = np.hstack([-db * I.V[map1, 1:nv], V2[map1, :]])
+            d12 = db * (I.V[map1, 0] - u[map1]) + b
             # constraint 3: y >= (y(u) - y(l)) * (x - l) / (u - l) + y(l)
             gamma = (b-a)/(u[map1] - l[map1])
-            C13 = np.hstack((np.multiply(gamma, I.V[map1, 1:nv]), -V2[map1, :]))
-            d13 = np.multiply(-gamma, I.V[map1, 0] - l[map1]) - a
+            C13 = np.hstack([gamma * I.V[map1, 1:nv], -V2[map1, :]])
+            d13 = -gamma * (I.V[map1, 0] - l[map1]) - a
 
-            C1 = np.vstack((C11, C12, C13))
-            d1 = np.vstack((d11, d12, d13))
+            C1 = np.vstack([C11, C12, C13])
+            d1 = np.hstack([d11, d12, d13])
         else:
-            C1 = np.empty((0, nv+1))
-            d1 = np.empty((0, 1))
+            C1 = np.empty([0, nv+1])
+            d1 = np.empty(0)
 
         # C2, d2, x <= 0
         # y is concave when x <= 0
         # constraint 1: y >= y'(l) * (x - l) + y(l)
         # constraint 2: y >= y'(u) * (x - u) + y(u)
         # constraint 3: y <= (y(u) - y(l)) * (x -l) / (u - l) + y(l)
-        map1 = np.argwhere((u.flatten() <= 0) & (l.flatten() != u.flatten()))
+        map1 = np.argwhere((u <= 0) & (l != u)).flatten()
         if len(map1):
             a = yl[map1]
             b = yu[map1]
             da = dyl[map1]
             db = dyu[map1]
             # constraint 1: y >= y'(l) * (x - l) + y(l)
-            C21 = np.hstack((np.multiply(da, I.V[map1, 1:nv]), -V2[map1, :]))
-            d21 = np.multiply(-da, I.V[map1, 0]-l[map1]) - a
+            C21 = np.hstack([da * I.V[map1, 1:nv], -V2[map1, :]])
+            d21 = -da * (I.V[map1, 0] - l[map1]) - a
             # constraint 2: y >= y'(u) * (x - u) + y(u)
-            C22 = np.hstack((np.multiply(db, I.V[map1, 1:nv]), -V2[map1, :]))
-            d22 = np.multiply(-db, I.V[map1, 0]-u[map1]) - b
+            C22 = np.hstack([db * I.V[map1, 1:nv], -V2[map1, :]])
+            d22 = -db * (I.V[map1, 0] - u[map1]) - b
             # constraint 3: y <= (y(u) - y(l)) * (x -l) / (u - l) + y(l)
             gamma = (b-a)/(u[map1] - l[map1])
-            C23 = np.hstack((np.multiply(-gamma, I.V[map1, 1:nv]), V2[map1, :]))
-            d23 = np.multiply(gamma, I.V[map1, 0]-l[map1]) + a
+            C23 = np.hstack([-gamma * I.V[map1, 1:nv], V2[map1, :]])
+            d23 = gamma * (I.V[map1, 0] - l[map1]) + a
 
-            C2 = np.vstack((C21, C22, C23))
-            d3 = np.vstack((d21, d22, d23))
+            C2 = np.vstack([C21, C22, C23])
+            d2 = np.hstack([d21, d22, d23])
         else:
-            C2 = np.empty((0, nv+1))
-            d2 = np.empty((0, 1))
+            C2 = np.empty([0, nv+1])
+            d2 = np.empty(0)
 
         # C3, d3, l< 0 and u > 0, x > 0 or x < 0
         # y is concave for x in [l, 0] and convex for x
         # in [0, u]
         # split can be done here
-        map1 = np.argwhere((l.flatten() < 0) & (u.flatten() > 0)).flatten()
-        # print('map1_4: \n', map1)
+        map1 = np.argwhere((l < 0) & (u > 0)).flatten()
         if len(map1):
             a = yl[map1]
             b = yu[map1]
@@ -405,69 +423,56 @@ class TanSig:
             # constraint 4: y >= g1 * x + y1
 
             # constraint 1: y >= min(y'(l), y'(u)) * (x - l) + y(l)
-            C31 = np.hstack((np.multiply(dmin, I.V[map1, 1:nv]), -V2[map1, :]))
-            d31 = np.multiply(-dmin, I.V[map1, 0]-l[map1]) - a
+            C31 = np.hstack([dmin * I.V[map1, 1:nv], -V2[map1, :]])
+            d31 = -dmin * (I.V[map1, 0] - l[map1]) - a
             # constraint 2: y <= min(y'(l), y'(u)) * (x - u) + y(u)
-            C32 = np.hstack((np.multiply(-dmin, I.V[map1, 1:nv]), V2[map1, :]))
-            d32 = np.multiply(dmin, I.V[map1, 0]-u[map1]) + b
+            C32 = np.hstack([-dmin * I.V[map1, 1:nv], V2[map1, :]])
+            d32 = dmin * (I.V[map1, 0] - u[map1]) + b
 
-            dmin = np.minimum(da, db)
-            y1 = dmin*(-l[map1]) + a
-            y2 = dmin*(-u[map1]) + b
-            g2 = (y2 - a)/(-l[map1])
-            g1 = (y1 - b)/(-u[map1])
+            # dmin = np.minimum(da, db)
+            # y1 = dmin*(-l[map1]) + a
+            # y2 = dmin*(-u[map1]) + b
+            # g2 = (y2 - a)/(-l[map1])
+            # g1 = (y1 - b)/(-u[map1])
 
-            # print('l: ', l[map1])
-            # print('u: ', [map1])
-            # print('y1: ', y1)
-            # print('y2: ', y2)
-            # print('g1: ', g1)
-            # print('g2: ', g2)
+            # # constraint 3: y <= g2 * x + y2
+            # C33 = np.hstack((np.multiply(-g2,I.V[map1, 1:nv]), V2[map1, :]))
+            # d33 = np.multiply(g2, I.V[map1, 0]) + y2
+            # # constraint 4: y >= g1 * x + y1
+            # C34 = np.hstack((np.multiply(g1,I.V[map1, 1:nv]), -V2[map1, :]))
+            # d34 = np.multiply(-g1, I.V[map1, 0]) - y1
+            
+            l_map = l[map1]
+            u_map = u[map1]
+            y0 = np.tanh(0)
+            dy0 = TanSig.dtansig(0)
+            gu_x = (b - dmin * u_map - y0) / (dy0 - dmin)
+            gu_y = dy0 * gu_x + y0
+            gl_x = (a - dmin * l_map - y0) / (dy0 - dmin)
+            gl_y = dy0 * gl_x + y0
+            
+            mu = (a - gu_y) / (l_map - gu_x) 
+            ml = (b - gl_y) / (u_map - gl_x)
 
+            # constraint 3: y[index] >= m_l * x[index] - m_l*u + y_u
+            C33 = np.hstack([ml * I.V[map1, 1:nv], -V2[map1, :]])
+            d33 = -ml * I.V[map1, 0] + ml * u_map - b
+            
+            # constraint 4: y[index] <= m_u * x[index] - m_u*l + y_l
+            C34 = np.hstack([-mu * I.V[map1, 1:nv], V2[map1, :]])
+            d34 = mu * I.V[map1, 0] - mu * l_map + a
 
-            # constraint 3: y <= g2 * x + y2
-            C33 = np.hstack((np.multiply(-g2,I.V[map1, 1:nv]), V2[map1, :]))
-            d33 = np.multiply(g2, I.V[map1, 0]) + y2
-            # constraint 4: y >= g1 * x + y1
-            C34 = np.hstack((np.multiply(g1,I.V[map1, 1:nv]), -V2[map1, :]))
-            d34 = np.multiply(-g1, I.V[map1, 0]) - y1
-
-            # print('C31: \n', C31)
-            # print('C32: \n', C32)
-            # print('C33: \n', C33)
-            # print('C34: \n', C34)
-            # print('d31: \n', d31)
-            # print('d32: \n', d32)
-            # print('d33: \n', d33)
-            # print('d34: \n', d34)
-            C3 = np.vstack((C31, C32, C33, C34))
-            d3 = np.vstack((d31, d32, d33, d34))
-            # print('C3: \n', C3)
-            # print('d3: \n', d3)
+            C3 = np.vstack([C31, C32, C33, C34])
+            d3 = np.hstack([d31, d32, d33, d34])
         else:
-            # C3 = np.array([])
-            # d3 = np.array([])
-            C3 = np.empty((0, nv+1))
-            d3 = np.empty((0, 1))
+            C3 = np.empty([0, nv+1])
+            d3 = np.empty(0)
+            
+        new_C = np.vstack([C0, C1, C2, C3])
+        new_d = np.hstack([d0, d1, d2, d3])
 
-        # print('C1: \n', C1)
-        # print('C2: \n', C2)
-        # print('C3: \n', C3)
-        # print('d1: \n', d1)
-        # print('d2: \n', d2)
-        # print('d3: \n', d3)
-        new_C = np.vstack((C0, C1, C2, C3))
-        new_d = np.vstack((d0, d1, d2, d3))
-
-        # print('new_C: \n', new_C)
-        # print('new_d: \n', new_d)
-
-        # print('I.predicate_lb: ', I.predicate_lb)
-        # print('I.predicate_ub: ', I.predicate_ub)
-        # print('yl[map2]: ', yl[map2.flatten()])
-        # print('yu[map2]: ', yu[map2.T])
-        new_pred_lb = np.vstack((I.predicate_lb, yl[map2.flatten()]))
-        new_pred_ub = np.vstack((I.predicate_ub, yu[map2.flatten()]))
+        new_pred_lb = np.hstack([I.predicate_lb, yl[map2].flatten()])
+        new_pred_ub = np.hstack([I.predicate_ub, yu[map2].flatten()])
 
         return Star(new_V, new_C, new_d, new_pred_lb, new_pred_ub)
 
@@ -506,7 +511,7 @@ class TanSig:
     def reach_rstar_approx(I):
         # @I: input RStar set
         # return: output RStar set
-        from engine.set.rstar import RStar
+        from rstar import RStar
         
         assert isinstance(I, RStar), 'error: input set is not a RStar set'
 
@@ -523,8 +528,8 @@ class TanSig:
 
         y_l = np.tanh(l)
         y_u = np.tanh(u)
-        dy_l = (1 - y_l*y_l.T).diagonal().reshape(-1,1)
-        dy_u = (1 - y_u*y_u.T).diagonal().reshape(-1,1)
+        dy_l = 1 - y_l**2
+        dy_u = 1 - y_u**2
 
         # create new matrices for lower and uppper polyhedral constraints and bounds
         D_L.append(np.zeros((I.dim, I.dim + 1)))
@@ -537,7 +542,7 @@ class TanSig:
             RS = TanSig.stepLogSig_rstar(RS, i, l[i], u[i], y_l[i], y_u[i], dy_l[i], dy_u[i])
         return RS
 
-    def stepLogSig_rstar(I, index, l, u, y_l, y_u, dy_l, dy_u):
+    def stepTanSig_rstar(I, index, l, u, y_l, y_u, dy_l, dy_u):
         # @I: rstar-input set
         # @index: index of neuron performing stepReach
         # @l: l = min(x[index]), lower bound at neuron x[index] 
@@ -547,7 +552,7 @@ class TanSig:
         # @dy_l: derivative of LogSig at the lower bound
         # @dy_u: derivative of LogSig at the upper bound
         # return: RStar output set
-        from engine.set.rstar import RStar
+        from rstar import RStar
 
         assert isinstance(I, RStar), 'error: input set is not a RStar set'
         
@@ -663,37 +668,37 @@ class TanSig:
     def multistepTanSig_rstar():
         return
 
-    #-------------------------------- over-approximate reachability analysis with zonotope -----------------------------------#
-    # rechability analysis with zonotope
     def reach_zono_approx(I):
-        # @I: input zono
-        # return: Z: output zono
-        
-        # method: approximate hyperbolic tangent function by a zonotope:
-        # reference: Fast and Effective Robustness Certification,
-        # Gagandeep Singh, NIPS, 2018
-        from engine.set.zono import Zono
+        """
+            Rechability analysis with zonotope.
+            Approximates hyperbolic tangent function by a zonotope.
+            I: input zono
+            
+            return: Z -> output zono
+            
+            reference: Fast and Effective Robustness Certification,
+                       Gagandeep Singh, NIPS, 2018
+        """
+        from zono import Zono
 
         assert isinstance(I, Zono), 'error: input set is not a Zono'
 
         B = I.getBox()
         lb = B.lb
         ub = B.ub
-        print('lb: \n', lb)
-        print('ub: \n', ub)
+
         y_lb = np.tanh(lb)
         y_ub = np.tanh(ub)
-        dy_lb = (1 - y_lb*y_lb)
-        dy_ub = (1 - y_ub*y_ub)
-
-        G = np.hstack((dy_lb, dy_ub))
-        gamma_mat = np.matrix(np.diagflat(G.min(1)))
-        mu1 = 0.5 * (y_ub + y_lb - gamma_mat * (ub + lb))
-        mu2 = 0.5 * (y_ub - y_lb - gamma_mat * (ub - lb))
+        
+        G = np.vstack([TanSig.dtansig(lb), TanSig.dtansig(ub)])
+        gamma_opt = np.min(G, axis = 0)
+        gamma_mat = np.diag(gamma_opt)
+        mu1 = 0.5 * (y_ub + y_lb - gamma_mat @ (ub + lb))
+        mu2 = 0.5 * (y_ub - y_lb - gamma_mat @ (ub - lb))
         Z1 = I.affineMap(gamma_mat, mu1)
         new_V = np.diagflat(mu2)
 
-        V = np.hstack((Z1.V, new_V))
+        V = np.hstack([Z1.V, new_V])
         return Zono(Z1.c, V)
 
 #------------------check if this function is working--------------------------------------------
@@ -720,7 +725,7 @@ class TanSig:
         # @y_l: y_l = np.tanh(l); output of tanh at lower bound
         # @y_u: y_u = np.tanh(u); output of tanh at upper bound
         # return: output star set
-        from engine.set.star import Star
+        from star import Star
 
         if l == u:
             new_V = I.V
@@ -736,25 +741,25 @@ class TanSig:
             n = I.nVar + 1
             # over-approximation constraints
             # constraint 1: y <= y'(u) * (x - u) + y(u)
-            C1 = np.column_stack((-dy_u*I.V[index, 1:n], 1))
+            C1 = np.hstack([-dy_u*I.V[index, 1:n], 1])
             d1 = dy_u * I.V[index, 0] - dy_u*u + y_u
             # constraint 2: y >= (y(u) - y(l)) * (x - l) / (u - l) + y(l)
             a = (y_u - y_l) / (u - l)
-            C2 = np.column_stack((a*I.V[index, 1:n], -1))
+            C2 = np.hstack([a*I.V[index, 1:n], -1])
             d2 = a*l - y_l - a*I.V[index, 0]
 
             m = I.C.shape[0]
-            C0 = np.column_stack((I.C, np.zeros((m, 1))))
+            C0 = np.hstack([I.C, np.zeros([m, 1])])
             d0 = I.d
-            new_C = np.row_stack((C0, C1, C2))
-            new_d = np.row_stack((d0, d1, d2))
-            new_V = np.column_stack((I.V, np.zeros((I.dim, 1))))
-            new_V[index, :] = np.zeros((1, n+1))
+            new_C = np.vstack([C0, C1, C2])
+            new_d = np.hstack([d0, d1, d2])
+            new_V = np.hstack([I.V, np.zeros([I.dim, 1])])
+            new_V[index, :] = 0
             new_V[index, n] = 1
 
             # update predicate bound
-            new_predicate_lb = np.row_stack((I.predicate_lb, y_l))
-            new_predicate_ub = np.row_stack((I.predicate_ub, y_u))
+            new_predicate_lb = np.hstack([I.predicate_lb, y_l])
+            new_predicate_ub = np.hstack([I.predicate_ub, y_u])
             return Star(new_V, new_C, new_d, new_predicate_lb, new_predicate_ub)
         
         elif u <= 0:
@@ -765,25 +770,25 @@ class TanSig:
             n = I.nVar + 1
             # over-approximation constraints
             # constraint 1: y >= y'(l) * (x - l) + y(l)
-            C1 = np.column_stack((dy_l*I.V[index, 1:n], -1))
+            C1 = np.hstack([dy_l*I.V[index, 1:n], -1])
             d1 = -dy_l * I.V[index, 0] + dy_l*l - y_l
             # constraint 2: y <= (y(u) - y(l)) * (x - l) / (u - l) + y(l)
             a = (y_u - y_l)/(u - l)
-            C2 = np.column_stack((-a*I.V[index, 1:n], 1)) 
+            C2 = np.hstack([-a*I.V[index, 1:n], 1]) 
             d2 = -a*l + y_l + a*I.V[index, 0]
 
             m = I.C.shape[0]
-            C0 = np.column_stack((I.C, np.zeros((m, 1))))
+            C0 = np.hstack([I.C, np.zeros([m, 1])])
             d0 = I.d
-            new_C = np.row_stack((C0, C1, C2))
-            new_d = np.row_stack((d0, d1, d2))
-            new_V = np.column_stack((I.V, np.zeros((I.dim, 1))))
-            new_V[index, :] = np.zeros((1, n+1))
+            new_C = np.vstack([C0, C1, C2])
+            new_d = np.hstack([d0, d1, d2])
+            new_V = np.hstack([I.V, np.zeros([I.dim, 1])])
+            new_V[index, :] = 0
             new_V[index, n] = 1
 
             # update predicate bound
-            new_predicate_lb = np.row_stack((I.predicate_lb, y_l))
-            new_predicate_ub = np.row_stack((I.predicate_ub, y_u))
+            new_predicate_lb = np.hstack([I.predicate_lb, y_l])
+            new_predicate_ub = np.hstack([I.predicate_ub, y_u])
             return Star(new_V, new_C, new_d, new_predicate_lb, new_predicate_ub)
 
         elif l < 0 and u > 0:
@@ -795,24 +800,24 @@ class TanSig:
 
             dy_min = min(dy_l, dy_u)
             # constraint 1: y >= y'(l) * (x - l) + y(l)
-            C1 = np.column_stack((dy_min*I.V[index, 1:n], -1))
+            C1 = np.hstack([dy_min*I.V[index, 1:n], -1])
             d1 = -dy_min * I.V[index, 0] + dy_min*l - y_l
             # constraint 2: y <= y'(u) * (x - u) + y(u)
-            C2 = np.column_stack((-dy_min*I.V[index, 1:n], 1))
+            C2 = np.hstack([-dy_min*I.V[index, 1:n], 1])
             d2 = dy_min * I.V[index, 0] - dy_min*u + y_u
 
             m = I.C.shape[0]
-            C0 = np.column_stack((I.C, np.zeros((m, 1))))
+            C0 = np.hstack([I.C, np.zeros([m, 1])])
             d0 = I.d
-            new_C = np.row_stack((C0, C1, C2))
-            new_d = np.row_stack((d0, d1, d2))
-            new_V = np.column_stack((I.V, np.zeros((I.dim, 1))))
-            new_V[index, :] = np.zeros((1, n+1))
+            new_C = np.vstack([C0, C1, C2])
+            new_d = np.hstack([d0, d1, d2])
+            new_V = np.hstack([I.V, np.zeros([I.dim, 1])])
+            new_V[index, :] = 0
             new_V[index, n] = 1
 
             # update predicate bound
-            new_predicate_lb = np.row_stack((I.predicate_lb, y_l))
-            new_predicate_ub = np.row_stack((I.predicate_ub, y_u))
+            new_predicate_lb = np.hstack([I.predicate_lb, y_l])
+            new_predicate_ub = np.hstack([I.predicate_ub, y_u])
             return Star(new_V, new_C, new_d, new_predicate_lb, new_predicate_ub)
 
     # reachability analysis with abstract domain
@@ -822,7 +827,7 @@ class TanSig:
 
         # reference: An abstract domain for certifying neural networks. Proceedings of the ACM on Programming Languages,
         # Gagandeep Singh, POPL, 2019
-        from engine.set.star import Star
+        from star import Star
 
         assert isinstance(I, Star), 'error: input set is not a Star'
 
@@ -830,8 +835,9 @@ class TanSig:
 
         y_l = np.tanh(l)
         y_u = np.tanh(u)
-        dy_l = (1 - y_l*y_l.T).diagonal().reshape(-1,1)
-        dy_u = (1 - y_u*y_u.T).diagonal().reshape(-1,1)
+        
+        dy_l = TanSig.dtansig(l)
+        dy_u = TanSig.dtansig(u)
 
         n = I.dim
         S = I

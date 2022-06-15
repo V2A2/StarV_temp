@@ -7,6 +7,7 @@ from gurobipy import GRB
 
 ####### TODO: NO POLYTOPE ########
 import polytope as pc
+#import pypolycontain as pp
 ##################################
 
 import matplotlib.pyplot as plt
@@ -1082,9 +1083,36 @@ class Star:
     # def get_convex_hull():
     # def concatenateStars():
     # def merge_stars()
-    
-    # def plot(self):
-    #     assert self.dim <= 2 and self.dim > 0, 'error: only 2D star can be plotted'
+ 
+    # def toPolytope(self):
+        
+    def toPypolycontain(self):
+        """
+            Converts to H-polytope of Pypolycotain (2D polytope or Polyhedron)
+        """
+        b = self.V[:, 0]
+        W = self.V[:, 1:]
+        
+        if self.predicate_lb.size and self.predicate_ub.size:
+            I = np.eye(self.nVar)
+            C1 = np.vstack([I, -I])
+            d1 = np.hstack([self.predicate_ub, -self.predicate_lb])
+            
+            A = np.vstack([self.C, C1])
+            b = np.hstack([self.d, d1]).reshape(-1,1)
+            
+            # H-polytope of Pypolycontain
+            Pa = pp.H_polytope(A, b)
+            
+            P = pp.affine_map(W, Pa, b)
+            pp.visualize([P])
+        
+    def plot(self):
+        assert self.dim <= 2 and self.dim > 0, 'error: only 2D star can be plotted'
+        
+        self.V
+        self.C
+        self.d
 
     #     P = pc.Polytope(self.C, self.d)
     # def plot(self):
@@ -1159,6 +1187,6 @@ class Star:
     def __repr__(self):
         from zono import Zono
         if isinstance(self.Z, Zono):
-            return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npred_lb: %s \npred_ub: %s \nstate_lb: %s \nstate_ub: %s\nZ: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub, self.Z.__class__)
+            return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npredicate_lb: %s \npredicate_ub: %s \nstate_lb: %s \nstate_ub: %s\nZ: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub, self.Z.__class__)
         else:
-            return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npred_lb: %s \npred_ub: %s \nstate_lb: %s \nstate_ub: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub)
+            return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npredicate_lb: %s \npredicate_ub: %s \nstate_lb: %s \nstate_ub: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub)

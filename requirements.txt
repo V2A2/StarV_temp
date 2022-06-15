@@ -5,3 +5,9 @@ polytope
 matplotlib
 cvxopt
 mat73
+# pypolycontain
+# sphinx>=1.4
+# ipykernel
+# nbsphinx
+# pydrake
+# pycddlib

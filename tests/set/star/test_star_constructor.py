@@ -88,6 +88,9 @@ class TestStarConstructor(unittest.TestCase):
         print(S.__repr__())
         print('\n\nPrint inormation of star in short: \n')
         print(S.__str__())
+        
+        print("visualize star")
+        S.plot()
     
 if __name__ == '__main__':
     unittest.main()
