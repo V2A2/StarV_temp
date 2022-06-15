@@ -10,7 +10,7 @@ AVGP2D_ERRMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0,
 AVGP2D_ERRMSG_UNK_REACH_METHOD = "Unknown reachability method"
 AVGP2D_ERRMSG_INVALID_PRECISION_OPT = 'The given precision option is not supported. Possible options: \'single\', \'double\', \'empty\''
 AVGP2D_ERRMSG_EVAL_INVALID_PARAM_NUM = 'Invalid number of input parameters'
-
+AVGP2D_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 
 AVGP2D_ATTRIBUTES_NUM = 8
 

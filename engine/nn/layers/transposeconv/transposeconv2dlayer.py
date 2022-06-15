@@ -13,6 +13,7 @@ CONVTR2D_ERRMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 
 CONVTR2D_ERRMSG_UNK_REACH_METHOD = "Unknown reachability method"
 CONVTR2D_ERRMSG_INVALID_PRECISION_OPT = 'The given precision option is not supported. Possible options: \'single\', \'double\', \'empty\''
 CONVTR2D_ERRMSG_EVAL_INVALID_PARAM_NUM = 'Invalid number of input parameters'
+CONVTR2D_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 
 CONVTR2D_ATTRIBUTES_NUM = 12
 CONVTR2D_FULL_ARGS_LEN = 9

@@ -10,6 +10,7 @@ MAXP2D_ERRMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0,
 MAXP2D_ERRMSG_UNK_REACH_METHOD = "Unknown reachability method"
 MAXP2D_ERRMSG_INVALID_PRECISION_OPT = 'The given precision option is not supported. Possible options: \'single\', \'double\', \'empty\''
 MAXP2D_ERRMSG_EVAL_INVALID_PARAM_NUM = 'Invalid number of input parameters'
+MAXP2D_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 
 MAXP2D_ERRMSG_RE_SINGLE_INVALID_ARGS_NUM = 'Invalid numer of arguments to perform reachability analysis'
 
