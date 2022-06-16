@@ -31,7 +31,7 @@ class TestStarAffineMap(unittest.TestCase):
                     predicate_ub -> predicate upper bound vector (1D numpy array)
         """
         lb = np.array([1, 1])
-        ub = np.array([2, 2])
+        ub = np.array([2, 2])        
     
         S = Star(lb, ub)
         print("Initial Star set\n")
@@ -40,9 +40,12 @@ class TestStarAffineMap(unittest.TestCase):
         W = np.array([[1, -1], [1, 1]])
         b = np.array([0.5, 0.5])
         
-        am_S = S.affineMap(W, b)
+        S_affine = S.affineMap(W, b)
         print("Affine mapped Star set\n")
-        print(am_S.__repr__())    
+        print(S_affine.__repr__())   
+        S_affine.plot()
+        plt.show()
+        
 
 if __name__ == '__main__':
     unittest.main()

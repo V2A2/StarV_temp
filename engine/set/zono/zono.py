@@ -250,25 +250,24 @@ class Zono:
         return Box(lb, ub)
     
     
-    # def toPolytope(self):
-    #     """
-    #         Converts current Zono to Polytope set
+    def toPolytope(self):
+        """
+            Converts current Zono to Polytope set
             
-    #         return -> created Polytope
-    #         reference: Polytope is based on polytope library in Python
-    #                    https://tulip-control.github.io/polytope/
-    #     """
-    #     I = np.eye(self.dim)
-    #     C = np.vstack([I, -I])
-    #     d = np.ones(self.dim*2)
-        
-    #     A = np.vstack([C, self.V])
-    #     b = np.hstack([d, self.c])
-        
-    #     print("A: %s" % A)
-    #     print("b: %s" % b)
-        
-    #     return pc.Polytope(A, b)
+            return -> created Polytope
+            reference: Polytope is based on polytope library in Python
+                       https://tulip-control.github.io/polytope/
+        """
+        I = np.eye(self.dim)
+        C = np.vstack([I, -I])
+        d = np.ones(self.dim*2)
+
+        # suppose polytope P = {x element of P : C x <= d} 
+        # then, new_P = V * P + c
+        V_inv = np.linalg.pinv(self.V)
+        new_C = np.dot(C, V_inv)
+        new_d = d + np.dot(new_C, self.c)
+        return pc.Polytope(new_C, new_d)
 
     def toStar(self):
         """
@@ -474,21 +473,21 @@ class Zono:
             V = np.vstack([V, v]) if V.size else v
         return V.T
 
-    # def plot(self, color="red"):
-    #     """
-    #         Plots a Box using Polytope library
-            
-    #         color : color of Polytope
-    #     """
+    def plot(self, color=""):
+        """
+            Plots a Zono using Polytope package
+            color : color of Polytope 
+                (if color is not provided, then polytope is plotted in random color)
+        """
+        assert self.dim <= 2 and self.dim > 0, 'error: only 2D zono can be plotted'
         
-    #     P = self.toPolytope()
-    #     ax = P.plot(color=color)
-    #     [lb, ub] = self.getRanges()
-    #     print("lb: ", lb)
-    #     print("ub: ", ub)
-    #     ranges = np.vstack([lb, ub]).T.reshape(self.dim**2)
-    #     ax.axis(ranges.tolist())
-    #     plt.show()
+        P = self.toPolytope()
+        if color: ax = P.plot(color=color)
+        else:     ax = P.plot()
+        [lb, ub] = self.getRanges()
+        ranges = np.vstack([lb, ub]).T.reshape(self.dim**2)
+        ax.axis(ranges.tolist())
+        plt.show()
 
     def __str__(self):
         print('class: %s' % self.__class__)

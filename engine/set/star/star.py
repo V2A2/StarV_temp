@@ -4,15 +4,11 @@ import scipy
 import scipy.sparse as sp
 import gurobipy as gp
 from gurobipy import GRB 
-
-####### TODO: NO POLYTOPE ########
 import polytope as pc
-#import pypolycontain as pp
-##################################
 
-import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d as a3
-import matplotlib.colors as colors
+# import matplotlib.pyplot as plt
+# import mpl_toolkits.mplot3d as a3
+# import matplotlib.colors as colors
 
 import sys
 
@@ -1084,11 +1080,9 @@ class Star:
     # def concatenateStars():
     # def merge_stars()
  
-    # def toPolytope(self):
-        
-    def toPypolycontain(self):
+    def toPolytope(self):
         """
-            Converts to H-polytope of Pypolycotain (2D polytope or Polyhedron)
+            Converts to Polytope
         """
         b = self.V[:, 0]
         W = self.V[:, 1:]
@@ -1098,62 +1092,34 @@ class Star:
             C1 = np.vstack([I, -I])
             d1 = np.hstack([self.predicate_ub, -self.predicate_lb])
             
-            A = np.vstack([self.C, C1])
-            b = np.hstack([self.d, d1]).reshape(-1,1)
-            
-            # H-polytope of Pypolycontain
-            Pa = pp.H_polytope(A, b)
-            
-            P = pp.affine_map(W, Pa, b)
-            pp.visualize([P])
+            C = np.vstack([self.C, C1])
+            d = np.hstack([self.d, d1])
+
+        else:
+            C = self.C
+            d = self.d
+
+        # suppose polytope P = {x element of P : C x <= d} 
+        # then, new_P = W * P + b
+        W_inv = np.linalg.pinv(W)
+        new_C = np.dot(C, W_inv)
+        new_d = d + np.dot(new_C, b)
+        return pc.Polytope(new_C, new_d)
         
-    def plot(self):
+    def plot(self, color=""):
+        """
+            Plots a Star using Polytope package
+            color : color of Polytope 
+                (if color is not provided, then polytope is plotted in random color)
+        """
         assert self.dim <= 2 and self.dim > 0, 'error: only 2D star can be plotted'
         
-        self.V
-        self.C
-        self.d
-
-    #     P = pc.Polytope(self.C, self.d)
-    # def plot(self):
-    #     # A = self.V[:, 1:]
-    #     A = np.vstack((self.C, self.V[:, 1:]))
-    #     b = np.vstack((self.d, self.V[:, 0]))
-    #     # halfspaces
-    #     # H = np.hstack((self.C, -self.d))
-    #     H = np.hstack((A, -b))
-    #     print('H: \n', H)
-    #     # feasible point
-    #     p = np.array(self.V[:, 0]).flatten()
-    #     p = np.zeros(3)
-    #     print('p: ', p)
-    #     print('V: \n', self.V)
-    #     hs = scipy.spatial.HalfspaceIntersection(H, p)
-    #     verts = hs.intersections
-    #     hull = scipy.spatial.ConvexHull(verts)
-    #     faces = hull.simplices
-
-    #     ax = a3.Axes3D(plt.figure())
-    #     ax.dist=10
-    #     ax.azim=30
-    #     ax.elev=10
-    #     ax.set_xlim([-3,3])
-    #     ax.set_ylim([-3,3])
-    #     ax.set_zlim([-3,3])
-
-    #     for s in faces:
-    #         sq = [
-    #             [verts[s[0], 0], verts[s[0], 1], verts[s[0], 2]],
-    #             [verts[s[1], 0], verts[s[1], 1], verts[s[1], 2]],
-    #             [verts[s[2], 0], verts[s[2], 1], verts[s[2], 2]]
-    #         ]
-
-    #         f = a3.art3d.Poly3DCollection([sq])
-    #         f.set_color(colors.rgb2hex(scipy.rand(3)))
-    #         f.set_edgecolor('k')
-    #         f.set_alpha(0.1)
-    #         ax.add_collection3d(f)
-    #     plt.show()
+        [l, u] = self.estimateRanges()
+        P = self.toPolytope()
+        if color: ax = P.plot(color=color)
+        else:     ax = P.plot()
+        ax.set_xlim(l[0], u[0]) # Optional: set axis max/min
+        ax.set_ylim(l[1], u[1])
 
     def __str__(self):
         from zono import Zono

@@ -225,14 +225,14 @@ class Box:
         ub = np.amax(ub, axis = 0)
         return Box(lb, ub)
     
-    def plot(self, color="red"):
+    def plot(self, color=""):
         """
-            Plots a Box using Polytope library
-            
-            color : color of Polytope
+            Plots a Box using Polytope package
+            color : color of Polytope (if color is not provided, then polytope is plotted in random color)
         """        
         P = self.toPolytope()
-        ax = P.plot(color=color)
+        if color: ax = P.plot(color=color)
+        else:     ax = P.plot()
         ranges = np.vstack([self.lb, self.ub]).T.reshape(self.dim**2)
         ax.axis(ranges.tolist())
         plt.show()

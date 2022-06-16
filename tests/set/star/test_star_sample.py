@@ -38,7 +38,7 @@ class TestStarSample(unittest.TestCase):
 
         X = S.sample(200)
 
-        P.plot()
+        S.plot()
         for i in range(X.shape[1]):
             plt.plot(X[0, i], X[1, i], 'go')
         plt.show()
