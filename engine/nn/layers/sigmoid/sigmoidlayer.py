@@ -1,75 +1,62 @@
-import numpy as np
-import torch
-import torch.nn as nn 
+SIGMOIDL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
+SIGMOIDL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
+SIGMOIDL_ERRORMSG_INVALID_INPUT = 'The input should be either an ImageStar or ImageZono'
 
-RELUL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
-RELUL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
-RELUL_ERRORMSG_INVALID_INPUT = 'The input should be either an ImageStar or ImageZono'
+SIGMOIDL_ATTRIBUTES_NUM = 5
 
-RELUL_ATTRIBUTES_NUM = 5
+SIGMOIDL_FULL_ARGS_LEN = 5
+SIGMOIDL_NAME_ARGS_LEN = 1
+SIGMOIDL_EMPTY_ARGS_LEN = 0
 
-RELUL_FULL_ARGS_LEN = 5
-RELUL_NAME_ARGS_LEN = 1
-RELUL_EMPTY_ARGS_LEN = 0
+SIGMOIDL_NAME_ID = 0
+SIGMOIDL_NUM_INPUTS_ID = 1
+SIGMOIDL_INPUT_NAMES_ID = 2
+SIGMOIDL_NUM_OUTPUTS_ID = 3
+SIGMOIDL_OUTPUT_NAMES_ID = 4
 
-RELUL_NAME_ID = 0
-RELUL_NUM_INPUTS_ID = 1
-RELUL_INPUT_NAMES_ID = 2
-RELUL_NUM_OUTPUTS_ID = 3
-RELUL_OUTPUT_NAMES_ID = 4
+SIGMOIDL_NAME_ARGS_ID = 0
+SIGMOIDL_NUM_INPUTS_ARGS_ID = 1
+SIGMOIDL_INPUT_NAMES_ARGS_ID = 2
+SIGMOIDL_NUM_OUTPUTS_ARGS_ID = 3
+SIGMOIDL_OUTPUT_NAMES_ARGS_ID = 4
 
-RELUL_NAME_ARGS_ID = 0
-RELUL_NUM_INPUTS_ARGS_ID = 1
-RELUL_INPUT_NAMES_ARGS_ID = 2
-RELUL_NUM_OUTPUTS_ARGS_ID = 3
-RELUL_OUTPUT_NAMES_ARGS_ID = 4
+SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID = 0
+SIGMOIDL_REACH_ARGS_OPTION_ID = 1
+SIGMOIDL_REACH_ARGS_METHOD_ID = 2
+SIGMOIDL_REACH_ARGS_RELAX_FACTOR_ID = 3
 
-RELUL_REACH_ARGS_INPUT_IMAGES_ID = 0
-RELUL_REACH_ARGS_OPTION_ID = 1
-RELUL_REACH_ARGS_METHOD_ID = 2
-RELUL_REACH_ARGS_RELAX_FACTOR_ID = 3
+SIGMOIDL_DEFAULT_NAME = 'relu_layer'
 
-RELUL_DEFAULT_NAME = 'relu_layer'
-
-class ReLULayer:
+class SigmoidLayer:
     """
-        The Relu layer class in CNN
+        The Sigmoid layer class in CNN
         Contains constructor and reachability analysis methods
-        Main references:
-        1) An intuitive explanation of convolutional neural networks: 
-           https://ujjwalkarn.me/2016/08/11/intuitive-explanation-convnets/
-        2) More detail about mathematical background of CNN
-           http://cs231n.github.io/convolutional-networks/
-           http://cs231n.github.io/convolutional-networks/#pool
-        3) Matlab implementation of Convolution2DLayer and MaxPooling (for training and evaluating purpose)
-           https://www.mathworks.com/help/deeplearning/ug/layers-of-a-convolutional-neural-network.html
-           https://www.mathworks.com/help/deeplearning/ref/nnet.cnn.layer.relulayer.html
     """
     
-    def ReLULayer(self, *args):
+    def SigmoidLayer(self, *args):
         """
             Constructor
         """
         
         self.attributes = []
         
-        for i in range(RELUL_ATTRIBUTES_NUM):
+        for i in range(SIGMOIDL_ATTRIBUTES_NUM):
             self.attributes.append(np.array([]))
         
-        if len(args) == RELUL_FULL_ARGS_LEN:
-            self.attributes[RELUL_NAME_ID] = self.attributes[RELUL_ARGS_NAME_ID]
-            self.attributes[RELUL_NUM_INPUTS_ID] = self.attributes[RELUL_ARGS_NUM_INPUTS_ID]
-            self.attributes[RELUL_INPUT_NAMES_ID] = self.attributes[RELUL_ARGS_INPUT_NAMES_ID]
-            self.attributes[RELUL_NUM_OUTPUTS_ID] = self.attributes[RELUL_ARGS_NUM_OUTPUTS_ID]
-            self.attributes[RELUL_OUTPUT_NAMES_ID] = self.attributes[RELUL_ARGS_OUTPUT_NAMES_ID]
-        elif len(args) == RELUL_NAME_ARGS_LEN:
-            assert isinstance(self.attributes[RELUL_ARGS_NAME_ID], str), 'error: %s' % RELUL_ERRMSG_NAME_NOT_STRING
+        if len(args) == SIGMOIDL_FULL_ARGS_LEN:
+            self.attributes[SIGMOIDL_NAME_ID] = self.attributes[SIGMOIDL_ARGS_NAME_ID]
+            self.attributes[SIGMOIDL_NUM_INPUTS_ID] = self.attributes[SIGMOIDL_ARGS_NUM_INPUTS_ID]
+            self.attributes[SIGMOIDL_INPUT_NAMES_ID] = self.attributes[SIGMOIDL_ARGS_INPUT_NAMES_ID]
+            self.attributes[SIGMOIDL_NUM_OUTPUTS_ID] = self.attributes[SIGMOIDL_ARGS_NUM_OUTPUTS_ID]
+            self.attributes[SIGMOIDL_OUTPUT_NAMES_ID] = self.attributes[SIGMOIDL_ARGS_OUTPUT_NAMES_ID]
+        elif len(args) == SIGMOIDL_NAME_ARGS_LEN:
+            assert isinstance(self.attributes[SIGMOIDL_ARGS_NAME_ID], str), 'error: %s' % SIGMOIDL_ERRMSG_NAME_NOT_STRING
 
-            self.attributes[RELUL_NAME_ID] = self.attributes[RELUL_ARGS_NAME_ID]
-        elif len(args) == RELUL_EMPTY_ARGS_LEN:
-            self.attributes[RELUL_NAME_ID] = RELUL_DEFAULT_NAME
+            self.attributes[SIGMOIDL_NAME_ID] = self.attributes[SIGMOIDL_ARGS_NAME_ID]
+        elif len(args) == SIGMOIDL_EMPTY_ARGS_LEN:
+            self.attributes[SIGMOIDL_NAME_ID] = SIGMOIDL_DEFAULT_NAME
         else:
-            raise Exception(RELUL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
+            raise Exception(SIGMOIDL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
     def evaluate(_, input):
         """
@@ -79,7 +66,7 @@ class ReLULayer:
             returns the result of apllying ReLU activation to the given input
         """
             
-        return np.reshape(PosLin.evaluate(torch.reshape(input,(np.prod(input.shape), 1))), input.shape)
+        return np.reshape(LogSig.evaluate(torch.reshape(input,(np.prod(input.shape), 1))), input.shape)
     
     def reach_star_single_input(_, input, method, relax_factor):
         """
@@ -92,9 +79,9 @@ class ReLULayer:
             returns a set of reachable sets for the given input images
         """
              
-        assert isinstance(input, ImageStar), 'error: %s' % RELUL_ERRORMSG_INVALID_INPUT
+        assert isinstance(input, ImageStar), 'error: %s' % SIGMOIDL_ERRORMSG_INVALID_INPUT
             
-        reachable_sets = PosLin.reach(input_image.to_star(), method, [], relax_factor)
+        reachable_sets = LogSig.reach(input_image.to_star(), method, [], relax_factor)
 
         rs = []
         
@@ -132,9 +119,9 @@ class ReLULayer:
             returns a reachable set or the given ImageZono
         """    
         
-        assert isinstance(input, ImageZono), 'error: %s' % RELUL_ERRORMSG_INVALID_INPUT
+        assert isinstance(input, ImageZono), 'error: %s' % SIGMOIDL_ERRORMSG_INVALID_INPUT
         
-        reachable_set = PosLin.reach(input_image.toZono())
+        reachable_set = LogSig.reach(input_image.toZono())
         return reachable_set.toImageZono(input_image.get_height(), \
                                          input_image.get_width(), \
                                          input_image.get_channel())
@@ -170,10 +157,10 @@ class ReLULayer:
         """
         
         if method == 'approx-star' or method == 'exact-star':
-            IS = self.reach_star_multiple_inputs(args[RELUL_REACH_ARGS_INPUT_IMAGES_ID], args[RELUL_REACH_ARGS_METHOD_ID], args[RELUL_REACH_ARGS_OPTION_ID], args[RELUL_REACH_ARGS_RELAX_FACTOR_ID])
+            IS = self.reach_star_multiple_inputs(args[SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGMOIDL_REACH_ARGS_METHOD_ID], args[SIGMOIDL_REACH_ARGS_OPTION_ID], args[SIGMOIDL_REACH_ARGS_RELAX_FACTOR_ID])
         elif method == 'approx-zono':
-            IS = self.reach_zono_multiple_inputs(args[RELUL_REACH_ARGS_INPUT_IMAGES_ID], args[RELUL_REACH_ARGS_OPTION_ID])
+            IS = self.reach_zono_multiple_inputs(args[SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGMOIDL_REACH_ARGS_OPTION_ID])
         else:
-            raise Exception(RELUL_ERRMSG_UNK_REACH_METHOD)
+            raise Exception(SIGMOIDL_ERRMSG_UNK_REACH_METHOD)
             
         return IS
