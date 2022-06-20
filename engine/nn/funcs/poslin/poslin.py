@@ -83,7 +83,8 @@ class PosLin:
         # print("\n xmin ------------------------ \n", xmin)
 
         if xmin >= 0:
-            S = I
+            S = []
+            S.append(I)
             return S
         else:
             # ------------- TODO: Using getMin and getMax after renew the gurobi license -------------
@@ -104,7 +105,9 @@ class PosLin:
                     new_Z = Zono(c, V)
                 else:
                     new_Z = np.array([])
-                S = Star(V1, I.C, I.d, I.predicate_lb, I.predicate_ub, new_Z)
+                S = []
+                S1 = Star(V1, I.C, I.d, I.predicate_lb, I.predicate_ub, new_Z)
+                S.append(S1)
                 return S
             else:
                 # ------------- S1 = I && x[index] < 0 -------------
@@ -267,13 +270,13 @@ class PosLin:
                 V = copy.deepcopy(I.V)
                 # print("\n V ------------------------ \n", V)
                 V[map, :] = 0
-                print("\n V ------------------------ \n", V)
+                # print("\n V ------------------------ \n", V)
 
                 # ------------- update outer-zono -------------
                 if isinstance(I.Z, Zono):
                     # ------------- TODO: modify the map -------------
                     c1 = copy.deepcopy(I.Z.c)
-                    print("\n c1 ------------------------ \n", c1)
+                    # print("\n c1 ------------------------ \n", c1)
                     c1[map] = 0
                     V1 = copy.deepcopy(I.Z.V)
                     # print("\n V1 ------------------------ \n", V1)
@@ -362,7 +365,7 @@ class PosLin:
         else:
             'error: Invalid number of input arguments, should be 2, 3, or 4'
 
-        #print("\n In: ------------------------ \n ", In)
+        # print("\n In: ------------------------ \n ", In)
         n = len(In)
         # S = np.array([])
         S = []
@@ -748,7 +751,9 @@ class PosLin:
         # ------------- TODO: Fix parallel -------------
         option = ''
         if method == 'exact-star':  # exact analysis using star
-            R = PosLin.reach_star_exact_multipleInputs(I, option, dis_opt,
+            Inputs = []
+            Inputs.append(I)
+            R = PosLin.reach_star_exact_multipleInputs(Inputs, option, dis_opt,
                                                        lp_solver)
             # R = PosLin.reach_star_exact(I, np.array([]))
             return R

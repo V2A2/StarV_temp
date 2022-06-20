@@ -88,7 +88,8 @@ class SatLin:
 
         # ------------- case 1) only single set -------------
         if xmin >= 0 and xmax <= 1:
-            S = I
+            S = []
+            S.append(I)
             return S
 
         # ------------- case 2) -------------
@@ -245,7 +246,9 @@ class SatLin:
                 # print("\n new_Z.V ------------------------ \n", new_Z.V)
             else:
                 new_Z = np.array([])
-            S = Star(new_V, I.C, I.d, I.predicate_lb, I.predicate_ub, new_Z)
+            S = []
+            S1 = Star(new_V, I.C, I.d, I.predicate_lb, I.predicate_ub, new_Z)
+            S.append(S1)
             # print("\n S ------------------------ \n", S)
             return S
 
@@ -264,7 +267,9 @@ class SatLin:
                 # print("\n new_Z.V ------------------------ \n", new_Z.V)
             else:
                 new_Z = np.array([])
-            S = Star(new_V, I.C, I.d, I.predicate_lb, I.predicate_ub, new_Z)
+            S = []
+            S1 = Star(new_V, I.C, I.d, I.predicate_lb, I.predicate_ub, new_Z)
+            S.append(S1)
             # print("\n S ------------------------ \n", S)
             return S
 
@@ -307,6 +312,7 @@ class SatLin:
                 # print("\n i ------------------------ \n", i)
                 S1 = SatLin.stepReach(I[i], index, lp_solver)
                 # print("\n S1 ------------------------ \n", len(S1))
+                # print("\n S1 ------------------------ \n", (S1))
                 S.extend(S1)
                 # print("\n S ------------------------ \n", len(S))
 
@@ -318,7 +324,7 @@ class SatLin:
                 # del S[:temp]
                 # else:
                 # S.extend(S1)
-                return S
+            return S
 
         # ------------- TODO: Fix parallel part -------------
         # elif option == 'parellel':
@@ -387,7 +393,7 @@ class SatLin:
             # print("\n V ------------------------ \n", V)
             if isinstance(I.Z, Zono):
                 c1 = copy.deepcopy(I.Z.c)
-                print("\n c1 ------------------------ \n", c1)
+                # print("\n c1 ------------------------ \n", c1)
                 c1[map1] = 0
                 V1 = copy.deepcopy(I.Z.V)
                 # print("\n V1 ------------------------ \n", V1)
@@ -419,16 +425,16 @@ class SatLin:
             map_float = np.intersect1d([lb_map], [ub_map])
             map = np.array(map_float, dtype=np.int)
             map_to_list = map.tolist()
-            # print("\n listed_lu_map ------------------------n", listed_lu_map)
+            # print("\n map_to_list ------------------------ \n", map_to_list)
             m = len(map_to_list)
             # print("\n m ------------------------n", m)
 
             In_list = []
             In_list.append(In)
             for i in range(m):
-                # print("\n i ------------------------n", i)
+                # print("\n i ------------------------ \n", i)
                 if dis_opt == 'display':
-                    print("\nPerforming exact PosLin_%d operation using Star",
+                    print("\n Performing exact PosLin_%d operation using Star",
                           map_to_list[i])
                 # print("\n In_list ------------------------ before \n", In_list)
                 In_list = SatLin.stepReachMultipleInputs(
@@ -456,7 +462,7 @@ class SatLin:
         assert isinstance(I, Star), 'error: input set is not a star set'
 
         # ------------- TODO: Call get Mins Maxs -------------
-        print("\n lp_solver ------------------------ \n", lp_solver)
+        # print("\n lp_solver ------------------------ \n", lp_solver)
         lb = I.getMin(index, lp_solver)
         ub = I.getMax(index, lp_solver)
         # [lb, ub] = I.estimateRange(index)
@@ -578,13 +584,13 @@ class SatLin:
             return S
         if lb < 0 and ub > 1:
             n = I.nVar + 1
-            print("\n n ------------------------ \n", n)
+            # print("\n n ------------------------ \n", n)
             # ------------- over-approximation constraints -------------
             # ------------- constraint 1: y[index] >= 0 -------------
             C1 = np.zeros([1, n])
-            print("\n C1 ------------------------ \n", C1)
+            # print("\n C1 ------------------------ \n", C1)
             C1[0, n - 1] = -1
-            print("\n C1 ------------------------ \n", C1)
+            # print("\n C1 ------------------------ \n", C1)
             d1 = 0
 
             # ------------- constraint 2: y[index] <= 1 -------------
@@ -670,7 +676,7 @@ class SatLin:
                     print(
                         "\n Performing approximate PosLin_%d operation using Star"
                         % i)
-                print("\n lp_solver ------------------------ \n", lp_solver)
+                # print("\n lp_solver ------------------------ \n", lp_solver)
                 In = SatLin.stepReachStarApprox(In, i, lp_solver)
                 # print("\n In ------------------------ \n", In.__repr__())
             S = In
@@ -856,6 +862,7 @@ class SatLin:
         #     R = PosLin.reach_polyhedron_exact(I, option, dis_opt)
         elif method == 'approx-star':  # over-approximate analysis using star
             # R = PosLin.reach_star_approx(I, option, dis_opt, lp_solver)
+            # print("\n I ------------------------ \n ", I)
             R = SatLin.reach_star_approx(I, dis_opt, lp_solver)
             return R
         elif method == 'approx-zono':  # over-approximate analysis using zonotope
