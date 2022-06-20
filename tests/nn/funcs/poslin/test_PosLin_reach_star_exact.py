@@ -1,4 +1,5 @@
-# ----------------- test for reach_star_exact function ---------
+# ------------- test for reach_star_exact function -------------
+import unittest
 import copy
 import numpy as np
 import sys
@@ -13,32 +14,51 @@ from zono import Zono
 from star import Star
 from poslin import PosLin
 
+
+class TestPosLinReachStarExact(unittest.TestCase):
+    """
+        Tests PosLin reach_star_exact function
+    """
+
+    def test_reach_star_exact(self):
+
+        lb = np.array([-0.5, -0.5])
+        ub = np.array([0.5, 0.5])
+        print("\n lb ------------------------ \n", lb)
+        print("\n ub ------------------------ \n", ub)
+
+        B = Box(lb, ub)
+        print("\n B ------------------------ \n", B)
+
+        I = Box.toZono(B)
+        print("\n I ------------------------n", I)
+
+        A = np.array([[0.5, 1], [1.5, -2]])
+        print("\n A ------------------------ \n ", A)
+
+        b = np.array([])
+        I = I.affineMap(A, b)
+        print("\n I ------------------------ \n ", I.__repr__())
+
+        I1 = Zono.toStar(I)
+        print("\n I1 ------------------------ \n", I1.__repr__())
+
+        S1 = PosLin.reach_star_exact(I1, b)
+        print("\n S1 ------------------------ \n", S1.__repr__())
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+# ------------- end of the test for reach_star_exact function -------------
+
+# ------------- Unused Testing -------------
+
 # lb = np.matrix('-0.5; -0.5')
 # ub = np.matrix('0.5; 0.5')
-lb = np.array([-0.5, -0.5])
-ub = np.array([0.5, 0.5])
-B = Box(lb, ub)
-print("\nB----------------\n", B)
-
-I = Box.toZono(B)
-print("\nI ---------\n", I)
 
 # A = np.matrix('0.5, 1; 1.5, -2')
 # b = np.matrix([])
-A = np.array([[0.5, 1], [1.5, -2]])
-b = np.array([])
-I = I.affineMap(A, b)
-I1 = Zono.toStar(I)
-print("\nI1 affine ---------\n", I1.__repr__())
-# S1 = np.column_stack([I1])
-# S2 = np.column_stack
-
-# [lb, ub] = Star.estimateRanges(I1)
-# print("\nlb -------- \n", lb)
-# print("\nub -------- \n", ub)
-
-S1 = PosLin.reach_star_exact(I1, b)
-print("\nS1 ---------- \n", S1.__repr__())
 
 # flatten_ub = np.ndarray.flatten(ub, "F")
 # map = np.argwhere(flatten_ub <= 0)
@@ -54,4 +74,4 @@ print("\nS1 ---------- \n", S1.__repr__())
 # S2 = np.column_stack([I1, I1])
 # print(len(S2[0]))
 
-# ----------------- end of the test for reach_star_exact function
+# ------------- End of Unused Testing -------------

@@ -1,4 +1,5 @@
-# ---------------- test for stepReach function -------------------
+# ------------- test for stepReach function -------------
+import unittest
 import sys
 import numpy as np
 import copy
@@ -12,35 +13,42 @@ from poslin import PosLin
 from zono import Zono
 from star import Star
 
-# lb = np.array([-0.5, -0.5])
-# ub = np.array([0.5, 0.5])
-lb = np.array([-1, -1])
-ub = np.array([1, 1])
-# print("lb------------\n ",lb)
-# print("ub------------\n ",ub)
 
-I = Star(lb, ub)
-# print("\nI-----------\n ",I.__repr__())
+class TestPosLinStepReach(unittest.TestCase):
+    """
+        Tests PosLin stepReach function
+    """
 
-W = np.array([[2, 1], [1, -1]])
-# print("\nW-----------\n ",W)
+    def test_stepReach(self):
 
-I = I.affineMap(W, np.array([]))
-# print("\nI Affine ----------\n", I)
-# print('I.v -----------\n', I.V)
-# print('I.c -----------\n', I.C)
-# print('I.d -----------\n', I.d)
-# print('I.dim -----------\n', I.dim)
-# print('I.nVar -----------\n', I.nVar)
-# print('I.pre_lb -----------\n', I.predicate_lb)
-# print('I.pre_ub -----------\n', I.predicate_ub)
-# print('I.state_lb -----------\n', I.state_lb)
-# print('I.state_ub -----------\n', I.state_ub)
-# print('I.Z -----------\n', I.Z, I.Z.V, I.Z.c, I.Z.dim)
+        # ------------- other lb and ub examples -------------
+        # lb = np.array([-0.5, -0.5])
+        # ub = np.array([0.5, 0.5])
 
-S = PosLin.stepReach(I, 0)
-print("\nS----------\n", S)
+        lb = np.array([-1, -1])
+        ub = np.array([1, 1])
+        print("\n lb ------------------------ \n ", lb)
+        print("\n ub ------------------------ \n ", ub)
 
+        I = Star(lb, ub)
+        print("\n I------------------------ \n ", I.__repr__())
+
+        W = np.array([[2, 1], [1, -1]])
+        print("\n W------------------------ \n ", W)
+
+        I = I.affineMap(W, np.array([]))
+        print("\n I Affine ------------------------ \n", I)
+
+        S = PosLin.stepReach(I, 0)
+        print("\n S ------------------------ \n", S)
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+# ------------- end of the test for stepReach function -------------
+
+# ------------- Unused Testing -------------
 # index = 0
 # c = copy.deepcopy(I.V[index, 0])
 # print("\nc -----------\n", c)
@@ -72,16 +80,6 @@ print("\nS----------\n", S)
 # S1 = Star(new_V, new_C, new_d, I.predicate_lb, I.predicate_ub, new_Z)
 # S1.Z = new_Z
 # print('S1 -----------\n', S1)
-# print('S1.v -----------\n', S1.V)
-# print('S1.c -----------\n', S1.C)
-# print('S1.d -----------\n', S1.d)
-# print('S1.dim -----------\n', S1.dim)
-# print('S1.nVar -----------\n', S1.nVar)
-# print('S1.pre_lb -----------\n', S1.predicate_lb)
-# print('S1.pre_ub -----------\n', S1.predicate_ub)
-# print('S1.state_lb -----------\n', S1.state_lb)
-# print('S1.state_ub -----------\n', S1.state_ub)
-# print('S1.Z -----------\n', S1.Z, S1.Z.V, S1.Z.c, S1.Z.dim)
 
 # new_C1 = np.vstack([I.C, -V])
 # print('\nnew_C1 ------------\n', new_C1)
@@ -92,25 +90,13 @@ print("\nS----------\n", S)
 # S2 = Star(I.V, new_C1, new_d1, I.predicate_lb, I.predicate_ub, I.Z)
 # S2.Z = I.Z
 # print('S2 -----------\n', S2)
-# print('S2.v -----------\n', S2.V)
-# print('S2.c -----------\n', S2.C)
-# print('S2.d -----------\n', S2.d)
-# print('S2.dim -----------\n', S2.dim)
-# print('S2.nVar -----------\n', S2.nVar)
-# print('S2.pre_lb -----------\n', S2.predicate_lb)
-# print('S2.pre_ub -----------\n', S2.predicate_ub)
-# print('S2.state_lb -----------\n', S2.state_lb)
-# print('S2.state_ub -----------\n', S2.state_ub)
-# print('S2.Z -----------\n', S2.Z)
 
 # S = np.column_stack([S1, S2])
 # S = []
 # S.append(S1)
 # S.append(S2)
 # print('\nS ----------- \n', S)
-# ---------------- end of the test for stepReach function -------------------
 
-# ----------------- the test for stepReach2 function ------------------
 # x1 = I.V[index, 0] + I.V[index, 1:I.nVar + 1] * I.predicate_lb
 # print('\nx1 --------------\n', x1)
 # x2 = I.V[index, 0] + I.V[index, 1:I.nVar + 1] * I.predicate_ub
@@ -136,4 +122,5 @@ print("\nS----------\n", S)
 
 # S = PosLin.stepReach2(I, 0)
 # print("\nS----------\n", S)
-# ----------------- end of the test for stepReach2 function ------------------
+
+# ------------- End of Unused Testing -------------
