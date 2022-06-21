@@ -46,6 +46,7 @@ class TestZonoAffineMap(unittest.TestCase):
         print('Affine mapped zonotope\n')
         print(Za.__repr__())
         print(Za.__str__())
+        Za.plot()
 
 if __name__ == '__main__':
     unittest.main()

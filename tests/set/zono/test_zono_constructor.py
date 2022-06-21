@@ -28,7 +28,7 @@ class TestZonoConstructor(unittest.TestCase):
         Z = Zono(c, V)
         print(Z.__repr__())
         print(Z.__str__())
-        # Z.plot()
+        Z.plot()
 
 if __name__ == '__main__':
     unittest.main()

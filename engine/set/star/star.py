@@ -20,19 +20,21 @@ from zono import *
 from box import *
 
 class Star:
-    # Class for representing a convex set using Star  set
-    # author: Sung Woo Choi
-    # date: 9/21/2021
-    
-    # Representation of a Star
-    # ====================================================================
-    # Star set defined by 
-    #   x = c + a[1]*v[1] + a[2]*v[2] + ... + a[n]*v[n]
-    #     = V * b,
-    #   where V = [c v[1] v[2] ... v[n]],
-    #         b = [1 a[1] a[2] ... a[n]]^T,
-    #         C*a <= d, constraints on a[i]
-    # ====================================================================
+    """
+        Class for representing a convex set using Star  set
+        author: Sung Woo Choi
+        date: 9/21/2021
+        
+        Representation of a Star
+        ====================================================================
+        Star set defined by 
+        x = c + a[1]*v[1] + a[2]*v[2] + ... + a[n]*v[n]
+            = V * b,
+        where V = [c v[1] v[2] ... v[n]],
+                b = [1 a[1] a[2] ... a[n]]^T,
+                C*a <= d, constraints on a[i]
+        ====================================================================
+    """
 
     def __init__(self, *args):
         """
@@ -59,7 +61,7 @@ class Star:
         self.Z = np.array([])
 
         length_args = len(args)
-        if length_args != 6:
+        if length_args != 6 and length_args != 1:
             args = [element.astype('float64') for element in args]
             
         if length_args == 7:
@@ -100,7 +102,24 @@ class Star:
             
             self.predicate_lb = -np.ones(S.nVar)
             self.predicate_ub = np.ones(S.nVar)
-            self.Z = B.toZono()         
+            self.Z = B.toZono()
+            
+        elif length_args == 1:
+            from polytope import Polytope
+            from box import Box
+            
+            P = args[0]
+            assert isinstance(P, Polytope), 'error: Input set is not a Polytope'
+            
+            c = np.zeros([P.dim, 1])
+            I = np.eye(P.dim)
+            V = np.hstack([c, I])
+            
+            self.check_essential_properties(np.hstack([c, I]), P.A, P.b)
+            
+            self.predicate_lb, self.predicate_ub = self.getRanges()
+            B = Box(self.predicate_lb, self.predicate_ub)
+            self.Z = B.toZono()
             
         elif length_args == 0:
             # create empty Star (for preallocation an array of Star)
@@ -323,7 +342,7 @@ class Star:
         
         V1 = self.V[:, 1:]
         V2 = X.V[:, 1:]
-        new_c = self.V[:, 0] + X.V[:, 1]
+        new_c = (self.V[:, 0] + X.V[:, 0]).reshape(-1, 1)
         
         # check if two Star have the same number of constraints
         if self.C.shape == X.C.shape and np.linalg.norm(self.C - X.C) + np.linalg.norm(self.d - X.d) < 0.0001 :
@@ -394,10 +413,147 @@ class Star:
             S = np.array([])
         return S
     
-    # def scalarMap(self, alp_max)
-    # def convexHull(self, X)
-    # def convexHull_with_linearTransform(self, L)
-    # def orderReduction_box(self, n_max)
+    def scalarMap(self, alp_max):
+        """
+            Scalar map of a Star S' = alp * S, 0 <= alp <= alp_max
+            =============================================================
+            S: x = alp*c + V* alph * a, Ca <= d
+            note that:   Ca <= d -> C*alph*a <= alp*a <= alp_max * d
+            let: beta = alp * a, we have
+            S := x = alp * c + V * beta, C * beta <= alp_max * d,
+                                         0 <= alp <= alp_max
+            Let g = [beta; alp]
+            S = Star(new_V, new_C, new_d), where:
+              new_V = [0 c V], new_C = [0 -1; 0 1; 0 C], new_d = [0; alpha_max; alp_max * d]
+                  
+            S has one more basic vector compared with obj
+            =============================================================
+            a_max : maximum value of a
+            
+            Note: we always require that alp >= 0
+        """
+        new_c = np.zeros([self.dim, 1])
+        new_V = np.hstack([self.V, new_c])
+        new_C = scipy.linalg.block_diag(self.C, np.array([[-1], [1]]))
+        new_d = np.hstack([alp_max*self.d, 0, alp_max])
+        return Star(new_V, new_C, new_d)
+    
+    def convexHull(self, X):
+        """
+            Convex hull of two Stars
+            =============================================================
+            This method is similar to the method proposed by Prof. Girard
+            for Zonotope. See the following paper:
+            1) Reachability of Uncertain Linear Systems Using
+            Zonotopes, Antoin Girard, HSCC2005.
+            
+            CH(S1 U S2) := {l*x1 + (1-l)*x2}, 0 <= l <= 1, x1 \in S1, x2
+            \in S2.     := {x2 + l*(x1 - x2)}
+            
+                        := c2 + a2 * V2 + l(c1 - c2) + l*a1*V1 - l*a2*V2
+            let beta1 = l * a1, beta2 = l*a2 -> C1 * beta1 <= l * d1 <=
+            d1 and C2 * beta2 <= l * d2 <= d2
+            
+            CH(S1 U S2) = c2 + a2 * V2 + l * (c1 - c2) + beta1 * V1 -
+                                                              beta2 * V2
+            
+            if S2 = L*S1, i.e., S2 is a projection of S1
+            
+            CH(S1 U S2) := {(l + (1-l)*L) * x1} = {(l(I - L) + L) * x1}
+                        := (l * (I - L) * x1 + L * x1)
+            =============================================================
+        """
+        assert isinstance(X, Star), 'error: Input set, X, is not a Star'
+        assert X.dim == self.dim, 'error: Inconsistent dimension between input set and current star'
+        
+        c1 = self.V[:, 0].reshape(-1,1)
+        V1 = self.V[:, 1:]
+        c2 = X.V[:, 0].reshape(-1,1)
+        V2 = X.V[:, 1:]
+        
+        new_V = np.hstack([c1-c2, V1, -V2])
+        new_C = scipy.linalg.block_diag(self.C, X.C)
+        new_d = np.hstack([self.d, X.d])
+        
+        S1 = Star(new_V, new_C, new_d)
+        return X.MinkowskiSum(S1)
+    
+    def convexHull_with_linearTransform(self, L):
+        """
+            convex hull of a Star with its linear transformation
+            L : linear transformation matrix
+            
+            return -> a new Star
+        """
+        assert len(L.shape) == 2 and L.shape[0] == L.shape[1], 'error: Transformation matrix, L, should be a square matrix'
+        assert L.shape[0] == self.dim, 'error: Inconsistent dimension of transformation and this Star'
+        
+        M = np.eye(self.dim) - L
+        S1 = self.affineMap(L)
+        S2 = self.affineMap(M)
+        
+        new_V = np.hstack([S1.V, S2.V])
+        new_C = scipy.linalg.block_diag(S1.C, np.array([[-1], [1]]), S2.C)
+        new_d = np.hstack([S1.d, 0, 1, S2.d])
+        return Star(new_V, new_C, new_d)
+    
+    #------------------------------- Need to Test this function ---------------------------------#
+    # def orderReduction_box(self, n_max):
+    #     """
+    #         Order reudction for Stars (similiar order reduction as zonotope)
+    #         See the Zono class for the detail
+    #         We reduce the number of basis vectors of a Star
+    #         n_max : maximum allowable number of basis vectors
+            
+    #         return -> a new Star with number of basis vectors = n_max
+    #     """
+    #     assert n_max >= self.dim, 'error: n_max should be >= %d' % self.dim
+        
+    #     if n_max == self.dim:
+    #         B = self.getBox()
+    #         S = B.toStar()
+        
+    #     # number of generators
+    #     n = self.V.shape[1] - 1 
+    #     if n_max > self.dim:
+    #         # number of generators need to be reduced
+    #         n1 = n- n_max + self.dim
+            
+    #         # sort generators based on their lenghts
+    #         length_gens = np.zeros(n)
+    #         for i in range(1, n+1):
+    #             length_gens[i] = np.linalg.norm(self.V[:, i], 2)
+    #         sorted_ind = np.argsort(length_gens)
+    #         sorted_gens = np.zeros([self.dim, n])
+    #         for i in range(n):
+    #             sorted_gens[:, i] = self.V[:, sorted_ind[i]]
+    #         return []
+        
+    def toPolytope(self):
+        """
+            Converts to Polytope
+        """
+        b = self.V[:, 0]
+        W = self.V[:, 1:]
+        
+        if self.predicate_lb.size and self.predicate_ub.size:
+            I = np.eye(self.nVar)
+            C1 = np.vstack([I, -I])
+            d1 = np.hstack([self.predicate_ub, -self.predicate_lb])
+            
+            C = np.vstack([self.C, C1])
+            d = np.hstack([self.d, d1])
+
+        else:
+            C = self.C
+            d = self.d
+
+        # suppose polytope P = {x element of P : C x <= d} 
+        # then, new_P = W * P + b
+        W_inv = np.linalg.pinv(W)
+        new_C = np.dot(C, W_inv)
+        new_d = d + np.dot(new_C, b)
+        return pc.Polytope(new_C, new_d)
 
     def toImageStar(self, height, width, numChannel):
         """
@@ -412,7 +568,7 @@ class Star:
 
         assert self.dim == height*width*numChannel, 'error: inconsistent dimension in the ImageStar and the original Star set'
         
-        new_V = np.reshape(self.V, (height, width, self.nVar + 1))
+        new_V = np.reshape(self.V, (height, width, numChannel, self.nVar + 1))
         return ImageStar(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
 
     def getBox(self):
@@ -480,11 +636,48 @@ class Star:
                     return np.array([])
                 else:
                     return Box(lb, ub)
-                
-    # def getMaxIndexes(self):
-    # def getBoxFast(self):
     
     #------------------------------- Need to Test this function ---------------------------------#
+    def getMaxIndexes(self):
+        """
+            Returns possible max indexes
+            
+            return -> index of the state that can be a max point 
+        """
+        new_rs = self.toImageStar(self.dim, 1, 1)
+        print('\nPrint converted ImageStar in detail: \n')
+        print('numChannel: ', new_rs.get_num_channel())
+        print('height: ', new_rs.get_height())
+        print('width: ', new_rs.get_width())
+        print('V: ', new_rs.get_V())
+        print('C: ', new_rs.get_C())
+        print('d: ', new_rs.get_d())
+        print('pred_lb: ', new_rs.get_pred_lb())
+        print('pred_ub: ', new_rs.get_pred_ub())
+        max_id = new_rs.get_localMax_index(np.array([0, 0]), np.array([self.dim, 1]), 0)
+        return max_id[:, 1]
+    
+    def getBoxFast(self):
+        """
+            Estimates ranges of the state vector quickly
+            These ranges are not the exact ranges,
+            The function finds ranges that are over-approximation of the exact ranges
+            
+            return -> Box
+        """
+        from box import Box
+        
+        if self.C.size == 0 or self.d.size == 0: # star set is just a vector (one point)
+            lb = self.V[:, 0]
+            ub = self.V[:, 0]
+            return Box(lb, ub)
+        else:
+            [pred_lb, pred_ub] = self.getPredicateBounds()
+            B1 = Box(pred_lb, pred_ub)
+            Z = B1.toZono()
+            Z = Z.affineMap(self.V[:, 1:], self.V[:, 0])
+            return Z.getBox()
+
     def getPredicateBounds(self):
         """
             Gets bounds of predicate variables
@@ -496,7 +689,7 @@ class Star:
                 ])
         """
         if self.predicate_lb.size and self.predicate_ub.size:
-            return np.array([self.predicate_lb, self.predicate_ub.size])
+            return np.array([self.predicate_lb, self.predicate_ub])
         
         else:
             center = np.zeros([self.dim, 1])
@@ -774,7 +967,6 @@ class Star:
             raise Exception('error: unknown lp solver, should be gurobi')
         return xmax
     
-    #------------------------------- Need to Test this function ---------------------------------#
     def resetRow(self, map):
         """
             Resets a row of a star set to zero
@@ -783,7 +975,7 @@ class Star:
             return: 
                 xmax -> max values of x[indexes] 
         """
-        from zono import zono
+        from zono import Zono
         
         V1 = self.V
         V1[map, :] = 0
@@ -796,9 +988,8 @@ class Star:
         else:
             new_Z = []
         return Star(V1, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
-    
-    #------------------------------- Need to Test this function ---------------------------------#
-    def sclaeRow(self, map, gamma):
+
+    def scaleRow(self, map, gamma):
         """
             Scales a row of a star set
             map : an array of indexes
@@ -810,7 +1001,7 @@ class Star:
         V1[map, :] = gamma*V1[map, :]
         if isinstance(self.Z, Zono):
             c2 = self.Z.c
-            c2[map] = gamma*c2
+            c2[map] = gamma*c2[map]
             V2 = self.Z.V
             V2[map, :] = gamma*V2[map, :]
             new_Z = Zono(c2, V2)
@@ -944,7 +1135,6 @@ class Star:
                 [lb[i], ub[i]] = self.estimateRange(i)
         return np.array([lb, ub])
     
-    #------------------------------- Need to Test this function ---------------------------------#
     def get_max_point_candidates(self):
         """
             Estimates quickly max-point candidates
@@ -952,16 +1142,13 @@ class Star:
             return:
                 an array of indexes of max-point candidates
         """
-        
         [lb, ub] = self.estimateRanges()
-        # [a, id] = max(lb);
-        # b = (ub >= a);
-        # if sum(b) == 1
-        #     max_cands = id;
-        # else
-        #     max_cands = find(b);
-        # end
-        
+        id = np.argmax(lb)
+        b = (ub >= lb[id])
+        if b.sum() == 1:
+            return id
+        else:
+            return np.where(b == True)
 
     def is_p1_larger_than_p2(self, p1_id, p2_id):
         """
@@ -993,7 +1180,7 @@ class Star:
         else:
             return True
 
-#------------------check if this function is working--------------------------------------------
+    #------------------check if this function is working--------------------------------------------
     # find a oriented box bound a star
     def getOrientedBox(self):
         # !!! the sign of SVD result is different compared to Matalb
@@ -1073,38 +1260,56 @@ class Star:
         else:
             return np.array([])
 
-    # def concatenate(self, X):
-    # def concatenate_with_vector(self, v):
-    # def get_hypercube_hull():
-    # def get_convex_hull():
-    # def concatenateStars():
-    # def merge_stars()
- 
-    def toPolytope(self):
+    def concatenate(self, X):
         """
-            Converts to Polytope
-        """
-        b = self.V[:, 0]
-        W = self.V[:, 1:]
-        
-        if self.predicate_lb.size and self.predicate_ub.size:
-            I = np.eye(self.nVar)
-            C1 = np.vstack([I, -I])
-            d1 = np.hstack([self.predicate_ub, -self.predicate_lb])
+            Concatenates the current Star with other Star, X
+            X : input star
             
-            C = np.vstack([self.C, C1])
-            d = np.hstack([self.d, d1])
+            return -> concataned Star
+        """
+        assert isinstance(X, Star), 'Input X is not a Star'
+        
+        c = np.hstack([self.V[:, 0], X.V[:, 0]]).reshape(-1, 1)
+        V = scipy.linalg.block_diag(self.V[:, 1:], X.V[:, 1:])
 
-        else:
-            C = self.C
-            d = self.d
+        new_V = np.hstack([c, V])
+        new_C = scipy.linalg.block_diag(self.C, X.C)
+        new_d = np.hstack([self.d, X.d])
 
-        # suppose polytope P = {x element of P : C x <= d} 
-        # then, new_P = W * P + b
-        W_inv = np.linalg.pinv(W)
-        new_C = np.dot(C, W_inv)
-        new_d = d + np.dot(new_C, b)
-        return pc.Polytope(new_C, new_d)
+        if self.predicate_lb.size and X.predicate_lb.size:
+            new_predicate_lb = np.hstack([self.predicate_lb, X.predicate_lb])
+            new_predicate_ub = np.hstack([self.predicate_ub, X.predicate_ub])
+            return Star(new_V, new_C, new_d, new_predicate_lb, new_predicate_ub)
+        return Star(new_V, new_C, new_d)
+
+    def concatenate_with_vector(self, v):
+        """
+            Concatenates a Star with a vector
+            v : a vector (1D numpy array)
+            
+            return -> concataned Star
+        """
+        assert len(v.shape) == 1, 'error: a vector should be 1D numpy array'
+        
+        c = np.hstack([v, self.V[:, 0]]).reshape(-1, 1)
+        V = np.vstack([np.zeros([v.shape[0], self.nVar]), self.V[:, 1:]])
+        new_V = np.hstack([c, V])
+        return Star(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
+
+    def rand(dim, N):
+        """
+            Generates random star set
+            dim : dimension of the random star set
+            N : maximum number of constraints in polytope
+            
+            return -> generated star set
+        """
+        assert dim > 0, "error: Invalid dimension"
+        
+        A = np.random.rand(N, dim)
+        # compute the convex hull
+        P = pc.qhull(A)
+        return Star(P)
         
     def plot(self, color=""):
         """
@@ -1120,6 +1325,7 @@ class Star:
         else:     ax = P.plot()
         ax.set_xlim(l[0], u[0]) # Optional: set axis max/min
         ax.set_ylim(l[1], u[1])
+        return ax
 
     def __str__(self):
         from zono import Zono
@@ -1156,3 +1362,67 @@ class Star:
             return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npredicate_lb: %s \npredicate_ub: %s \nstate_lb: %s \nstate_ub: %s\nZ: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub, self.Z.__class__)
         else:
             return "class: %s \nV: %s \nC: %s \nd: %s \ndim: %s \nnVar: %s \npredicate_lb: %s \npredicate_ub: %s \nstate_lb: %s \nstate_ub: %s" % (self.__class__, self.V, self.C, self.d, self.dim, self.nVar, self.predicate_lb, self.predicate_ub, self.state_lb, self.state_ub)
+
+    def get_hypercube_hull(stars):
+        """
+            Bounds a set of stars by a box
+            stars : an 1D numpy array of stars
+            
+            return -> Box
+        """
+        from box import Box
+        
+        assert len(stars.shape) == 1, 'error: an input should be 1D numpy array that contains Stars '
+        
+        n = len(stars)
+        dim = stars[0].dim
+        
+        for i in range(1, n):
+            assert isinstance(stars[i], Star), 'error: The %d-th object is not a star' % i
+            assert stars[i].dim == dim, 'error: Incosistent dimensions between stars'
+        
+        lb = np.empty([0,2])
+        ub = np.empty([0,2])
+        for i in range(n):
+            B1 = stars[i].getBox()
+            lb = np.vstack([lb, B1.lb])
+            ub = np.vstack([ub, B1.ub])
+        
+        lb = np.min(lb, axis=0)
+        ub = np.max(ub, axis=0)
+
+        return Box(lb, ub)
+    
+    #------------------------------- Need to Test this function ---------------------------------#
+    # def get_convex_hull():
+    
+    def concatenateStars(stars):
+        """
+            Concatenates many stars into a single star
+            stars : an array of stars
+            
+            return -> a new Star
+        """
+        assert len(stars.shape) == 1, 'error: Input stars should be 1D numpy array of Stars'
+        
+        new_c = np.empty([0])
+        new_V = np.empty([0, 0])
+        new_C = np.empty([0, 0])
+        new_d = np.empty([0])
+        new_pred_lb = np.empty([0])
+        new_pred_ub = np.empty([0])
+        
+        n = len(stars)
+        for i in range(n):
+            assert isinstance(stars[i], Star), 'error: The %d-th input is not a Star' % i
+            new_c = np.hstack([new_c, stars[i].V[:, 0]])
+            new_V = scipy.linalg.block_diag(new_V, stars[i].V[:, 1:])
+            new_C = scipy.linalg.block_diag(new_C, stars[i].C)
+            new_d = np.hstack([new_d, stars[i].d])
+            new_pred_lb = np.hstack([new_pred_lb, stars[i].predicate_lb])
+            new_pred_ub = np.hstack([new_pred_ub, stars[i].predicate_ub])
+        
+        return Star(np.hstack([new_c.reshape(-1, 1), new_V]), new_C, new_d, new_pred_lb, new_pred_ub)
+    
+    #------------------------------- Need to Test this function ---------------------------------#
+    # def merge_stars()

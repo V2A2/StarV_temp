@@ -51,6 +51,8 @@ ERRMSG_INVALID_VERT_ID = "Invalid veritical index"
 ERRMSG_INVALID_HORIZ_ID = "Invalid horizonal index"
 ERRMSG_INVALID_CHANNEL_ID = "Invalid channel index"
 
+ERRMSG_INVALID_STARTPOINT_POOLSIZE = "Invalid startpoint or poolsize"
+
 ERRMSG_SHAPES_INCONSISTENCY = "New shape is inconsistent with the current shape"
 
 ERRMSG_INPUT_NOT_IMAGESTAR = "Input set is not an ImageStar"
@@ -796,8 +798,8 @@ class ImageStar:
         h = pool_size[0] # height of the MaxPooling layer
         w = pool_size[1] # width of the MaxPooling layer
         
-        assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 < self.attributes[HEIGHT_ID] \
-                        and y0 + w - 1 < self.attributes[WIDTH_ID]), \
+        assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 <= self.attributes[HEIGHT_ID] \
+                        and y0 + w - 1 <= self.attributes[WIDTH_ID]), \
                         'error: %s' % ERRMSG_INVALID_STARTPOINT_POOLSIZE 
                         
         points = np.zeros((h * w, 2))
@@ -836,7 +838,7 @@ class ImageStar:
             self.estimate_ranges()
     
         height = args[POOL_SIZE_ID][0]
-        width = args[POOL_SIZE_ID][0]
+        width = args[POOL_SIZE_ID][1]
         size = height * width
         
         lb = np.zeros((size, 1))

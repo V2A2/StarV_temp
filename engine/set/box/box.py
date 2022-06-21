@@ -9,25 +9,27 @@ sys.path.insert(0, "engine/set/zono")
 from zono import *
 
 class Box:
-    # Class for representing a hyper-rectangle convex set using Box set
-    # Box and simple methods
-    # author: Sung Woo Choi
-    # date: 9/21/2021
-    
-    # Representation of a Box
-    # ====================================================================
-    # A Box set B is defined by:
-    # B = {x| lb <= x <= ub},
-    #   where lb is lower bound of a state vector x and
-    #         ub is upper bound of a state vector x.
-    #
-    # center vector and generator matrix are supporting vector and matrix 
-    # of a Box. They are used to compute lower bound vector and upper of 
-    # bound vector of a state vector x.
-    # 
-    # center: is a center vector
-    # generator: is a center matrix
-    # ====================================================================
+    """
+        Class for representing a hyper-rectangle convex set using Box set
+        Box and simple methods
+        author: Sung Woo Choi
+        date: 9/21/2021
+        
+        Representation of a Box
+        ====================================================================
+        A Box set B is defined by:
+        B = {x| lb <= x <= ub},
+        where lb is lower bound of a state vector x and
+                ub is upper bound of a state vector x.
+        
+        center vector and generator matrix are supporting vector and matrix 
+        of a Box. They are used to compute lower bound vector and upper of 
+        bound vector of a state vector x.
+        
+        center: is a center vector
+        generator: is a center matrix
+        ====================================================================
+    """
 
     def __init__(self, lb = np.array([]), ub = np.array([])):
         """
@@ -228,8 +230,11 @@ class Box:
     def plot(self, color=""):
         """
             Plots a Box using Polytope package
-            color : color of Polytope (if color is not provided, then polytope is plotted in random color)
-        """        
+            color : color of Polytope 
+                (if color is not provided, then polytope is plotted in random color)
+        """
+        assert self.dim <= 2 and self.dim > 0, 'error: only 2D box can be plotted'
+        
         P = self.toPolytope()
         if color: ax = P.plot(color=color)
         else:     ax = P.plot()

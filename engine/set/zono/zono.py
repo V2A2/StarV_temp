@@ -11,17 +11,19 @@ from box import *
 from star import *
 
 class Zono:
-    # Class for representing a convex set using Zono (zonotope) set
-    # author: Sung Woo Choi
-    # date: 9/26/2021
-    
-    # Representation of a Zono
-    # ====================================================================
-    # Zono set Z is defined by:
-    # Z = (c , <v1, v2, ..., vn>) = c + a1 * v1 + ... + an * vn, 
-    #   where -1 <= ai <= 1,
-    #   c is center, vi is generator
-    # ====================================================================
+    """
+        Class for representing a convex set using Zono (zonotope) set
+        author: Sung Woo Choi
+        date: 9/26/2021
+        
+        Representation of a Zono
+        ====================================================================
+        Zono set Z is defined by:
+        Z = (c , <v1, v2, ..., vn>) = c + a1 * v1 + ... + an * vn, 
+        where -1 <= ai <= 1,
+        c is center, vi is generator
+        ====================================================================
+    """
 
     def __init__(self, c, V):
         """
