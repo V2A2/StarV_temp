@@ -203,9 +203,11 @@ class ImageZono:
 
         Z = self.toZono()
         return Z.contains(y)
-
-    # get Ranges
+    
     def getRanges(self):
+        """
+            Gets lower and upper bounds (ranges) of ImageZono image
+        """
         return [self.lb_image, self.ub_image]
 
     def is_p1_larger_p2(self, p1, p2):
