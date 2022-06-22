@@ -68,9 +68,9 @@ class TestStarConstructor(unittest.TestCase):
                 
             Output:
                 Star ->
-                    V -> Basis matrix (2D numpy array)
-                    C -> Predicate matrix (2D numpy array)
-                    d -> Predicate vector (1D numpy array)
+                    V -> basic matrix (2D numpy array)
+                    C -> predicate matrix (2D numpy array)
+                    d -> predicate vector (1D numpy array)
                     predicate_lb -> predicate lower bound vector (1D numpy array)
                     predicate_ub -> predicate upper bound vector (1D numpy array)
         """
@@ -84,9 +84,9 @@ class TestStarConstructor(unittest.TestCase):
         ub = 2*np.ones(dim)
         
         S = Star(lb, ub)
-        print('\nPrint all information of star in detail: \n')
+        print('\nPrint all information of Star in detail: \n')
         print(S.__repr__())
-        print('\n\nPrint inormation of star in short: \n')
+        print('\n\nPrint inormation of Star in short: \n')
         print(S.__str__())
         S.plot()
         plt.show()

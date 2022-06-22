@@ -14,7 +14,7 @@ class TestStarSum(unittest.TestCase):
         """
             Tests with initializing Star based on:
                 Star :
-                    V : basis matrix (2D numpy array)
+                    V : basic matrix (2D numpy array)
                     C : predicate matrix (2D numpy array)
                     d : predicate vector (1D numpy array)
         """

@@ -1,33 +1,52 @@
-#!/usr/bin/python3
+import unittest
+
 import sys
-import os
 import numpy as np
 
-os.chdir('tests/')
-sys.path.append("..")
+sys.path.insert(0, "engine/set/imagezono/")
+from imagezono import *
 
-from engine.set.imagezono import ImageZono
+class TestImageZonoToZono(unittest.TestCase):
+    """
+        Tests affine mapping of ImageZono
+    """
+    
+    def test_toZoono(self):
+        """
+            Initiate the ImageZono with lower and upper bounds of attack (high-dimensional numpy arrays)
+            Convert ImageZono to Zono by toZono() function
+            
+            output -> Zono
+        """
+        LB = np.zeros([4, 4, 3])
+        UB = np.zeros([4, 4, 3])
 
-def main():
-    # attack on piexel (1,1) and (1,2)
-    L1 = np.matrix('-0.1 -0.2 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 0') 
-    L2 = np.matrix('-0.1 -0.15 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 0')
-    L3 = L2
-    LB = np.array([L1, L2, L3])
+        # attack on piexel (1,1) and (1,2)
+        LB[:,:,0] = np.array([[-0.1, -0.2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        LB[:,:,1] = np.array([[-0.1, -0.15, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        LB[:,:,2] = LB[:,:,1]
+        
+        UB[:,:,0] = np.array([[0, 0.2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        UB[:,:,1] = np.array([[0.1, 0.15, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        UB[:,:,2] = UB[:,:,1]
+        
+        image = ImageZono(LB, UB)
+        print('\nPrint all information of image in detail: \n')
+        print('\nimage: ', image.__repr__())
+        print('\n\nPrint inormation of image in short: \n')
+        print('\nimage: ', image.__str__())
+        
+        Z = image.toZono()
+        print('\nPrint all information of Z in detail: \n')
+        print('\Z: ', Z.__repr__())
+        print('\n\nPrint inormation of Z in short: \n')
+        print('\Z: ', Z.__str__())
 
-    U1 = np.matrix('0 0.2 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 0')
-    U2 = np.matrix('0.1 0.15 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 0')
-    U3 = U2
-    UB = np.array([U1, U2, U3])
-
-    image = ImageZono(lb_image = LB, ub_image = UB)
-    print('image: ', image)
-
-    Z = image.toZono()
-    print('image in zono: ', Z)
-
-    image1 = Z.toImageZono(4, 4, 3)
-    print('image1: ', image1)
+        image1 = Z.toImageZono(4, 4, 3)
+        print('\nPrint all information of image1 in detail: \n')
+        print('\nimage: ', image.__repr__())
+        print('\n\nPrint inormation of image1 in short: \n')
+        print('\nimage: ', image.__str__())
 
 if __name__ == '__main__':
-    main()
+    unittest.main()

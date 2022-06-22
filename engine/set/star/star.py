@@ -10,7 +10,7 @@ import polytope as pc
 # import mpl_toolkits.mplot3d as a3
 # import matplotlib.colors as colors
 
-import sys
+import sys, copy
 
 sys.path.insert(0, "engine/set/imagestar")
 sys.path.insert(0, "engine/set/zono")
@@ -21,7 +21,7 @@ from box import *
 
 class Star:
     """
-        Class for representing a convex set using Star  set
+        Class for representing a convex set using Star set
         author: Sung Woo Choi
         date: 9/21/2021
         
@@ -39,7 +39,7 @@ class Star:
     def __init__(self, *args):
         """
             Star is a tuple consisting <C, V, d>.
-            V is a basis matrix (2D numpy array) 
+            V is a basic matrix (2D numpy array) 
             C is a constraint vector (2D numpy array)
             d is a constraint vector (1D numpy array)
             dim is dimension of star set (non-negative number)
@@ -65,28 +65,28 @@ class Star:
             args = [element.astype('float64') for element in args]
             
         if length_args == 7:
-            [V, C, d, pred_lb, pred_ub, state_lb, state_ub] = args
+            [V, C, d, pred_lb, pred_ub, state_lb, state_ub] = copy.deepcopy(args)
             self.check_essential_properties(V, C, d)
             self.check_predicate_bounds(pred_lb, pred_ub, C, d)
             self.check_state_bounds(state_lb, state_ub, V)
             
         elif length_args == 6:
-            [V, C, d, pred_lb, pred_ub, outer_zono] = args
+            [V, C, d, pred_lb, pred_ub, outer_zono] = copy.deepcopy(args)
             self.check_essential_properties(V, C, d)
             self.check_predicate_bounds(pred_lb, pred_ub, C, d)
             self.check_outer_zono(outer_zono, V)
             
         elif length_args == 5:
-            [V, C, d, pred_lb, pred_ub] = args
+            [V, C, d, pred_lb, pred_ub] = copy.deepcopy(args)
             self.check_essential_properties(V, C, d)
             self.check_predicate_bounds(pred_lb, pred_ub, C, d)
             
         elif length_args == 3:
-            [V, C, d] = args
+            [V, C, d] = copy.deepcopy(args)
             self.check_essential_properties(V, C, d)
             
         elif length_args == 2:
-            [lb, ub] = args
+            [lb, ub] = copy.deepcopy(args)
             assert lb.shape == ub.shape, 'error: Inconsistent dimension between upper- and lower- bound vectors'
             assert len(lb.shape) == len(ub.shape) == 1, 'error: Lower- and upper-bound vectors should be 1D numpy array'
             
@@ -108,7 +108,7 @@ class Star:
             from polytope import Polytope
             from box import Box
             
-            P = args[0]
+            [P] = copy.deepcopy(args)
             assert isinstance(P, Polytope), 'error: Input set is not a Polytope'
             
             c = np.zeros([P.dim, 1])
@@ -133,15 +133,14 @@ class Star:
             Checks essential properties of star (V, C, d) before insearting to Star
             
             return:
-                V -> a basis matrix (2D numpy array) 
+                V -> a basic matrix (2D numpy array) 
                 C -> a constraint vector (2D numpy array)
                 d -> a constraint vector (1D numpy array)
         """
-        assert len(V.shape) == 2, 'error: Basis matrix should be 2D numpy array'
         assert len(C.shape) == 2, 'error: Constraint matrix should be 2D numpy array'
         assert len(d.shape) == 1, 'error: Constraint vector should be 1D numpy array'
         
-        [nV, mV] = V.shape
+        [nV, mV] = V.shape[0:2]
         [nC, mC] = C.shape
         [nd] = d.shape
         assert mV == mC + 1, 'error: Inconsistency between basic matrix and constraint matrix'
@@ -502,10 +501,10 @@ class Star:
     #     """
     #         Order reudction for Stars (similiar order reduction as zonotope)
     #         See the Zono class for the detail
-    #         We reduce the number of basis vectors of a Star
-    #         n_max : maximum allowable number of basis vectors
+    #         We reduce the number of basic vectors of a Star
+    #         n_max : maximum allowable number of basic vectors
             
-    #         return -> a new Star with number of basis vectors = n_max
+    #         return -> a new Star with number of basic vectors = n_max
     #     """
     #     assert n_max >= self.dim, 'error: n_max should be >= %d' % self.dim
         
@@ -1153,7 +1152,6 @@ class Star:
     def is_p1_larger_than_p2(self, p1_id, p2_id):
         """
             Checks if an index of a point in Star is larger than an index of other point.
-            This function is based on Star.is_p1_larger_than_p2() function.
         
             p1_id : index of point 1
             p2_id : index of point 2
@@ -1332,6 +1330,7 @@ class Star:
         print('class: %s' % self.__class__)
         print('V: [shape: %s | type: %s]' % (self.V.shape, self.V.dtype))
         print('C: [shape: %s | type: %s]' % (self.C.shape, self.C.dtype))
+        print('d: [shape: %s | type: %s]' % (self.d.shape, self.d.dtype))
         print('dim: %s' % self.dim)
         print('nVar: %s' % self.nVar)
         if self.predicate_lb.size:

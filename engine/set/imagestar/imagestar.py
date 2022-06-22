@@ -81,7 +81,10 @@ WIDTH_ID = 12
 NUM_CHANNELS_ID = 13
 FLATTEN_ORDER_ID = 14
 
-LAST_ATTRIBUTE_ID = FLATTEN_ORDER_ID
+MAX_IDXS_ID = 15
+INPUT_SIZES_ID = 16
+
+LAST_ATTRIBUTE_ID = INPUT_SIZES_ID
 
 ##### ARGUMENTS:
 VERT_ID = 0
@@ -1014,21 +1017,31 @@ class ImageStar:
             C1[i-1] = self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], i] - \
                       self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], i]
                       
-        # TODO: WHY DOESN'T THE SUBTRAHEND HAVE THE 4-TH COMPONENT INDEXING IN NNV?
         d1 = self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], 0] - \
                  self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], 0]
                  
-        new_C = np.vstack((self.attributes[C_ID], C1))
-        new_d = np.vstack((self.attributes[D_ID], d1))
+        new_C = np.vstack([self.attributes[C_ID], C1])
+        new_d = np.hstack([self.attributes[D_ID], d1])
         
-        print(self.attributes[V_ID].shape)
-        
-        S = Star(self.attributes[V_ID], new_C, new_d, self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
+        f = np.zeros(self.attributes[NUMPRED_ID])
+        m = gp.Model()
+        # prevent optimization information
+        m.Params.LogToConsole = 0
+        m.Params.OptimalityTol = 1e-9
+        x = m.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
+        m.setObjective(f @ x, GRB.MINIMIZE)
+        A = sp.csr_matrix(self.attributes[C_ID])
+        b = self.attributes[D_ID]
+        m.addConstr(A @ x <= b)     
+        m.optimize()
 
-        if S.isEmptySet():
-            return 0
+        if m.status == 2:   #feasible solution exist
+            return True
+        elif m.status == 3:
+            return False
         else:
-            return 1
+            raise Exception('error: exitflat = %d' % (m.status))
+
      
     def is_max(self, *args):
         """
@@ -1259,3 +1272,83 @@ class ImageStar:
     
     def get_attribute(self, i):
         return self.attributes[i]
+    
+    def __str__(self):
+        from zono import Zono
+        print('class: %s' % self.__class__)
+        print('height: %s \nwidth: %s \nnumChannel: %s' % (self.get_height(), self.get_width(), self.get_num_channel()))
+        if self.attributes[IM_ID].size:
+            print('IM: [shape: %s | type: %s]' % (self.attributes[IM_ID].shape, self.attributes[IM_ID].dtype))
+        else:
+            print('IM: []')
+        if self.attributes[IM_LB_ID].size:
+            print('LB: [shape: %s | type: %s]' % (self.attributes[IM_LB_ID].shape, self.attributes[IM_LB_ID].dtype))
+        else:
+            print('LB: []')
+        if self.attributes[IM_UB_ID].size:
+            print('UB: [shape: %s | type: %s]' % (self.attributes[IM_UB_ID].shape, self.attributes[IM_UB_ID].dtype))
+        else:
+            print('UB: []')       
+        print('V: [shape: %s | type: %s]' % (self.get_V().shape, self.get_V().dtype))
+        print('C: [shape: %s | type: %s]' % (self.get_C().shape, self.get_C().dtype))
+        print('d: [shape: %s | type: %s]' % (self.get_d().shape, self.get_d().dtype))
+        print('numPred: %s' % self.get_num_pred())
+        if self.get_pred_lb().size:
+            print('predicate_lb: [shape: %s | type: %s]' % (self.get_pred_lb().shape, self.get_pred_lb().dtype))
+        else:
+            print('predicate_lb: []')
+        if self.get_pred_ub().size:
+            print('predicate_ub: [shape: %s | type: %s]' % (self.get_pred_ub().shape, self.get_pred_ub().dtype))
+        else:
+            print('predicate_ub: []')
+        if self.get_im_lb().size:
+            print('im_lb: [shape: %s | type: %s]' % (self.get_im_lb().shape, self.get_im_lb().dtype))
+        else:
+            print('im_lb: []')
+        if self.get_im_ub().size:
+            print('im_ub: [shape: %s | type: %s]' % (self.get_im_ub().shape, self.get_im_ub().dtype))
+        else:
+            print('im_ub: []')
+        if self.attributes[MAX_IDXS_ID].size:
+            print('MaxIdxs: [shape: %s | type: %s]' % (self.attributes[MAX_IDXS_ID].shape, self.attributes[MAX_IDXS_ID].dtype))
+        else:
+            print('MaxIdxs: []')
+        if self.attributes[INPUT_SIZES_ID].size:
+            print('InputSizes: [shape: %s | type: %s]' % (self.attributes[INPUT_SIZES_ID].shape, self.attributes[INPUT_SIZES_ID].dtype))
+        else:
+            print('InputSizes: []')     
+        return '\n'
+
+    def __repr__(self, mat_ver=True):
+        """
+            mat_ver :   1 -> print images in [[[height, width] x channel] x (numPred+1)]
+                        0 -> print images in [height x [width x [channel, (numPred+1)]]]
+        """
+        if mat_ver == False:
+            return "class: %s \nheight: %s\nwidth: %s\nnumChannels: %s\nIM: \n%s\nLB: \n%s\nUB: \n%s\nV: \n%s \nC: \n%s \nd: %s\nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s\nim_lb: \n%s\nimb_ub: \n%s\nMaxIdxs: %s\nInputSizes: %s" % \
+                (self.__class__, self.get_height(), self.get_width(), self.get_num_channel(), self.attributes[IM_ID], self.attributes[IM_LB_ID], self.attributes[IM_UB_ID], self.get_V(), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub(), self.get_im_lb(), self.get_im_ub(),self.attributes[MAX_IDXS_ID],self.attributes[INPUT_SIZES_ID])
+        else:
+            print("class: %s \nheight: %s\nwidth: %s\nnumChannels: %s" % (self.__class__, self.get_height(), self.get_width(), self.get_num_channel()))
+            if self.attributes[IM_ID].size:
+                print("IM: \n%s\n" % self.attributes[IM_ID].transpose([-1, 0, 1]))
+            else:
+                print('IM: []')
+            if self.attributes[IM_LB_ID].size:
+                print("LB: \n%s\n" % self.attributes[IM_LB_ID].transpose([-1, 0, 1]))
+            else:
+                print('LB: []')
+            if self.attributes[IM_UB_ID].size:
+                print("UB: \n%s\n" % self.attributes[IM_UB_ID].transpose([-1, 0, 1]))
+            else:
+                print('UB: []')
+            print("V: \n%s \nC: \n%s \nd: %s \nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s" % (self.get_V().transpose([3,2,0,1]), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub()))
+            if self.get_im_lb().size:
+                print("im_lb: \n%s\n" % self.get_im_lb().transpose([-1, 0, 1]))
+            else:
+                print("im_ub: []")
+            if self.get_im_ub().size:
+                print("im_ub: \n%s" % self.get_im_ub().transpose([-1, 0, 1]))
+            else:
+                print("im_ub: []")
+            print("MaxIdxs: %s\nInputSizes: %s" % (self.attributes[MAX_IDXS_ID], self.attributes[INPUT_SIZES_ID]))
+            return ""

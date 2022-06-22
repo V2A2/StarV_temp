@@ -3,7 +3,7 @@ import numpy as np
 import polytope as pc
 import matplotlib.pyplot as plt
 
-import sys
+import sys, copy
 
 sys.path.insert(0, "engine/set/box")
 sys.path.insert(0, "engine/set/star")
@@ -38,8 +38,7 @@ class Zono:
         assert len(V.shape) == 2, 'error: Generator matrix should be 2D numpy array'
         assert len(c.shape) == 1, 'error: Center vector should be 1D numpy array'
 
-        self.c = c
-        self.V = V
+        [self.c, self.V] = copy.deepcopy([c, V])
         self.dim = V.shape[0]
 
     def affineMap(self, W, b = np.array([])):
@@ -89,41 +88,42 @@ class Zono:
             X : input Zono (zonotope)
             
             return -> a new Zono
-        """        
-        # =====================================================================
-        # Convex hull of two zonotopes is generally NOT a zonotope.
-        # This method returns an over-approximation (which is a zonotope)
-        # of a convex hull of two zonotopes.
-        # This method is a generalization of the method proposed in reference 1.
-        # In reference 1: the author deals with: CONVEX_HULL(Z, L*Z)
-        # Here we deals with a more general case: CONVEX_HULL(Z1, Z2)
-        # We will see that if Z2 = L * Z1, the result is reduced to the result
-        # obtained by the reference 1.
-        # We define CH as a convex hull operator and U is union operator.
-        # Z1 = (c1, <g1, g2, ..., gp>), Z2 = (c2, <h1, ...., hq>)
-        # ===================================================================== #
-        # CH(Z1 U Z2) := {a * x1 + (1 - a) * x2}| x1 \in Z1, x2 \in Z2, 0 <= a <= 1}
-        # Let a = (e + 1)/2, -1<= e <=1, we have:
-        #     CH(Z1 U Z2) := {(x1 + x2)/2 + e * (x1 - x2)/2}
-        #                  = (Z1 + Z2)/2 + e*(Z1 + (-Z2))/2
-        #                  where, '+' denote minkowski sum of two zonotopes
-        # From minkowski sum method, one can see that:
-        #      CH(Z1 U Z2) = 0.5*(c1 + c2 <2g1, ..., 2gp, 2h1, ...2hq, c1 - c2>)
-        # So, the zonotope that over-approximate the convex hull of two zonotop
-        # has (p + q) + 1 generators.
-        #                                               
-        # So, the zonotope that over-approximate the convex hull of two zonotop
-        # has (p + q) + 1 generators.
-        # Let consider the specific case Z2 = L * Z1.
-        # In this case we have:
-        #     (Z1 + L*Z1)/2 = 0.5 * (I+L) * (c1, <g1, g2, ..., gp>)
-        #     (Z1 - L*Z1)/2 = 0.5 * (I-L) * (c1, <g1, ..., gp>)
-        #     ea * (Z1 - L*Z1)/2 = 0.5*(I-L)*(0, <c1, g1, ..., gp>)
-        #     CH(Z1 U L * Z1) = 0.5*((I + L)*c1, <(I+L)*g1, ..., (I+L)*gp,
-        #                        (I-L)*c1, (I-L)*g1, ..., (I-L)*gp>)
-        # where I is an identity matrix.
-        # So the resulted zonotope has 2p + 1 generators.
-        # ===================================================================== #        
+        
+            =====================================================================
+            Convex hull of two zonotopes is generally NOT a zonotope.
+            This method returns an over-approximation (which is a zonotope)
+            of a convex hull of two zonotopes.
+            This method is a generalization of the method proposed in reference 1.
+            In reference 1: the author deals with: CONVEX_HULL(Z, L*Z)
+            Here we deals with a more general case: CONVEX_HULL(Z1, Z2)
+            We will see that if Z2 = L * Z1, the result is reduced to the result
+            obtained by the reference 1.
+            We define CH as a convex hull operator and U is union operator.
+            Z1 = (c1, <g1, g2, ..., gp>), Z2 = (c2, <h1, ...., hq>)
+            =====================================================================
+            CH(Z1 U Z2) := {a * x1 + (1 - a) * x2}| x1 \in Z1, x2 \in Z2, 0 <= a <= 1}
+            Let a = (e + 1)/2, -1<= e <=1, we have:
+                CH(Z1 U Z2) := {(x1 + x2)/2 + e * (x1 - x2)/2}
+                            = (Z1 + Z2)/2 + e*(Z1 + (-Z2))/2
+                            where, '+' denote minkowski sum of two zonotopes
+            From minkowski sum method, one can see that:
+                CH(Z1 U Z2) = 0.5*(c1 + c2 <2g1, ..., 2gp, 2h1, ...2hq, c1 - c2>)
+            So, the zonotope that over-approximate the convex hull of two zonotop
+            has (p + q) + 1 generators.
+                                                        
+            So, the zonotope that over-approximate the convex hull of two zonotop
+            has (p + q) + 1 generators.
+            Let consider the specific case Z2 = L * Z1.
+            In this case we have:
+                (Z1 + L*Z1)/2 = 0.5 * (I+L) * (c1, <g1, g2, ..., gp>)
+                (Z1 - L*Z1)/2 = 0.5 * (I-L) * (c1, <g1, ..., gp>)
+                ea * (Z1 - L*Z1)/2 = 0.5*(I-L)*(0, <c1, g1, ..., gp>)
+                CH(Z1 U L * Z1) = 0.5*((I + L)*c1, <(I+L)*g1, ..., (I+L)*gp,
+                                (I-L)*c1, (I-L)*g1, ..., (I-L)*gp>)
+            where I is an identity matrix.
+            So the resulted zonotope has 2p + 1 generators.
+            =====================================================================
+        """       
         assert isinstance(X, Zono), 'error: Input set, X, is not a zonotope'
         assert self.dim == X.dim, 'error: Inconsistent dimension of input zonotope and this zonotope'
         
@@ -165,46 +165,47 @@ class Zono:
             n_max : maximum allowable number of generators
             
             return -> a new Zono
+        
+        ======================================================================================
+                    ZONOTOPE ORDER REDUCTION USING BOX METHOD
+        
+        We define: R(Z) is the reduced-order zonotope that over-approximates
+        zonotope Z, i.e., Z \subset R(Z).
+        
+        IDEA: R(Z) is generated by less segments than Z.
+        
+        PRINCIPLE OF REDUCTION: "The edge of Z with lower length having priority
+        to be involved in the reduction". Read references 1, 3, 4, 5 for more information.
+        
+        STEPS:
+           0) Z = (c, <g1, g2, ..., gp>) = c + Z0, Z0 = (0, <g1, g2, ..., gp>)
+              we do order reduction for zonotope Z0, and then shift it to a new center point c.
+        
+           1) Sort the generators g1, g2, ..., gp by their length to have:
+              ||g1|| <= ||g2|| <= ||g3||.... <= ||gp||, where ||.|| is the 2-norm.
+              This is the heuristic used in reference 3.
+              we can use another heuristic used in reference 1 that is:
+                 ||g1||_1 - ||g1||_\inf <= .... <= ||gp||_1 - ||gp||_\inf.
+              where ||.||_1 is 1-norm and ||.||_\inf is the infinity norm.
+        
+           2) cur_order = p/n is the current order in which p is the number of generators,
+              n is the dimension. r is the desired order of the reduced zonotope R(Z).
+              r is usually selected as 1.
+              Let d = cur_order - r be the number of orders needed to be reduced.
+              We have p = (r + d)*n = (r-1)*n + (d+1)*n
+        
+           3) The zonotope Z0 is splited into 2 zonotopes: Z0 = Z01 + Z02
+              Z01 contains (d + 1)*n smallest generators
+              Z02 contains (r - 1)*n lagest generators
+        
+           4) Over-approximate Z01 by an interval hull IH(Z01), see references 3, 4, 5
+              The IH(Z01) has n generators
+        
+           5) The reduced zonotope is the Minkowski sum of IH(Z01) and Z02:
+                           R(Z0) = IH(Z01) + Z02
+              R(Z0) has (r-1)*n + n = r*n generators. So it has order of r.
+        ======================================================================================
         """
-        # ======================================================================================
-        #             ZONOTOPE ORDER REDUCTION USING BOX METHOD
-        # 
-        # We define: R(Z) is the reduced-order zonotope that over-approximates
-        # zonotope Z, i.e., Z \subset R(Z).
-        #
-        # IDEA: R(Z) is generated by less segments than Z.
-        #
-        # PRINCIPLE OF REDUCTION: "The edge of Z with lower length having priority
-        # to be involved in the reduction". Read references 1, 3, 4, 5 for more information.
-        #
-        # STEPS:
-        #    0) Z = (c, <g1, g2, ..., gp>) = c + Z0, Z0 = (0, <g1, g2, ..., gp>)
-        #       we do order reduction for zonotope Z0, and then shift it to a new center point c.
-        #
-        #    1) Sort the generators g1, g2, ..., gp by their length to have:
-        #       ||g1|| <= ||g2|| <= ||g3||.... <= ||gp||, where ||.|| is the 2-norm.
-        #       This is the heuristic used in reference 3.
-        #       we can use another heuristic used in reference 1 that is:
-        #          ||g1||_1 - ||g1||_\inf <= .... <= ||gp||_1 - ||gp||_\inf.
-        #       where ||.||_1 is 1-norm and ||.||_\inf is the infinity norm.
-        #
-        #    2) cur_order = p/n is the current order in which p is the number of generators,
-        #       n is the dimension. r is the desired order of the reduced zonotope R(Z).
-        #       r is usually selected as 1.
-        #       Let d = cur_order - r be the number of orders needed to be reduced.
-        #       We have p = (r + d)*n = (r-1)*n + (d+1)*n
-        #
-        #    3) The zonotope Z0 is splited into 2 zonotopes: Z0 = Z01 + Z02
-        #       Z01 contains (d + 1)*n smallest generators
-        #       Z02 contains (r - 1)*n lagest generators
-        #
-        #    4) Over-approximate Z01 by an interval hull IH(Z01), see references 3, 4, 5
-        #       The IH(Z01) has n generators
-        #
-        #    5) The reduced zonotope is the Minkowski sum of IH(Z01) and Z02:
-        #                    R(Z0) = IH(Z01) + Z02
-        #       R(Z0) has (r-1)*n + n = r*n generators. So it has order of r.
-        # ======================================================================================    
         assert n_max >= self.dim, 'error: n_max should be >= %d' % self.dim
         
         # number of generators
@@ -288,19 +289,22 @@ class Zono:
         V = np.hstack([self.c.reshape(-1, 1), self.V])
         return Star(V, C, d, lb, ub, self)
 
-    # convert to ImageZono
     def toImageZono(obj, height, width, numChannels):
-        # @height: height of the image
-        # @width: width of the image
-        # @numChannels: number of channels of the image
-        # return: ImageZono
-        from engine.set.imagezono import ImageZono
+        """
+            Converts Zono to ImageZono
+            height: height of the image
+            width: width of the image
+            numChannels: number of channels of the image
+            
+            return -> ImageZono
+        """
+        from imagezono import ImageZono
 
-        assert height*width*numChannels == obj.dim, 'error: inconsistent dimension, please change the height, width and numChannels to be consistent with the dimension of the zonotope' 
+        assert height*width*numChannels == obj.dim, 'error: Inconsistent dimension, please change the height, width and numChannels to be consistent with the dimension of the zonotope' 
 
-        new_V = np.hstack((obj.c, obj.V))
+        new_V = np.hstack([obj.c.reshape(-1,1), obj.V])
         numPreds = obj.V.shape[1]
-        new_V = new_V.reshape((numPreds+1, numChannels, height, width))
+        new_V = new_V.reshape([height, width, numChannels, numPreds+1])
         return ImageZono(new_V)
 
     # convert to ImageStar
@@ -346,12 +350,13 @@ class Zono:
                 True -> if the zonotope contain a point x
                 False -> if the zonotope does not contain a point x
         """
+        assert isinstance(x, np.ndarray), 'error: x is not a numpy array (numpy.ndarray)'
         assert len(x.shape) == 1, 'error: Invalid input point, X should be 1D numpy array'
         assert x.shape[0] == self.dim, 'error: Inconsistent dimension between the input point and the zonotope'
         
         d = x - self.c
         abs_V = abs(self.V)
-        d1 = np.sum(abs_V, axis=0)
+        d1 = np.sum(abs_V, axis=1)
         
         x1 = (d <= d1)
         x2 = (d >= -d1)

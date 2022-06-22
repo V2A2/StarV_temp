@@ -43,8 +43,7 @@ class Box:
         assert lb.shape == ub.shape, 'error: Inconsistent dimension between lower bound vector and upper bound vector'
         assert len(lb.shape) == len(ub.shape) == 1, 'error: Lower bound vector and upper bound vector should be 1D numpy array'
 
-        self.lb = lb
-        self.ub = ub
+        [self.lb, self.ub] = copy.deepcopy([lb, ub])
         self.dim = lb.shape[0]
 
         self.center = 0.5 * (ub + lb)

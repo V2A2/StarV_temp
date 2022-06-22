@@ -6,21 +6,17 @@ import numpy as np
 sys.path.insert(0, "engine/set/imagezono/")
 from imagezono import *
 
-class TestImageZonoAffineMap(unittest.TestCase):
+class TestImageZonoEvaluate(unittest.TestCase):
     """
-        Tests affine mapping of ImageZono
+        Tests evaluate() function that evaluates an ImageZono with specific values of predicates
     """
     
-    def test_affineMap(self):
+    def test_evaluate(self):
         """
             Initiate the ImageZono with lower and upper bounds of attack (high-dimensional numpy arrays)
-            Affine mapping of an ImageZono is another ImageZono
-            y = scale * x + offset
-        
-            scale: scale coefficient [1 x 1 x NumChannels] numpy array
-            offset: offset coefficient [1 x 1 x NumChannels] numpy array
+            Convert ImageZono to Zono by toZono() function
             
-            Output -> ImageZono
+            output -> Zono
         """
         LB = np.zeros([4, 4, 3])
         UB = np.zeros([4, 4, 3])
@@ -34,20 +30,17 @@ class TestImageZonoAffineMap(unittest.TestCase):
         UB[:,:,1] = np.array([[0.1, 0.15, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
         UB[:,:,2] = UB[:,:,1]
         
-        image = ImageZono(LB, UB)
-        print('\nPrint all information of ImageZono in detail: \n')
-        print('\nimage: ', image.__repr__())
+        IZ = ImageZono(LB, UB)
+        print('\nPrint all information of IZ in detail: \n')
+        print('\nIZ: ', IZ.__repr__())
         print('\n\nPrint inormation of ImageZono in short: \n')
-        print('\nimage: ', image.__str__())
-
-        scale = 2*np.ones([1,1,3]) 
-        offset = np.zeros([1,1,3])
-
-        new_image = image.affineMap(scale, offset)
-        print('\nPrint all information of new_image in detail: \n')
-        print('\nimage: ', new_image.__repr__())
-        print('\n\nPrint inormation of new_image in short: \n')
-        print('\nimage: ', new_image.__str__())
+        print('\nIZ: ', IZ.__str__())
         
+        predicate_vector = 1 - 2*np.random.rand(IZ.numPreds)
+        print('\npredicate_vector: ', predicate_vector)
+        
+        image = IZ.evaluate(predicate_vector)
+        print('\nimage: ', image.transpose([-1, 0, 1]))
+
 if __name__ == '__main__':
     unittest.main()

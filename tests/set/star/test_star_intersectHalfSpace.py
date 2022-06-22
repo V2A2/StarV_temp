@@ -16,18 +16,18 @@ class TestStarIntersectHalfSpace(unittest.TestCase):
     def test_intersectHalfSpace(self):
         """
              Tests with initializing Star based on:
-                V : Basis matrix (2D numpy array)
-                C : Predicate matrix (2D numpy array)
-                d : Predicate vector (1D numpy array)
+                V : basic matrix (2D numpy array)
+                C : predicate matrix (2D numpy array)
+                d : predicate vector (1D numpy array)
             
             H : halfspace matrix
             g : halfspace vector
             
             Output:
                 Star ->
-                    V -> Basis matrix (2D numpy array)
-                    C -> Predicate matrix (2D numpy array)
-                    d -> Predicate vector (1D numpy array)
+                    V -> basic matrix (2D numpy array)
+                    C -> predicate matrix (2D numpy array)
+                    d -> predicate vector (1D numpy array)
         """
         # dimension of convex set
         dim = 3

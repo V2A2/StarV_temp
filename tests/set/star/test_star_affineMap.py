@@ -24,7 +24,7 @@ class TestStarAffineMap(unittest.TestCase):
                 
             Output:
                 Star ->
-                    V -> basis matrix (2D numpy array)
+                    V -> basic matrix (2D numpy array)
                     C -> predicate matrix (2D numpy array)
                     d -> predicate vector (1D numpy array)
                     predicate_lb -> predicate lower bound vector (1D numpy array)
