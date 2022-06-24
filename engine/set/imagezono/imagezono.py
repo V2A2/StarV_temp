@@ -137,19 +137,27 @@ class ImageZono:
             
             return -> a new ImageZono
         """
-
-        assert scale.size and not np.isscalar(scale) and scale.shape[2] == self.numChannels and len(scale.shape) == 3, \
-            'error: Inconsistent number of channels between scale array and the ImageZono'
+        scalar = np.isscalar(scale)
+        if not scalar:
+            assert scale.size and scale.shape[2] == self.numChannels and len(scale.shape) == 3, \
+                'error: Inconsistent number of channels between scale array and the ImageZono'
         
-        scale_ = np.repeat(scale[:,:,:,np.newaxis], self.numPreds+1, axis=3) 
-        
-        if scale.size:
-            new_V = scale_ * self.V
+        if self.numPreds > 0 and not scalar:
+            scale = np.repeat(scale[:,:,:,np.newaxis], self.numPreds+1, axis=3) 
+            
+        if scalar:
+            new_V = scale * self.V
         else:
-            new_V = self.V
+            if scale.size:
+                new_V = scale * self.V
+            else:
+                new_V = self.V
 
-        if offset.size:
+        if np.isscalar(offset):
             new_V[:,:,:,0] += offset
+        else:
+            if offset.size:
+                new_V[:,:,:,0] += offset
 
         return ImageZono(new_V)
 
