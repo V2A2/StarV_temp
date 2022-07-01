@@ -1,4 +1,18 @@
 import numpy as np
+import sys, os
+
+sys.path.insert(0, "engine/set/imagestar")
+from imagestar import *
+
+sys.path.insert(0, "engine/set/imagezono")
+from imagezono import *
+
+sys.path.insert(0, "engine/set/star")
+from imagestar import *
+
+sys.path.insert(0, "engine/set/zono")
+from imagezono import *
+
 
 FC_ERRMSG_NAME_NOT_STRING = "Layer name is not a string"
 FC_ERRMSG_INPUT_PARAM_NOT_NP = "One of the numerical input parameters is not a numpy arrays" 
@@ -20,8 +34,8 @@ FC_DEFAULT_NAME = "fully_connected_layer"
 FC_DEFAULT_EMPTY_NAME = ""
 FC_DEFAULT_EMPTY_WEIGHTS = np.array([])
 FC_DEFAULT_EMPTY_BIAS = np.array([])
-FC_EMPTY_INPUT_SIZE = 0
-FC_EMPTY_OUTPUT_SIZE = 0
+FC_DEFAULT_EMPTY_INPUT_SIZE = 0
+FC_DEFAULT_EMPTY_OUTPUT_SIZE = 0
 
 FC_NAME_ID = 0
 FC_W_ID = 1
@@ -57,17 +71,26 @@ class FullyConnectedLayer:
         for i in range(FCLAYER_ATTRIBUTES_NUM):
             self.attributes.append(np.array([]))
             
-        if len(args) <= FC_FULL_ARGS_LEN:
+        
+        if len(args) == FC_EMPTY_ARGS_LEN:            
+            self.attributes[FC_NAME_ID] = FC_DEFAULT_EMPTY_NAME
+            
+            self.attributes[FC_W_ID] = FC_DEFAULT_EMPTY_WEIGHTS 
+            self.attributes[FC_B_ID] = FC_DEFAULT_EMPTY_BIAS
+            
+            self.attributes[FC_INPUT_SIZE_ID] = FC_DEFAULT_EMPTY_INPUT_SIZE
+            self.attributes[FC_OUTPUT_SIZE_ID] = FC_DEFAULT_EMPTY_OUTPUT_SIZE
+        elif len(args) == FC_FULL_ARGS_LEN or len(args) == FC_CALC_ARGS_LEN:
             if len(args) == FC_CALC_ARGS_LEN:
                 args = self.offset_args(args, FC_CALC_ARGS_OFFSET)
                 self.attributes[FC_NAME_ID] = FC_DEFAULT_NAME
             else:
-                assert args[FC_NAME_ID] is str, 'error: %s' % FC_ERRMSG_NAME_NOT_STRING
+                assert isinstance(args[FC_NAME_ID], str), 'error: %s' % FC_ERRMSG_NAME_NOT_STRING
                 self.attributes[FC_NAME_ID] = args[FC_NAME_ID] 
             
-            assert isinstance(self.attributes[FC_W_ID], np.ndarray) and isinstance(self.attributes[FC_B_ID], np.ndarray), 'error: %s' % FC_ERRMSG_WEGHT_OR_BIAS_NOT_NP
-            assert self.attributes[FC_W_ID].shape[0] == self.attributes[FC_B_ID].shape[0], 'error: %s' % FC_ERRMSG_WEGHT_BIAS_INCONSISTENT
-            assert len(self.attributes[FC_W_ID].shape) == 1, 'error: %s' % FC_ERRMSG_BIAS_SHAPE_INCONSISTENT
+            assert isinstance(args[FC_W_ID], np.ndarray) and isinstance(args[FC_B_ID], np.ndarray), 'error: %s' % FC_ERRMSG_WEGHT_OR_BIAS_NOT_NP
+            assert args[FC_W_ID].shape[0] == args[FC_B_ID].shape[0], 'error: %s' % FC_ERRMSG_WEGHT_BIAS_INCONSISTENT
+            assert (len(args[FC_B_ID].shape) == 2 and args[FC_B_ID].shape[1] == 1) or len(args[FC_B_ID].shape) == 1, 'error: %s' % FC_ERRMSG_BIAS_SHAPE_INCONSISTENT
             
             self.attributes[FC_W_ID] = args[FC_W_ID].astype('float64') 
             self.attributes[FC_B_ID] = args[FC_B_ID].astype('float64')
@@ -76,14 +99,6 @@ class FullyConnectedLayer:
             self.attributes[FC_OUTPUT_SIZE_ID] = args[FC_W_ID].shape[0]
             
             self.attributes[FLATTEN_ORDER_ID] = COLUMN_FLATTEN
-        elif len(args) == FC_EMPTY_ARGS_LEN:            
-            self.attributes[FC_NAME_ID] = FC_DEFAULT_EMPTY_NAME
-            
-            self.attributes[FC_W_ID] = FC_DEFAULT_EMPTY_WEIGHTS 
-            self.attributes[FC_B_ID] = FC_DEFAULT_EMPTY_BIAS
-            
-            self.attributes[FC_INPUT_SIZE_ID] = FC_DEFAULT_EMPTY_INPUTSIZE
-            self.attributes[FC_OUTPUT_SIZE_ID] = FC_DEFAULT_EMPTY_OUTPUTSIZE
         else:
             raise Exception(FC_ERRMSG_INVALID_NUMBER_OF_INPUTS)
 
@@ -96,10 +111,14 @@ class FullyConnectedLayer:
             returns the result of the input multiplied by the weight matrix and added to the bias
         """        
     
-        assert isinstance(self.attributes[FC_W_ID], np.ndarray), 'error: %s' % FC_ERRMSG_INPUT_PARAM_NOT_NP 
         assert np.prod(input.shape) == self.attributes[FC_INPUT_SIZE_ID], 'error: %s' % FC_ERRMSG_INPUT_LAYER_SIZE_INCONSISTENT
         
-        I = input.flatten(order=self.attributes[FLATTEN_ORDER_ID])
+        # TODO: create a separate 'is_column_vec' utility function + use it in line 79
+        if (len(input.shape) == 2 and input.shape[1] != 1) and len(input.shape) != 1:
+            I = input.flatten(order=self.attributes[FLATTEN_ORDER_ID])
+        else:
+            I = input
+            
         y = np.matmul(self.attributes[FC_W_ID], I) + self.attributes[FC_B_ID]
         
         # TODO: consider y = reshape(y, [1, 1, size(obj.Bias, 1)]); when implementing reachability algorithms
@@ -132,16 +151,16 @@ class FullyConnectedLayer:
             I = I.flatten(order=self.attributes[FLATTEN_ORDER_ID])
         
             if i == 0:
-                V[0,0,:,i] = np.matmul(self.attributes[FC_W_ID], I) + self.attributes[FC_B_ID]
+                new_V[0,0,:,i] = np.matmul(self.attributes[FC_W_ID], I) + self.attributes[FC_B_ID]
             else:
-                V[0,0,:,i] = np.matmul(self.attributes[FC_W_ID], I)
+                new_V[0,0,:,i] = np.matmul(self.attributes[FC_W_ID], I)
                 
         if isinstance(input_image, ImageStar):
-            return ImageStar(new_V, input_image.get_C(), input_image.get_D(), input_image.get_pred_lb(), input_image.get_pred_ub())
+            return ImageStar(new_V, input_image.get_C(), input_image.get_d(), input_image.get_pred_lb(), input_image.get_pred_ub())
         elif isinstance(input_image, ImageZono):
-            return ImageZono(new_V, input_image.get_C(), input_image.get_D(), input_image.get_pred_lb(), input_image.get_pred_ub())
+            return ImageZono(new_V, input_image.get_C(), input_image.get_d(), input_image.get_pred_lb(), input_image.get_pred_ub())
         
-    def reach_multiple_inputs(self, input_images, option):
+    def reach_multiple_inputs(self, input_images, option = []):
         """
             Performs reachability analysis on the given set of images
             
@@ -151,9 +170,6 @@ class FullyConnectedLayer:
                          
             returns the affine mappings of the input images
         """
-        
-        if option > 0:
-            raise NotImplementedError
         
         output_images = []
         
@@ -167,11 +183,6 @@ class FullyConnectedLayer:
             Performs reachability analysis on the multiple inputs
             
             in_image -> the input image(s)
-            method : string -> 'exact-star' - exact star reachability
-                            -> 'approx-star' - approx star reachability
-                            -> 'abs-dom' - abs dom reachability
-                            -> 'relax-star' - relax star reachability
-                            -> 'approx-zono' - approx zono reachability
                          
             option : int -> 0 - single core
                          -> 1 - multiple cores
@@ -179,9 +190,9 @@ class FullyConnectedLayer:
             returns the output set(s)
         """
         
-        assert args[FC_ARGS_METHODID] < 5, 'error: %s' % FC_ERRMSG_UNK_REACH_METHOD
+        #assert args[FC_ARGS_METHODID] < 5, 'error: %s' % FC_ERRMSG_UNK_REACH_METHOD
         
-        IS = self.reach_multiple_inputs(args[FC_REACH_ARGS_INPUT_IMAGES_ID], option)
+        IS = self.reach_multiple_inputs(args[FC_REACH_ARGS_INPUT_IMAGES_ID], [])
     
 ########################## UTILS ##########################
     def offset_args(self, args, offset):

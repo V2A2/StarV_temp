@@ -762,10 +762,10 @@ class PosLin:
         elif method == 'approx-star':  # over-approximate analysis using star
             # R = PosLin.reach_star_approx(I, option, dis_opt, lp_solver)
             R = PosLin.reach_star_approx(I)
-            return R
+            return [R]
         elif method == 'approx-zono':  # over-approximate analysis using zonotope
             R = PosLin.reach_zono_approx(I, dis_opt)
-            return R
+            return [R]
 
 
 # ------------- Unused Functions -------------
