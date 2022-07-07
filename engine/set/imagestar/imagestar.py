@@ -441,6 +441,7 @@ class ImageStar:
             
             return -> created Star
         """
+        from star import Star
  
         pixel_num = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
         
@@ -1026,6 +1027,7 @@ class ImageStar:
         f = np.zeros(self.attributes[NUMPRED_ID])
         m = gp.Model()
         # prevent optimization information
+        # TODO: why not new_C here?????
         m.Params.LogToConsole = 0
         m.Params.OptimalityTol = 1e-9
         x = m.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
