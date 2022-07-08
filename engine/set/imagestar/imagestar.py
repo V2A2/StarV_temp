@@ -2,13 +2,16 @@
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB 
+import sys, os
 
 import sys
 import operator
-        
-sys.path.insert(0, "engine/set/star/")
-        
+
+sys.path.insert(0, "engine/set/star")
 from star import *
+
+sys.path.insert(0, "engine/set/zono")
+from zono import *
 
 ############################ ERROR MESSAGES ############################
 
@@ -51,11 +54,11 @@ ERRMSG_INVALID_VERT_ID = "Invalid veritical index"
 ERRMSG_INVALID_HORIZ_ID = "Invalid horizonal index"
 ERRMSG_INVALID_CHANNEL_ID = "Invalid channel index"
 
-ERRMSG_INVALID_STARTPOINT_POOLSIZE = "Invalid startpoint or poolsize"
-
 ERRMSG_SHAPES_INCONSISTENCY = "New shape is inconsistent with the current shape"
 
 ERRMSG_INPUT_NOT_IMAGESTAR = "Input set is not an ImageStar"
+
+ERRMSG_UNK_MP_LAYER_NAME = "Unknown name of the maxpooling layer"
 
 ESTIMATE_RANGE_STAGE_STARTED = "Ranges estimation started..."
 ESTIMATE_RANGE_STAGE_OVER = "Ranges estimation finished..."
@@ -80,11 +83,10 @@ HEIGHT_ID = 11
 WIDTH_ID = 12
 NUM_CHANNELS_ID = 13
 FLATTEN_ORDER_ID = 14
+MAX_IDS_ID = 15
+MAX_INPUT_SIZES_ID = 16
 
-MAX_IDXS_ID = 15
-INPUT_SIZES_ID = 16
-
-LAST_ATTRIBUTE_ID = INPUT_SIZES_ID
+LAST_ATTRIBUTE_ID = MAX_INPUT_SIZES_ID
 
 ##### ARGUMENTS:
 VERT_ID = 0
@@ -106,6 +108,12 @@ PREDICATE_IMGBOUNDS_INIT_ARGS_NUM = 7
 PREDICATE_INIT_ARGS_NUM = 5
 IMAGE_INIT_ARGS_NUM = 3
 BOUNDS_INIT_ARGS_NUM = 2
+
+
+MAX_MAP_ID = 0
+ORI_IMAGE_ID = 1
+CENTER_ID = 2
+OTHERS_ID = 3
 #####################
 
 IM_OFFSET = 7
@@ -119,6 +127,9 @@ COLUMN_FLATTEN = 'F'
 
 DEFAULT_SOLVER_ARGS_NUM = 3
 CUSTOM_SOLVER_ARGS_NUM = 4
+
+IMAGESTAR_DEFAULT_MAX_ID_NAME_KEY = 'name'
+IMAGESTAR_DEFAULT_MAX_ID_IDX_KEY = 'id'
 
 
 class ImageStar:
@@ -237,12 +248,15 @@ class ImageStar:
         
         self.attributes[FLATTEN_ORDER_ID] = COLUMN_FLATTEN
         
+        self.attributes[MAX_IDS_ID] = []
+        self.attributes[MAX_INPUT_SIZES_ID] = []
+        
         if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM or len(args) == PREDICATE_INIT_ARGS_NUM:    
             if np.size(args[V_ID]) and np.size(args[C_ID]) and np.size(args[D_ID]) and np.size(args[PREDLB_ID]) and np.size(args[PREDUB_ID]):
                 assert (args[C_ID].shape[0] == 1 and np.size(args[D_ID]) == 1) or (args[C_ID].shape[0] == args[D_ID].shape[0]), \
                        'error: %s' % ERRMSG_INCONSISTENT_CONSTR_DIM
                 
-                assert (np.size(args[D_ID]) == 1) or (len(np.shape(args[D_ID])) == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
+                assert (np.size(args[D_ID]) == 1) or (len(np.shape(args[D_ID])) == 1) or (len(np.shape(args[D_ID])) == 2 and np.shape(args[D_ID])[1] == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
                 
                 self.attributes[NUMPRED_ID] = args[C_ID].shape[1]
                 self.attributes[C_ID] = args[C_ID].astype('float64')
@@ -436,12 +450,12 @@ class ImageStar:
         return ImageStar(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
     
     def to_star(self):
+        from star import Star
         """
             Converts current ImageStar to Star
             
             return -> created Star
         """
-        from star import Star
  
         pixel_num = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
         
@@ -773,15 +787,15 @@ class ImageStar:
             image_lb = self.attributes[IM_LB_ID]
             image_ub = self.attributes[IM_UB_ID]
         
-        lb = image_lb[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNELS_ID] - 1]
-        ub = image_ub[int(points[0,0]), int(points[0,1]), self.attributes[NUM_CHANNELS_ID] - 1]
+        lb = image_lb[int(points[0,0]), int(points[0,1]), args[CHANNEL_ID]]
+        ub = image_ub[int(points[0,0]), int(points[0,1]), args[CHANNEL_ID]]
         
         for i in range(1, points_num):
-            if image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1] < lb:
-                lb = image_lb[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1]
+            if image_lb[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]] < lb:
+                lb = image_lb[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]]
             
-            if image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1] > ub:
-                ub = image_ub[int(points[i,0]), int(points[i,1]), self.attributes[NUM_CHANNELS_ID] - 1]
+            if image_ub[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]] > ub:
+                ub = image_ub[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]]
                 
         return [lb, ub]
             
@@ -802,8 +816,8 @@ class ImageStar:
         h = pool_size[0] # height of the MaxPooling layer
         w = pool_size[1] # width of the MaxPooling layer
         
-        assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 <= self.attributes[HEIGHT_ID] \
-                        and y0 + w - 1 <= self.attributes[WIDTH_ID]), \
+        assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 < self.attributes[HEIGHT_ID] \
+                        and y0 + w - 1 < self.attributes[WIDTH_ID]), \
                         'error: %s' % ERRMSG_INVALID_STARTPOINT_POOLSIZE 
                         
         points = np.zeros((h * w, 2))
@@ -842,14 +856,14 @@ class ImageStar:
             self.estimate_ranges()
     
         height = args[POOL_SIZE_ID][0]
-        width = args[POOL_SIZE_ID][1]
+        width = args[POOL_SIZE_ID][0]
         size = height * width
         
         lb = np.zeros((size, 1))
         ub = np.zeros((size, 1))
         
         for i in range(size):
-            current_point = points[i, :].astype(int)
+            current_point = points[i, :].astype('int')
             
             lb[i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
             ub[i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
@@ -862,7 +876,7 @@ class ImageStar:
         a = np.delete(a, np.argwhere(a==max_lb_id)[:,0])
         
         if self.isempty(a):
-            max_id = points[max_lb_id, :]
+            max_id = np.array([np.append(points[max_lb_id, :].astype('int'), args[CHANNEL_ID])])
         else:
             candidates = a1
             
@@ -872,8 +886,8 @@ class ImageStar:
             new_points1 = np.zeros((candidates_num, 2))
             
             for i in range(candidates_num):
-                selected_points = points[candidates[i], :]
-                new_points.append(np.append(selected_points, args[CHANNEL_ID] - 1))
+                selected_points = points[candidates[i], :].astype('int')
+                new_points.append(np.append(selected_points, args[CHANNEL_ID]))
                 new_points1[i, :] = selected_points
                
             self.update_ranges(new_points)
@@ -894,29 +908,29 @@ class ImageStar:
             a = np.delete(a, np.argwhere(a==max_lb_id)[:,0])
             
             if self.isempty(a):
-                max_id = new_points1[max_lb_val, :]
+                max_id = new_points1[max_lb_val, :].astype('int')
             else:
                 candidates1 = (ub - max_lb_val) >= 0
-                max_id = new_points1[max_lb_id, :]
+                max_id = new_points1[max_lb_id, :].astype('int')
                 
                 candidates1[candidates1 == max_lb_id] == []
                 candidates_num = len(candidates1)
                 
-                max_id1 = max_id
+                max_id1 = np.append(max_id, args[CHANNEL_ID])
                 
                 for j in range(candidates_num):
-                    p1 = new_points[candidates1[j], :]
+                    p1 = new_points[np.argwhere(candidates1 == True)[:,0][j]]
                     
-                    if self.is_p1_larger_p2(np.array([p1[0], p2[1], args[CHANNEL_ID]]), \
-                                            np.array([max_id[0], max_id[1], args[CHANNEL_ID]])):
-                        max_id1 = np.array([max_ids1, p1])
+                    if self.is_p1_larger_p2(np.array([p1[0], p1[1], args[CHANNEL_ID]]), \
+                                            np.array([max_id[0], max_id[1], int(args[CHANNEL_ID])])):
+                        max_id1 = np.vstack((max_id1, p1))
                         
                         
-                max_id = max_id1
+                max_id = max_id1[1:max_id1.shape[0], :]
                         
-                print('\nThe local image has %d max candidates: \t%d' % np.size(max_id, 0))
+                print('\nThe local image has %d max candidates' % max_id.shape[0])
                 
-        return np.append(max_id, args[CHANNEL_ID] * np.zeros((len(max_id.shape)))).tolist()
+        return max_id.astype('int')
           
     def get_localMax_index2(self, start_point, pool_size, channel_id):
         """
@@ -951,17 +965,6 @@ class ImageStar:
         max_id = np.argwhere((ub - max_lb_val) > 0)[:,0]
         
         return np.append(max_id, channel_id * np.zeros((len(max_id.shape)))).tolist()
-
-    def add_max_id(self, name, max_id):
-        """
-            Adds a matrix used for unmaxpooling reachability
-            
-            name : string -> name of the max pooling layer
-            max_id : np.array([*int]) -> max indices
-        """
-            
-        #TODO: WHAT IS 'A' in NNV?
-        return Exception("unimplemented")
     
     def update_max_id(self, name, max_id, pos):
         """
@@ -986,17 +989,6 @@ class ImageStar:
                 
         if unk_laye_num == ids_num:
             raise Exception('error: %s' % ERRMSG_UNK_NAME_MAX_POOL_LAYER)
-
-    def add_input_size(self, name, input_size):
-        """
-            Adds a matrix used for unmaxpooling reachability
-            
-            name : string -> name of the max pooling layer
-            input_size : np.array([*int]) -> input size of the original image
-        """
-         
-        #TODO: WHAT IS 'A' in NNV?    
-        return Exception("unimplemented")
         
     def is_p1_larger_p2(self, *args):
         """
@@ -1021,19 +1013,21 @@ class ImageStar:
         d1 = self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], 0] - \
                  self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], 0]
                  
-        new_C = np.vstack([self.attributes[C_ID], C1])
-        new_d = np.hstack([self.attributes[D_ID], d1])
-        
+        new_C = np.vstack((self.attributes[C_ID], C1))
+        new_d = np.vstack((self.attributes[D_ID], d1))
+                
+        if len(new_d.shape) == 2 and new_d.shape[1] == 1:
+            new_d = np.reshape(new_d, (2,))
+                
         f = np.zeros(self.attributes[NUMPRED_ID])
         m = gp.Model()
         # prevent optimization information
-        # TODO: why not new_C here?????
         m.Params.LogToConsole = 0
         m.Params.OptimalityTol = 1e-9
         x = m.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
         m.setObjective(f @ x, GRB.MINIMIZE)
-        A = sp.csr_matrix(self.attributes[C_ID])
-        b = self.attributes[D_ID]
+        A = sp.csr_matrix(new_C)
+        b = new_d
         m.addConstr(A @ x <= b)     
         m.optimize()
 
@@ -1042,10 +1036,10 @@ class ImageStar:
         elif m.status == 3:
             return False
         else:
-            raise Exception('error: exitflat = %d' % (m.status))
-
-     
-    def is_max(self, *args):
+            raise Exception('error: exitflat = %d' % (m.status)) 
+            
+    @staticmethod
+    def is_max(*args):
         """
             Checks if a pixel value is the maximum value compared with the other ones.
             Implements one of the core steps of the maxpooling operation over
@@ -1067,20 +1061,42 @@ class ImageStar:
         new_C = np.zeros((size, args[MAX_MAP_ID].get_num_pred()))
         new_d = np.zeros((size, 1))
         
-        for i in range(n):
+        for i in range(size):
             new_d[i] = args[ORI_IMAGE_ID].get_V()[args[CENTER_ID][0], args[CENTER_ID][1], args[CENTER_ID][2], 0] - \
-                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][0], args[OTHERS_ID][1], args[OTHERS_ID][2], 0]
+                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][i][0], args[OTHERS_ID][i][1], args[OTHERS_ID][i][2], 0]
         
             for j in range(args[MAX_MAP_ID].get_num_pred()):
-                new_C[i, j] = args[ORI_IMAGE_ID].get_V()[args[CENTER_ID][0], args[CENTER_ID][1], args[CENTER_ID][2], j + 1] - \
-                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][0], args[OTHERS_ID][1], args[OTHERS_ID][2], j + 1]
+                new_C[i, j] = - args[ORI_IMAGE_ID].get_V()[args[CENTER_ID][0], args[CENTER_ID][1], args[CENTER_ID][2], j + 1] + \
+                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][i][0], args[OTHERS_ID][i][1], args[OTHERS_ID][i][2], j + 1]
         
-        C1 = np.vstack(args[MAX_MAP_ID].get_C(), new_C)
-        d1 = np.vstack(args[MAX_MAP_ID].get_D(), new_d)
+        C1 = np.vstack((args[MAX_MAP_ID].get_C(), new_C))
+        d1 = np.vstack((args[MAX_MAP_ID].get_d(), new_d))
         
         # TODO: remove redundant constraints here
+        E = np.hstack((C1, d1))
+        E = np.unique(E, axis = 0)
         
-        return C1, d1
+        new_C = E[:, 0:args[ORI_IMAGE_ID].get_num_pred()]
+        new_d_gurobi = E[:, args[ORI_IMAGE_ID].get_num_pred()]
+        new_d = np.reshape(new_d_gurobi, (new_d_gurobi.shape[0], 1))
+                
+        f = np.zeros(args[ORI_IMAGE_ID].get_num_pred())
+        m = gp.Model()
+        # prevent optimization information
+        m.Params.LogToConsole = 0
+        m.Params.OptimalityTol = 1e-9
+        x = m.addMVar(shape=args[ORI_IMAGE_ID].get_num_pred(), lb=args[ORI_IMAGE_ID].get_pred_lb(), ub=args[ORI_IMAGE_ID].get_pred_ub())
+        m.setObjective(f @ x, GRB.MINIMIZE)
+        A = sp.csr_matrix(new_C)
+        b = new_d_gurobi
+        m.addConstr(A @ x <= b)     
+        m.optimize()
+
+        if m.status != 2:   #feasible solution exist
+             Exception('error: exitflat = %d' % (m.status))
+
+        
+        return new_C, new_d
     
     @staticmethod
     def reshape(input, new_shape):
@@ -1133,7 +1149,59 @@ class ImageStar:
         new_d = np.vstack((input.get_d(), new_d))
         
         return new_C, new_d
+      
+    def add_max_idx(self, name, id): 
+        """
+            Adds a max index. This is used for (un)maxpooling reachability
+            
+            name : string -> name of the max pooling layer
+            id : int -> index
+        """
+      
+        new_max_id = {
+                'name' : name,
+                'id' : id
+            }
         
+        self.attributes[MAX_IDS_ID].append(new_max_id)
+        
+    
+    def add_input_size(self, name, input_size):
+        """
+            Adds a matrix used for unmaxpooling reachability
+            
+            name : string -> name of the max pooling layer
+            input_size : np.array([*int]) -> input size of the original image
+        """
+         
+        new_input_size = {
+                'name' : name,
+                'input_size' : id
+            }
+        
+        self.attributes[MAX_INPUT_SIZES_ID].append(new_input_size)
+      
+    def update_max_idx(self, name, max_id, pos):
+        """
+            Updates max index. This is used for (un)maxpooling reachability
+            
+            name : String -> name of the max pooling layer
+            maxIdx : np.array([int*]) -> max indices
+            pos : np.array([int*]) -> the position of the local pixel of the max map
+            orresponding to the maxIdx
+        """
+        
+        max_indices_size = len(self.attributes[MAX_IDS_ID])
+        
+        for i in range(max_indices_size):
+            curr_index = self.attributes[MAX_IDS_ID][i]
+            
+            if curr_index[IMAGESTAR_DEFAULT_MAX_ID_NAME_KEY] == name:
+                curr_index[IMAGESTAR_DEFAULT_MAX_ID_IDX_KEY][pos[0]][pos[1]][pos[2]] = max_id
+                return
+                
+        raise Exception(ERRMSG_UNK_MP_LAYER_NAME)
+      
 ##################### GET/SET METHODS #####################
         
     def get_V(self):
@@ -1170,7 +1238,7 @@ class ImageStar:
         """
         
         return self.attributes[PREDUB_ID]
-        
+  
     def get_im_lb(self):
         """
             return -> the lowerbound image of the ImageStar
@@ -1212,6 +1280,34 @@ class ImageStar:
         """
         
         return self.attributes[NUMPRED_ID]
+    
+    def get_max_indices(self):
+        """
+            return -> max indices of the ImageStar
+        """
+        
+        return self.attributes[MAX_IDS_ID]
+    
+    def set_max_indices(self, new_max_indices):
+        """
+            sets max indices of the ImageStar
+        """
+        
+        self.attributes[MAX_IDS_ID] = new_max_indices
+    
+    def get_input_sizes(self):
+        """
+            return -> max input sizes of the ImageStar
+        """
+        
+        return self.attributes[MAX_INPUT_SIZES_ID]
+    
+    def set_input_sizes(self, new_input_sizes):
+        """
+            sets max input sizes of the ImageStar
+        """
+        
+        self.attributes[MAX_INPUT_SIZES_ID] = new_input_sizes
         
 ########################## UTILS ##########################
 
@@ -1274,83 +1370,89 @@ class ImageStar:
     
     def get_attribute(self, i):
         return self.attributes[i]
-    
-    def __str__(self):
-        from zono import Zono
-        print('class: %s' % self.__class__)
-        print('height: %s \nwidth: %s \nnumChannel: %s' % (self.get_height(), self.get_width(), self.get_num_channel()))
-        if self.attributes[IM_ID].size:
-            print('IM: [shape: %s | type: %s]' % (self.attributes[IM_ID].shape, self.attributes[IM_ID].dtype))
-        else:
-            print('IM: []')
-        if self.attributes[IM_LB_ID].size:
-            print('LB: [shape: %s | type: %s]' % (self.attributes[IM_LB_ID].shape, self.attributes[IM_LB_ID].dtype))
-        else:
-            print('LB: []')
-        if self.attributes[IM_UB_ID].size:
-            print('UB: [shape: %s | type: %s]' % (self.attributes[IM_UB_ID].shape, self.attributes[IM_UB_ID].dtype))
-        else:
-            print('UB: []')       
-        print('V: [shape: %s | type: %s]' % (self.get_V().shape, self.get_V().dtype))
-        print('C: [shape: %s | type: %s]' % (self.get_C().shape, self.get_C().dtype))
-        print('d: [shape: %s | type: %s]' % (self.get_d().shape, self.get_d().dtype))
-        print('numPred: %s' % self.get_num_pred())
-        if self.get_pred_lb().size:
-            print('predicate_lb: [shape: %s | type: %s]' % (self.get_pred_lb().shape, self.get_pred_lb().dtype))
-        else:
-            print('predicate_lb: []')
-        if self.get_pred_ub().size:
-            print('predicate_ub: [shape: %s | type: %s]' % (self.get_pred_ub().shape, self.get_pred_ub().dtype))
-        else:
-            print('predicate_ub: []')
-        if self.get_im_lb().size:
-            print('im_lb: [shape: %s | type: %s]' % (self.get_im_lb().shape, self.get_im_lb().dtype))
-        else:
-            print('im_lb: []')
-        if self.get_im_ub().size:
-            print('im_ub: [shape: %s | type: %s]' % (self.get_im_ub().shape, self.get_im_ub().dtype))
-        else:
-            print('im_ub: []')
-        if self.attributes[MAX_IDXS_ID].size:
-            print('MaxIdxs: [shape: %s | type: %s]' % (self.attributes[MAX_IDXS_ID].shape, self.attributes[MAX_IDXS_ID].dtype))
-        else:
-            print('MaxIdxs: []')
-        if self.attributes[INPUT_SIZES_ID].size:
-            print('InputSizes: [shape: %s | type: %s]' % (self.attributes[INPUT_SIZES_ID].shape, self.attributes[INPUT_SIZES_ID].dtype))
-        else:
-            print('InputSizes: []')     
-        return '\n'
 
-    def __repr__(self, mat_ver=True):
-        """
-            mat_ver :   1 -> print images in [[[height, width] x channel] x (numPred+1)]
-                        0 -> print images in [height x [width x [channel, (numPred+1)]]]
-        """
-        if mat_ver == False:
-            return "class: %s \nheight: %s\nwidth: %s\nnumChannels: %s\nIM: \n%s\nLB: \n%s\nUB: \n%s\nV: \n%s \nC: \n%s \nd: %s\nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s\nim_lb: \n%s\nimb_ub: \n%s\nMaxIdxs: %s\nInputSizes: %s" % \
-                (self.__class__, self.get_height(), self.get_width(), self.get_num_channel(), self.attributes[IM_ID], self.attributes[IM_LB_ID], self.attributes[IM_UB_ID], self.get_V(), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub(), self.get_im_lb(), self.get_im_ub(),self.attributes[MAX_IDXS_ID],self.attributes[INPUT_SIZES_ID])
-        else:
-            print("class: %s \nheight: %s\nwidth: %s\nnumChannels: %s" % (self.__class__, self.get_height(), self.get_width(), self.get_num_channel()))
-            if self.attributes[IM_ID].size:
-                print("IM: \n%s\n" % self.attributes[IM_ID].transpose([-1, 0, 1]))
-            else:
-                print('IM: []')
-            if self.attributes[IM_LB_ID].size:
-                print("LB: \n%s\n" % self.attributes[IM_LB_ID].transpose([-1, 0, 1]))
-            else:
-                print('LB: []')
-            if self.attributes[IM_UB_ID].size:
-                print("UB: \n%s\n" % self.attributes[IM_UB_ID].transpose([-1, 0, 1]))
-            else:
-                print('UB: []')
-            print("V: \n%s \nC: \n%s \nd: %s \nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s" % (self.get_V().transpose([3,2,0,1]), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub()))
-            if self.get_im_lb().size:
-                print("im_lb: \n%s\n" % self.get_im_lb().transpose([-1, 0, 1]))
-            else:
-                print("im_ub: []")
-            if self.get_im_ub().size:
-                print("im_ub: \n%s" % self.get_im_ub().transpose([-1, 0, 1]))
-            else:
-                print("im_ub: []")
-            print("MaxIdxs: %s\nInputSizes: %s" % (self.attributes[MAX_IDXS_ID], self.attributes[INPUT_SIZES_ID]))
-            return ""
+    # def __str__(self):
+    #     from zono import Zono
+    #     print('class: %s' % self.__class__)
+    #     print('height: %s \nwidth: %s \nnumChannel: %s' % (self.get_height(), self.get_width(), self.get_num_channel()))
+    #     if self.attributes[IM_ID].size:
+    #         print('IM: [shape: %s | type: %s]' % (self.attributes[IM_ID].shape, self.attributes[IM_ID].dtype))
+    #     else:
+    #         print('IM: []')
+    #     if self.attributes[IM_LB_ID].size:
+    #         print('LB: [shape: %s | type: %s]' % (self.attributes[IM_LB_ID].shape, self.attributes[IM_LB_ID].dtype))
+    #     else:
+    #         print('LB: []')
+    #     if self.attributes[IM_UB_ID].size:
+    #         print('UB: [shape: %s | type: %s]' % (self.attributes[IM_UB_ID].shape, self.attributes[IM_UB_ID].dtype))
+    #     else:
+    #         print('UB: []')       
+    #     print('V: [shape: %s | type: %s]' % (self.get_V().shape, self.get_V().dtype))
+    #     print('C: [shape: %s | type: %s]' % (self.get_C().shape, self.get_C().dtype))
+    #     print('d: [shape: %s | type: %s]' % (self.get_d().shape, self.get_d().dtype))
+    #     print('numPred: %s' % self.get_num_pred())
+    #
+    #     if self.get_pred_lb().size:
+    #         print('predicate_lb: [shape: %s | type: %s]' % (self.get_pred_lb().shape, self.get_pred_lb().dtype))
+    #     else:
+    #         print('predicate_lb: []')
+    #
+    #     if self.get_pred_ub().size:
+    #         print('predicate_ub: [shape: %s | type: %s]' % (self.get_pred_ub().shape, self.get_pred_ub().dtype))
+    #     else:
+    #         print('predicate_ub: []')
+    #
+    #     if self.get_im_lb().size:
+    #         print('im_lb: [shape: %s | type: %s]' % (self.get_im_lb().shape, self.get_im_lb().dtype))
+    #     else:
+    #         print('im_lb: []')
+    #
+    #     if self.get_im_ub().size:
+    #         print('im_ub: [shape: %s | type: %s]' % (self.get_im_ub().shape, self.get_im_ub().dtype))
+    #     else:
+    #         print('im_ub: []')
+    #
+    #     if self.attributes[MAX_IDS_ID].size:
+    #         print('MaxIdxs: [shape: %s | type: %s]' % (self.attributes[MAX_IDS_ID].shape, self.attributes[MAX_IDS_ID].dtype))
+    #     else:
+    #         print('MaxIdxs: []')
+    #
+    #     if self.attributes[MAX_INPUT_SIZES_ID].size:
+    #         print('InputSizes: [shape: %s | type: %s]' % (self.attributes[MAX_INPUT_SIZES_ID].shape, self.attributes[MAX_INPUT_SIZES_ID].dtype))
+    #     else:
+    #         print('InputSizes: []')     
+    #     return '\n'
+    #
+    # def __repr__(self, mat_ver=True):
+    #     """
+    #         mat_ver :   1 -> print images in [[[height, width] x channel] x (numPred+1)]
+    #                     0 -> print images in [height x [width x [channel, (numPred+1)]]]
+    #     """
+    #     if mat_ver == False:
+    #         return "class: %s \nheight: %s\nwidth: %s\nnumChannels: %s\nIM: \n%s\nLB: \n%s\nUB: \n%s\nV: \n%s \nC: \n%s \nd: %s\nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s\nim_lb: \n%s\nimb_ub: \n%s\nMaxIdxs: %s\nInputSizes: %s" % \
+    #             (self.__class__, self.get_height(), self.get_width(), self.get_num_channel(), self.attributes[IM_ID], self.attributes[IM_LB_ID], self.attributes[IM_UB_ID], self.get_V(), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub(), self.get_im_lb(), self.get_im_ub(),self.attributes[MAX_IDS_ID],self.attributes[MAX_INPUT_SIZES_ID])
+    #     else:
+    #         print("class: %s \nheight: %s\nwidth: %s\nnumChannels: %s" % (self.__class__, self.get_height(), self.get_width(), self.get_num_channel()))
+    #         if self.attributes[IM_ID].size:
+    #             print("IM: \n%s\n" % self.attributes[IM_ID].transpose([-1, 0, 1]))
+    #         else:
+    #             print('IM: []')
+    #         if self.attributes[IM_LB_ID].size:
+    #             print("LB: \n%s\n" % self.attributes[IM_LB_ID].transpose([-1, 0, 1]))
+    #         else:
+    #             print('LB: []')
+    #         if self.attributes[IM_UB_ID].size:
+    #             print("UB: \n%s\n" % self.attributes[IM_UB_ID].transpose([-1, 0, 1]))
+    #         else:
+    #             print('UB: []')
+    #         print("V: \n%s \nC: \n%s \nd: %s \nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s" % (self.get_V().transpose([3,2,0,1]), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub()))
+    #         if self.get_im_lb().size:
+    #             print("im_lb: \n%s\n" % self.get_im_lb().transpose([-1, 0, 1]))
+    #         else:
+    #             print("im_ub: []")
+    #         if self.get_im_ub().size:
+    #             print("im_ub: \n%s" % self.get_im_ub().transpose([-1, 0, 1]))
+    #         else:
+    #             print("im_ub: []")
+    #         print("MaxIdxs: %s\nInputSizes: %s" % (self.attributes[MAX_IDS_ID], self.attributes[MAX_INPUT_SIZES_ID]))
+    #         return "" 

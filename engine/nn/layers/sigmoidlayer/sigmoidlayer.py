@@ -1,3 +1,8 @@
+import numpy as np
+import torch
+import torch.nn as nn 
+import sys, os
+
 SIGMOIDL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 SIGMOIDL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
 SIGMOIDL_ERRORMSG_INVALID_INPUT = 'The input should be either an ImageStar or ImageZono'
@@ -14,18 +19,28 @@ SIGMOIDL_INPUT_NAMES_ID = 2
 SIGMOIDL_NUM_OUTPUTS_ID = 3
 SIGMOIDL_OUTPUT_NAMES_ID = 4
 
-SIGMOIDL_NAME_ARGS_ID = 0
-SIGMOIDL_NUM_INPUTS_ARGS_ID = 1
-SIGMOIDL_INPUT_NAMES_ARGS_ID = 2
-SIGMOIDL_NUM_OUTPUTS_ARGS_ID = 3
-SIGMOIDL_OUTPUT_NAMES_ARGS_ID = 4
+SIGMOIDL_ARGS_NAME_ID = 0
+SIGMOIDL_ARGS_NUM_INPUTS_ID = 1
+SIGMOIDL_ARGS_INPUT_NAMES_ID = 2
+SIGMOIDL_ARGS_NUM_OUTPUTS_ID = 3
+SIGMOIDL_ARGS_OUTPUT_NAMES_ID = 4
 
 SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID = 0
-SIGMOIDL_REACH_ARGS_OPTION_ID = 1
-SIGMOIDL_REACH_ARGS_METHOD_ID = 2
+SIGMOIDL_REACH_ARGS_METHOD_ID = 1
+SIGMOIDL_REACH_ARGS_OPTION_ID = 2
 SIGMOIDL_REACH_ARGS_RELAX_FACTOR_ID = 3
 
-SIGMOIDL_DEFAULT_NAME = 'relu_layer'
+SIGMOIDL_DEFAULT_NAME = 'sigmoid_layer'
+SIGMOIDL_DEFAULT_RELAXFACTOR = 0
+
+sys.path.insert(0, "engine/nn/funcs/logsig")
+from logsig import *
+
+sys.path.insert(0, "engine/set/imagestar")
+from imagestar import *
+
+sys.path.insert(0, "engine/set/star")
+from star import *
 
 class SigmoidLayer:
     """
@@ -33,7 +48,7 @@ class SigmoidLayer:
         Contains constructor and reachability analysis methods
     """
     
-    def SigmoidLayer(self, *args):
+    def __init__(self, *args):
         """
             Constructor
         """
@@ -44,15 +59,15 @@ class SigmoidLayer:
             self.attributes.append(np.array([]))
         
         if len(args) == SIGMOIDL_FULL_ARGS_LEN:
-            self.attributes[SIGMOIDL_NAME_ID] = self.attributes[SIGMOIDL_ARGS_NAME_ID]
-            self.attributes[SIGMOIDL_NUM_INPUTS_ID] = self.attributes[SIGMOIDL_ARGS_NUM_INPUTS_ID]
-            self.attributes[SIGMOIDL_INPUT_NAMES_ID] = self.attributes[SIGMOIDL_ARGS_INPUT_NAMES_ID]
-            self.attributes[SIGMOIDL_NUM_OUTPUTS_ID] = self.attributes[SIGMOIDL_ARGS_NUM_OUTPUTS_ID]
-            self.attributes[SIGMOIDL_OUTPUT_NAMES_ID] = self.attributes[SIGMOIDL_ARGS_OUTPUT_NAMES_ID]
+            self.attributes[SIGMOIDL_NAME_ID] = args[SIGMOIDL_ARGS_NAME_ID]
+            self.attributes[SIGMOIDL_NUM_INPUTS_ID] = args[SIGMOIDL_ARGS_NUM_INPUTS_ID]
+            self.attributes[SIGMOIDL_INPUT_NAMES_ID] = args[SIGMOIDL_ARGS_INPUT_NAMES_ID]
+            self.attributes[SIGMOIDL_NUM_OUTPUTS_ID] = args[SIGMOIDL_ARGS_NUM_OUTPUTS_ID]
+            self.attributes[SIGMOIDL_OUTPUT_NAMES_ID] = args[SIGMOIDL_ARGS_OUTPUT_NAMES_ID]
         elif len(args) == SIGMOIDL_NAME_ARGS_LEN:
-            assert isinstance(self.attributes[SIGMOIDL_ARGS_NAME_ID], str), 'error: %s' % SIGMOIDL_ERRMSG_NAME_NOT_STRING
+            assert isinstance(args[SIGMOIDL_ARGS_NAME_ID], str), 'error: %s' % SIGMOIDL_ERRMSG_NAME_NOT_STRING
 
-            self.attributes[SIGMOIDL_NAME_ID] = self.attributes[SIGMOIDL_ARGS_NAME_ID]
+            self.attributes[SIGMOIDL_NAME_ID] = args[SIGMOIDL_ARGS_NAME_ID]
         elif len(args) == SIGMOIDL_EMPTY_ARGS_LEN:
             self.attributes[SIGMOIDL_NAME_ID] = SIGMOIDL_DEFAULT_NAME
         else:
@@ -66,9 +81,9 @@ class SigmoidLayer:
             returns the result of apllying ReLU activation to the given input
         """
             
-        return np.reshape(LogSig.evaluate(torch.reshape(input,(np.prod(input.shape), 1))), input.shape)
+        return np.reshape(LogSig.evaluate(torch.reshape(torch.FloatTensor(input),(np.prod(input.shape), 1)).cpu().detach().numpy()), input.shape)
     
-    def reach_star_single_input(_, input, method, relax_factor):
+    def reach_star_single_input(self, input, method, option = [], relax_factor = SIGMOIDL_DEFAULT_RELAXFACTOR):
         """
             Performs reachability analysis on the given input
                  
@@ -79,18 +94,26 @@ class SigmoidLayer:
             returns a set of reachable sets for the given input images
         """
              
-        assert isinstance(input, ImageStar), 'error: %s' % SIGMOIDL_ERRORMSG_INVALID_INPUT
+        #assert isinstance(input, ImageStar), 'error: %s' % SIGMOIDL_ERRORMSG_INVALID_INPUT
             
-        reachable_sets = LogSig.reach(input_image.to_star(), method, [], relax_factor)
+        input_image = input
+            
+        if isinstance(input, ImageStar):
+            input_image = input_image.to_star()
+            
+        reachable_sets = LogSig.reach(input_image, method, option, relax_factor)
 
-        rs = []
         
-        for i in range(len(reachable_sets)):
-            rs.append(reachable_sets[i].to_image_star(h, w, c))
+        if isinstance(input, ImageStar):
+            rs = []
+            for star in reachable_sets:
+                rs.append(star.toImageStar(input.get_height(), input.get_width(), input.get_num_channel()))
+                
+            return rs
             
-        return rs
+        return reachable_sets
     
-    def reach_star_multiple_inputs(self, input_images, method, option, relax_factor):
+    def reach_star_multiple_inputs(self, input_images, method, option = [], relax_factor = SIGMOIDL_DEFAULT_RELAXFACTOR):
         """
             Performs reachability analysis on the given multiple inputs
             
@@ -156,9 +179,9 @@ class SigmoidLayer:
             returns the output set(s)
         """
         
-        if method == 'approx-star' or method == 'exact-star':
-            IS = self.reach_star_multiple_inputs(args[SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGMOIDL_REACH_ARGS_METHOD_ID], args[SIGMOIDL_REACH_ARGS_OPTION_ID], args[SIGMOIDL_REACH_ARGS_RELAX_FACTOR_ID])
-        elif method == 'approx-zono':
+        if args[SIGMOIDL_REACH_ARGS_METHOD_ID] == 'approx-star' or args[SIGMOIDL_REACH_ARGS_METHOD_ID] == 'exact-star':
+            IS = self.reach_star_multiple_inputs(args[SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGMOIDL_REACH_ARGS_METHOD_ID])
+        elif args[SIGMOIDL_REACH_ARGS_METHOD_ID] == 'approx-zono':
             IS = self.reach_zono_multiple_inputs(args[SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGMOIDL_REACH_ARGS_OPTION_ID])
         else:
             raise Exception(SIGMOIDL_ERRMSG_UNK_REACH_METHOD)
