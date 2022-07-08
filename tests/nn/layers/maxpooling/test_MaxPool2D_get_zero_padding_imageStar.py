@@ -3,12 +3,11 @@ import numpy as np
 import sys, os
 import mat73
 
-from test_inputs.sources import *
-
-os.chdir("../../../../")
-print(os.getcwd())
 sys.path.insert(0, "engine/nn/layers/maxpooling")
 from maxpooling2dlayer import *
+
+sys.path.insert(0, "tests/nn/layers/maxpooling")
+from test_inputs.sources import *
     
 def read_csv_data(path):        
     return np.array(list(mat73.loadmat(path).values())[0])
