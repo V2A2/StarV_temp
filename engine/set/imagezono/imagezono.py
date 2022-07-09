@@ -233,7 +233,13 @@ class ImageZono:
         """
         IS = self.toImageStar()
         return IS.is_p1_larger_p2(p1, p2)
-        
+       
+    def get_lb_image(self):
+        return self.lb_image
+
+    def get_ub_image(self):
+        return self.ub_image
+
     def __str__(self):
         print('class: %s' % (self.__class__))
         print('height: %s \nwidth: %s \nnumChannels: %s' % (self.height, self.width, self.numChannels))
