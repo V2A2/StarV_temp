@@ -49,9 +49,12 @@ class TestPosLinReach(unittest.TestCase):
         S2 = PosLin.reach(I1, 'approx-star')
         # over-approximate reach set using star
         print("\n S2 ------------------------ \n", S2)
-        S3 = PosLin.reach(I, 'approx-zono')
-        # over-approximate reach set using star
+        S3 = PosLin.reach(I1, 'approx-star2')
+        # over-approximate method 2 reach set using star
         print("\n S3 ------------------------ \n", S3)
+        S4 = PosLin.reach(I, 'approx-zono')
+        # over-approximate reach set using star
+        print("\n S4 ------------------------ \n", S4)
 
 
 if __name__ == '__main__':

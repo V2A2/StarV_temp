@@ -28,7 +28,7 @@ class PosLin:
         evaluate method and reachability analysis with stars
 
         Args:
-            @x = np.arrays
+            @x = np.arrays()
 
         Returns:
             0, if n <= 0

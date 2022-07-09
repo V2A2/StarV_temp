@@ -985,7 +985,7 @@ class Star:
             V2[map, :] = 0
             new_Z = Zono(c2, V2)
         else:
-            new_Z = []
+            new_Z = np.array([])
         return Star(V1, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
 
     def scaleRow(self, map, gamma):
@@ -1005,7 +1005,7 @@ class Star:
             V2[map, :] = gamma*V2[map, :]
             new_Z = Zono(c2, V2)
         else:
-            new_Z = []
+            new_Z = np.array([])
         return Star(V1, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
 
     def getRanges(self):
