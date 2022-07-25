@@ -496,6 +496,9 @@ class Zono:
         ax.axis(ranges.tolist())
         plt.show()
 
+    def isempty(self):
+        return self.V.size == 0
+
     def __str__(self):
         print('class: %s' % self.__class__)
         print('c: [shape: %s | type: %s]' % (self.c.shape, self.c.dtype))

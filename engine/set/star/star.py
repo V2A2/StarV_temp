@@ -985,7 +985,7 @@ class Star:
             V2[map, :] = 0
             new_Z = Zono(c2, V2)
         else:
-            new_Z = []
+            new_Z = np.array([])
         return Star(V1, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
 
     def scaleRow(self, map, gamma):
@@ -1005,7 +1005,7 @@ class Star:
             V2[map, :] = gamma*V2[map, :]
             new_Z = Zono(c2, V2)
         else:
-            new_Z = []
+            new_Z = np.array([])
         return Star(V1, self.C, self.d, self.predicate_lb, self.predicate_ub, new_Z)
 
     def getRanges(self):
@@ -1425,3 +1425,23 @@ class Star:
     
     #------------------------------- Need to Test this function ---------------------------------#
     # def merge_stars()
+    
+################################ UTILS ###############################
+         
+    def deep_copy(self, new_star):
+        self.V = copy.deepcopy(new_star.V)
+        self.C = copy.deepcopy(new_star.C)
+        self.d = copy.deepcopy(new_star.d)
+        
+        self.predicate_lb = copy.deepcopy(new_star.predicate_lb)
+        self.predicate_ub = copy.deepcopy(new_star.predicate_ub)
+        
+        self.state_lb = copy.deepcopy(new_star.state_lb)
+        self.state_ub = copy.deepcopy(new_star.state_ub)
+        
+        self.dim, self.nVar = self.V.shape
+        self.nVar -= 1
+        
+        self.Z = Zono(copy.deepcopy(new_star.Z.c), copy.deepcopy(new_star.Z.V))
+        
+        
