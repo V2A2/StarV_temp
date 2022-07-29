@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn 
+import sys, os
 
 TANHL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 TANHL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
@@ -30,13 +31,24 @@ TANHL_REACH_ARGS_METHOD_ID = 2
 TANHL_REACH_ARGS_RELAX_FACTOR_ID = 3
 
 TANHL_DEFAULT_NAME = 'tanh_layer'
+TANHL_DEFAULT_RELAXFACTOR = 0
+
+sys.path.insert(0, "engine/nn/funcs/tanh")
+from tanh import *
+
+sys.path.insert(0, "engine/set/imagestar")
+from imagestar import *
+
+sys.path.insert(0, "engine/set/star")
+from star import *
+
 
 class TanhLayer:
     """
         The Tanh layer class in CNN
         Contains constructor and reachability analysis methods    """
     
-    def TanhLayer(self, *args):
+    def __init__(self, *args):
         """
             Constructor
         """
@@ -47,29 +59,30 @@ class TanhLayer:
             self.attributes.append(np.array([]))
         
         if len(args) == TANHL_FULL_ARGS_LEN:
-            self.attributes[TANHL_NAME_ID] = self.attributes[TANHL_ARGS_NAME_ID]
-            self.attributes[TANHL_NUM_INPUTS_ID] = self.attributes[TANHL_ARGS_NUM_INPUTS_ID]
-            self.attributes[TANHL_INPUT_NAMES_ID] = self.attributes[TANHL_ARGS_INPUT_NAMES_ID]
-            self.attributes[TANHL_NUM_OUTPUTS_ID] = self.attributes[TANHL_ARGS_NUM_OUTPUTS_ID]
-            self.attributes[TANHL_OUTPUT_NAMES_ID] = self.attributes[TANHL_ARGS_OUTPUT_NAMES_ID]
+            self.attributes[TANHL_NAME_ID] = args[TANHL_ARGS_NAME_ID]
+            self.attributes[TANHL_NUM_INPUTS_ID] = args[TANHL_ARGS_NUM_INPUTS_ID]
+            self.attributes[TANHL_INPUT_NAMES_ID] = args[TANHL_ARGS_INPUT_NAMES_ID]
+            self.attributes[TANHL_NUM_OUTPUTS_ID] = args[TANHL_ARGS_NUM_OUTPUTS_ID]
+            self.attributes[TANHL_OUTPUT_NAMES_ID] = args[TANHL_ARGS_OUTPUT_NAMES_ID]
         elif len(args) == TANHL_NAME_ARGS_LEN:
-            assert isinstance(self.attributes[TANHL_ARGS_NAME_ID], str), 'error: %s' % TANHL_ERRMSG_NAME_NOT_STRING
+            assert isinstance(args[TANHL_ARGS_NAME_ID], str), 'error: %s' % TANHL_ERRMSG_NAME_NOT_STRING
 
-            self.attributes[TANHL_NAME_ID] = self.attributes[TANHL_ARGS_NAME_ID]
+            self.attributes[TANHL_NAME_ID] = args[TANHL_ARGS_NAME_ID]
         elif len(args) == TANHL_EMPTY_ARGS_LEN:
             self.attributes[TANHL_NAME_ID] = TANHL_DEFAULT_NAME
         else:
             raise Exception(TANHL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
-    def evaluate(_, input):
+    def evaluate(self, input):
         """
             Evaluates the layer on the given input
             input : np.array([*]) -> a 2- or 3-dimensional array
             
             returns the result of apllying ReLU activation to the given input
         """
-            
-        return np.reshape(TanSig.evaluate(torch.reshape(input,(np.prod(input.shape), 1))), input.shape)
+         
+        return TanSig.evaluate(torch.FloatTensor(input), self.attributes[SIGNL_MODE_ID])    
+        #return np.reshape(TanSig.evaluate(torch.reshape(input,(np.prod(input.shape), 1))), input.shape)
     
     def reach_star_single_input(_, input, method, relax_factor):
         """
@@ -82,16 +95,24 @@ class TanhLayer:
             returns a set of reachable sets for the given input images
         """
              
-        assert isinstance(input, ImageStar), 'error: %s' % TANHL_ERRORMSG_INVALID_INPUT
+        #assert isinstance(input, ImageStar), 'error: %s' % TANHL_ERRORMSG_INVALID_INPUT
+         
+        input_image = input
             
-        reachable_sets = TanSig.reach(input_image.to_star(), method, [], relax_factor)
+        if isinstance(input, ImageStar):
+            input_image = input_image.to_star()
+ 
+            
+        reachable_sets = TanSig.reach(input_image, method, option, relax_factor)
 
-        rs = []
-        
-        for i in range(len(reachable_sets)):
-            rs.append(reachable_sets[i].to_image_star(h, w, c))
+        if isinstance(input, ImageStar):
+            rs = []
+            for star in reachable_sets:
+                rs.append(star.toImageStar(input.get_height(), input.get_width(), input.get_num_channel()))
+                
+            return rs
             
-        return rs
+        return reachable_sets
     
     def reach_star_multiple_inputs(self, input_images, method, option, relax_factor):
         """
@@ -159,9 +180,9 @@ class TanhLayer:
             returns the output set(s)
         """
         
-        if method == 'approx-star' or method == 'exact-star':
+        if args[TANHL_REACH_ARGS_METHOD_ID] == 'approx-star' or args[TANHL_REACH_ARGS_METHOD_ID] == 'exact-star':
             IS = self.reach_star_multiple_inputs(args[TANHL_REACH_ARGS_INPUT_IMAGES_ID], args[TANHL_REACH_ARGS_METHOD_ID], args[TANHL_REACH_ARGS_OPTION_ID], args[TANHL_REACH_ARGS_RELAX_FACTOR_ID])
-        elif method == 'approx-zono':
+        elif args[TANHL_REACH_ARGS_METHOD_ID] == 'approx-zono':
             IS = self.reach_zono_multiple_inputs(args[TANHL_REACH_ARGS_INPUT_IMAGES_ID], args[TANHL_REACH_ARGS_OPTION_ID])
         else:
             raise Exception(TANHL_ERRMSG_UNK_REACH_METHOD)
