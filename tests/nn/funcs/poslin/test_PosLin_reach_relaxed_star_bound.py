@@ -1,4 +1,4 @@
-# ------------- test for reach_star_approx function -------------
+# ------------- test for reach_relaxed_star_bound function -------------
 import unittest
 
 import copy
@@ -16,9 +16,9 @@ from star import Star
 from poslin import PosLin
 
 
-class TestPosLinReachStarApprox(unittest.TestCase):
+class TestPosLinReachRelaxedStarBound(unittest.TestCase):
     """
-        Tests PosLin reach_star_approx function
+        Tests PosLin reach_relaxed_star_bound function
     """
 
     def test_reach_star_approx(self):
@@ -59,14 +59,14 @@ class TestPosLinReachStarApprox(unittest.TestCase):
 
         # from glpk import glpk, GLPK
 
-        S = PosLin.reach_star_approx(I)
+        S = PosLin.reach_relaxed_star_bound(I, 0.5, '', 'display')
         print("\n S ------------------------ \n", S.__repr__())
 
 
 if __name__ == '__main__':
     unittest.main()
 
-# ------------- end of the test for reach_star_approx function -------------
+# ------------- end of the test for reach_relaxed_star_bound function -------------
 
 # ------------- Unused Testing -------------
 # V = np.matrix('0 1 1; 0 1 0')

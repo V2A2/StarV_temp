@@ -28,7 +28,7 @@ class PosLin:
         evaluate method and reachability analysis with stars
 
         Args:
-            @x = np.arrays
+            @x = np.arrays()
 
         Returns:
             0, if n <= 0
@@ -613,6 +613,1292 @@ class PosLin:
                 S = In
                 return S
 
+    def multipleStepReachStarApprox_at_one(I, index, lb, ub):
+        """
+        step reach approximation using star
+        
+        Args:
+            @I: star set input
+            @index: index of the neurons performing stepReach
+            @lb: lower bound of x[index]
+            @ub: upper bound of x[index]
+
+        Returns:
+            @S: star output set
+        """
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+
+        # print("\n I ------------------------ \n", I.__repr__())
+        # print("\n index ------------------------ \n", index)
+        # print("\n lb ------------------------ \n", lb)
+        # print("\n ub ------------------------ \n", ub)
+        N = I.dim
+        # print("\n N ------------------------ \n", N)
+        # ------------- number of neurons involved (number of new predicate variables introduced) -------------
+        m = len(index)
+        # print("\n m ------------------------ \n", m)
+
+        # ------------- construct new basis array -------------
+        # ------------- originaial basis array -------------
+        V1 = copy.deepcopy(I.V)
+        # print("\n V1 ------------------------ \n", V1)
+        V1[index, :] = 0
+        # print("\n V1 ------------------------ \n", V1)
+        # ------------- basis array for new predicates -------------
+        V2 = np.zeros([N, m])
+        # print("\n V2 ------------------------ \n", V2)
+        for i in range(m):
+            V2[index[i], i] = 1
+        # print("\n V2 ------------------------ \n", V2)
+
+        # ------------- new basis for over-approximate star set -------------
+        new_V = np.hstack([V1, V2])
+        # print("\n new_V ------------------------ \n", new_V)
+
+        # ------------- construct new constraints on new predicate variables -------------
+        # ------------- case 0: keep the old constraints on the old predicate variable -------------
+        # ------------- number of old predicate variables -------------
+        n = I.nVar
+        # print("\n n ------------------------ \n", n)
+        C0 = np.hstack([I.C, np.zeros([I.C.shape[0], m])])
+        # print("\n C0 ------------------------ \n", C0)
+        d0 = copy.deepcopy(I.d)
+        # print("\n d0 ------------------------ \n", d0)
+
+        # ------------- case 1: y[index] >= 0 -------------
+        C1_zeros = np.zeros([m, n])
+        # print("\n C1_zeros ------------------------ \n", C1_zeros)
+        C1_identity = -np.identity(m)
+        # print("\n C1_identity ------------------------ \n", C1_identity)
+        C1 = np.hstack([C1_zeros, C1_identity])
+        # print("\n C1 ------------------------ \n", C1)
+        d1 = np.zeros([m, 1]).flatten()
+        # print("\n d1 ------------------------ \n", d1)
+
+        # ------------- case 2: y[index] >= x[index] -------------
+        C2 = np.hstack([I.V[index, 1:n + 1], -V2[index, 0:m]])
+        # print("\n C2 ------------------------ \n", C2)
+        d2 = copy.deepcopy(-I.V[index, 0])
+        # print("\n d2 ------------------------ \n", d2)
+
+        # ------------- case 3: y[index] <= (ub/(ub - lb))*(x-lb) -------------
+        # ------------- devide element-wise -------------
+        a = ub / (ub - lb)
+        # print("\n a ------------------------ \n", a)
+        # ------------- multiply element-wise -------------
+        b = a * lb
+        # print("\n b ------------------------ \n", b)
+        C3 = np.hstack([(-a.reshape(-1, 1) * I.V[index, 1:n + 1]), V2[index,
+                                                                      0:m]])
+        # print("\n C3 ------------------------ \n", C3)
+        d3 = a * I.V[index, 0] - b
+        # print("\n d3 ------------------------ \n", d3)
+
+        new_C = np.vstack([C0, C1, C2, C3])
+        # print("\n new_C ------------------------ \n", new_C)
+        new_d = np.hstack([d0, d1, d2, d3])
+        # print("\n new_d ------------------------ \n", new_d)
+
+        new_pred_lb = np.hstack([I.predicate_lb, np.zeros([m, 1]).flatten()])
+        # print("\n new_pred_lb ------------------------ \n", new_pred_lb)
+        new_pred_ub = np.hstack([I.predicate_ub, ub])
+        # print("\n new_pred_ub ------------------------ \n", new_pred_ub)
+
+        S = Star(new_V, new_C, new_d, new_pred_lb, new_pred_ub)
+        # print("\n S ------------------------ \n", S.__repr__())
+        return S
+
+    def reach_star_approx2(*args):
+        """
+        more efficient method by doing multiple stepReach at one time
+        over-approximate reachability analysis using Star
+
+        Args:
+            @I: star set input
+            @option: 'parallel' or single
+
+        Returns:
+            @S: star output set
+        """
+        len_args = len(args)
+        if len_args == 1:
+            I = args[0]
+            option = 'single'
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 2:
+            [I, option] = args
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 3:
+            [I, option, dis_opt] = args
+            lp_solver = 'gurobi'
+        elif len_args == 4:
+            [I, option, dis_opt, lp_solver] = args
+        else:
+            'error: Invalid number of input arguments, should be 1, 2, 3, or 4'
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+
+        if Star.isEmptySet(I):
+            S = np.array([])
+            return S
+        else:
+            [lb, ub] = Star.estimateRanges(I)
+            # print("\n lb ------------------------ \n", lb)
+            # print("\n ub ------------------------ \n", ub)
+            if len(lb) == 0 or len(ub) == 0:
+                S = np.array([])
+                return S
+            else:
+                # ------------- find all indexes having ub <= 0, then reset the -------------
+                # ------------- values of the elements corresponding to these indexes to 0 -------------
+
+                if dis_opt == 'display':
+                    print(
+                        '\n Finding all neurons (in %d neurons) with ub <= 0...: '
+                        % len(ub))
+                # ------------- computation map -------------
+                map1 = np.argwhere(ub <= 0).flatten()
+                # print("\n map1 ------------------------ \n", map1)
+                if dis_opt == 'display':
+                    print(
+                        '\n %d neurons with ub <= 0 are found by estimating ranges: '
+                        % len(map1))
+
+                map2_lb = np.argwhere(lb < 0).flatten()
+                # print("\n map2_lb ------------------------ \n", map2_lb)
+                map2_ub = np.argwhere(ub > 0).flatten()
+                # print("\n map2_ub ------------------------ \n", map2_ub)
+                map2_float = np.intersect1d([map2_lb], [map2_ub])
+                # print("\n map2_float ------------------------ \n", map2_float)
+                map2 = np.array(map2_float, dtype=np.int)
+
+                if dis_opt == 'display':
+                    print(
+                        '\n Finding neurons (in %d neurons) with ub <= 0 by optimizing ranges: '
+                        % len(map2))
+
+                xmax = I.getMaxs(map2, option, dis_opt, lp_solver)
+                # print("\n xmax ------------------------ \n", xmax)
+                map3 = np.argwhere(xmax <= 0).flatten()
+                # print("\n map3 ------------------------ \n", map3)
+                if dis_opt == 'display':
+                    print(
+                        '\n %d neurons (in %d neurons) with ub <= 0 are found by optimizing ranges: '
+                        % (len(map3), len(map2)))
+
+                n = len(map3)
+                # print("\n n ------------------------ \n", n)
+                map4 = np.zeros([n, 1], dtype=np.int).flatten()
+                # print("\n map4 ------------------------ \n", map4)
+                for i in range(n):
+                    map4[i] = map2[map3[i]]
+                # print("\n map4 ------------------------ \n", map4)
+                map11 = np.hstack([map1, map4])
+                # print("\n map11 ------------------------ \n", map11)
+                # ------------- reset to zero at the element having ub <= 0 -------------
+                if map11.size:
+                    In = copy.deepcopy(I)
+                    In = In.resetRow(map11)
+                else:
+                    In = copy.deepcopy(I)
+                # print("\n In ------------------------ \n", In.__repr__())
+                if dis_opt == 'display':
+                    print('\n (%d+%d =%d)/%d neurons have ub <= 0: ' %
+                          (len(map1), len(map3), len(map11), len(ub)))
+
+                # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+                # ------------- apply the over-approximation rule for ReLU -------------
+
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding all neurons (in %d neurons) with lb < 0 & ub >0: "
+                        % len(ub))
+
+                map5 = np.argwhere(xmax > 0).flatten()
+                # print("\n map5 ------------------------ \n", map5)
+                # ------------- all indexes having ub > 0 -------------
+                map6 = map2[map5[:]]
+                # print("\n map6 ------------------------ \n", map6)
+                # ------------- upper bound of all neurons having ub > 0 -------------
+                xmax1 = xmax[map5[:]]
+                # print("\n xmax1 ------------------------ \n", xmax1)
+
+                xmin = I.getMins(map6, option, dis_opt, lp_solver)
+                # print("\n xmin ------------------------ \n", xmin)
+                map7 = np.argwhere(xmin < 0).flatten()
+                # print("\n map7 ------------------------ \n", map7)
+                # ------------- all indexes habing lb < 0 & ub > 0 -------------
+                map8 = map6[map7[:]]
+                # print("\n map8 ------------------------ \n", map8)
+                # ------------- lower bound of all indexes having lb < 0 & ub > 0 -------------
+                lb1 = xmin[map7[:]]
+                # print("\n lb1 ------------------------ \n", lb1)
+                # ------------- upper bound of all neurons having lb < 0 & ub > 0 -------------
+                ub1 = xmax1[map7[:]]
+                # print("\n ub1 ------------------------ \n", ub1)
+
+                if dis_opt == 'display':
+                    print('\n %d/%d neurons have lb < 0 & ub > 0: ',
+                          len(map8) % len(ub))
+                    print(
+                        '\n Construct new star set, %d new predicate variables are introduced: '
+                        % len(map8))
+                # ------------- one-shot approximation -------------
+                S = PosLin.multipleStepReachStarApprox_at_one(
+                    In, map8, lb1, ub1)
+                return S
+
+    # ------------- reachability analysis using relax-star method -------------
+    def round(number, ndigits=0):
+        """
+        Always round off function
+        Matlab always round up with half numbers, ie, 1.5, 2.5
+        But Python round function only round up half numbers that are odd, ie, 1.5, 3.5
+
+        Args: 
+            Number that needs to be rounded
+
+        Returns:
+            Rounded number
+        """
+
+        import math
+        exp = number * 10**ndigits
+        if abs(exp) - abs(math.floor(exp)) < 0.5:
+            return type(number)(math.floor(exp) / 10**ndigits)
+        return type(number)(math.ceil(exp) / 10**ndigits)
+
+    def reach_relaxed_star_range(*args):
+        """
+        a relaxed star-approx method using distance heristics
+
+        Args:
+            @I: star input set
+            @relaxFactor: a relaxFactor
+
+        Returns:
+            @S: star output set
+        """
+
+        len_args = len(args)
+        if len_args == 2:
+            [I, relaxFactor] = args
+            option = 'single'
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 3:
+            [I, relaxFactor, option] = args
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 4:
+            [I, relaxFactor, option, dis_opt] = args
+            lp_solver = 'gurobi'
+        elif len_args == 5:
+            [I, relaxFactor, option, dis_opt, lp_solver] = args
+        else:
+            'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+        # print("\n relaxFactor ------------------------ \n", relaxFactor)
+        assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
+
+        if not isinstance(I, Star):
+            S = np.array([])
+        else:
+            [lb, ub] = Star.estimateRanges(I)
+            # print("\n lb ------------------------ \n", lb)
+            # print("\n ub ------------------------ \n", ub)
+            if not lb.size or not ub.size:
+                S = np.array([])
+                return S
+            else:
+                # ------------- find all indexes having ub <= 0, then reset the -------------
+                # ------------- values of the elements corresponding to these indexes to 0 -------------
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding all neurons (in %d neurons) with ub <= 0...: "
+                        % (len(ub)))
+                # ------------- computation map -------------
+                map1 = np.argwhere(ub <= 0).flatten()
+                # print("\n map1 ------------------------ \n", map1)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with ub <= 0 are found by estimating ranges: "
+                        % (len(map1)))
+                map2_lb = np.argwhere(lb < 0).flatten()
+                map2_ub = np.argwhere(ub > 0).flatten()
+                map2_float = np.intersect1d([map2_lb], [map2_ub])
+                map2 = np.array(map2_float, dtype=np.int)
+                # print("\n map2 ------------------------ \n", map2)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with lb < 0 & ub > 0 are found by estimating ranges: "
+                        % (len(map2)))
+                # ------------- number of LP need to solve -------------
+                n1 = round((1 - relaxFactor) * len(map2))
+                # print("\n n1 ------------------------ \n", n1)
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding neurons (in (1-%.3f) x %d neurons = %d) with ub <= 0 by optimizing ranges, i.e. relaxing %2.2f%%: "
+                        % (relaxFactor, len(map2), n1, 100 * relaxFactor))
+                # midx = -np.sort(-(ub[map2] - lb[map2]))
+                midx = np.argsort(ub[map2] - lb[map2])[::-1]
+                # print("\n midx ------------------------ \n", midx)
+                # ------------- neurons with optimized ranged -------------
+                map21 = map2[midx[0:n1]]
+                # print("\n map21 ------------------------ \n", map21)
+                # ------------- neurons without optimized ranges -------------
+                map22 = map2[midx[n1 + 0:len(map2)]]
+                # print("\n map22 ------------------------ \n", map22)
+                lb1 = lb[map22]
+                # print("\n lb1 ------------------------ \n", lb1)
+                ub1 = ub[map22]
+                # print("\n ub1 ------------------------ \n", ub1)
+                if dis_opt == 'display':
+                    print("\n Optimize upper bounds of %d neurons: " %
+                          (len(map21)))
+                xmax = I.getMaxs(map21, option, dis_opt, lp_solver)
+                # print("\n xmax ------------------------ \n", xmax)
+                map3 = np.argwhere(xmax <= 0).flatten()
+                # print("\n map3 ------------------------ \n", map3)
+
+                n = len(map3)
+                # print("\n n ------------------------ \n", n)
+                map4 = np.zeros([n, 1]).flatten()
+                # print("\n map4 ------------------------ \n", map4)
+                for i in range(n):
+                    map4[i] = map21[map3[i]]
+                # print("\n map4 ------------------------ \n", map4)
+                map11 = np.hstack([map1, map4])
+                # print("\n map11 ------------------------ \n", map11)
+                # ------------- reset to zero at the element having ub <= 0 -------------
+                if map11.size:
+                    In = copy.deepcopy(I)
+                    In = In.resetRow(map11)
+                else:
+                    In = copy.deepcopy(I)
+                # print("\n In ------------------------ \n", In.__repr__())
+
+                # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+                # ------------- apply the over-approximation rule for ReLU -------------
+                map5 = np.argwhere(xmax > 0).flatten()
+                # print("\n map5 ------------------------ \n", map5)
+                map6 = map21[map5]  # all indexes having ub > 0
+                # print("\n map6 ------------------------ \n", map6)
+                xmax1 = xmax[map5]  # upper bound of all neurons having ub > 0
+                # print("\n xmax1 ------------------------ \n", xmax1)
+                if dis_opt == 'display':
+                    print("\n Optimize lower bounds of %d neurons: " %
+                          (len(map6)))
+
+                xmin = I.getMins(map6, option, dis_opt, lp_solver)
+                # print("\n xmin ------------------------ \n", xmin)
+                map7 = np.argwhere(xmin < 0).flatten()
+                # print("\n map7 ------------------------ \n", map7)
+                # ------------- all indexes having lb < 0 & ub > 0 -------------
+                map8 = map6[map7]
+                # print("\n map8 ------------------------ \n", map8)
+                # ------------- lower bound of all indexes having lb < 0 & ub > 0 -------------
+                lb2 = xmin[map7]
+                # print("\n lb2 ------------------------ \n", lb2)
+                # ------------- upper bound of all neurons having lb < 0 & ub > 0 -------------
+                ub2 = xmax1[map7]
+                # print("\n ub2 ------------------------ \n", ub2)
+
+                map9 = np.hstack([map22, map8])
+                # print("\n map9 ------------------------ \n", map9)
+                lb3 = np.hstack([lb1, lb2])
+                # print("\n lb3 ------------------------ \n", lb3)
+                ub3 = np.hstack([ub1, ub2])
+                # print("\n ub3 ------------------------ \n", ub3)
+                if dis_opt == 'display':
+                    print("\n %d/%d neurons have lb < 0 & ub > 0: " %
+                          (len(map9), len(ub)))
+                    print(
+                        "\n Construct new star set, %d new predicate variables are introduced: "
+                        % (len(map9)))
+                S = PosLin.multipleStepReachStarApprox_at_one(
+                    In, map9, lb3, ub3)
+                # S = PosLin.reach_star_approx(In)
+                return S
+
+    def reach_relaxed_star_area(*args):
+        """
+        a relaxed star-approx method using area heuristic
+        optimize ranges of neurons that have largest estimated areas
+
+        Args:
+            @I: star input set
+            @relaxFactor: a relaxFactor
+
+        Returns:
+            @S: star output set
+        """
+
+        len_args = len(args)
+        if len_args == 2:
+            [I, relaxFactor] = args
+            option = 'single'
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 3:
+            [I, relaxFactor, option] = args
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 4:
+            [I, relaxFactor, option, dis_opt] = args
+            lp_solver = 'gurobi'
+        elif len_args == 5:
+            [I, relaxFactor, option, dis_opt, lp_solver] = args
+        else:
+            'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+        assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
+
+        if not isinstance(I, Star):
+            S = np.array([])
+        else:
+            [lb, ub] = Star.estimateRanges(I)
+            # print("\n lb ------------------------ \n", lb)
+            # print("\n ub ------------------------ \n", ub)
+            if not lb.size or not ub.size:
+                S = np.array([])
+                return S
+            else:
+                # ------------- find all indexes having ub <= 0, then reset the -------------
+                # ------------- values of the elements corresponding to these indexes to 0 -------------
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding all neurons (in %d neurons) with ub <= 0...: "
+                        % (len(ub)))
+                # ------------- computation map -------------
+                map1 = np.argwhere(ub <= 0).flatten()
+                # print("\n map1 ------------------------ \n", map1)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with ub <= 0 are found by estimating ranges: "
+                        % (len(map1)))
+                map2_lb = np.argwhere(lb < 0).flatten()
+                map2_ub = np.argwhere(ub > 0).flatten()
+                map2_float = np.intersect1d([map2_lb], [map2_ub])
+                map2 = np.array(map2_float, dtype=np.int)
+                # print("\n map2 ------------------------ \n", map2)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with lb < 0 & ub > 0 are found by estimating ranges: "
+                        % (len(map2)))
+                # ------------- number of LP need to solve -------------
+                n1 = round((1 - relaxFactor) * len(map2))
+                # print("\n n1 ------------------------ \n", n1)
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding neurons (in (1-%.3f) x %d neurons = %d) with ub <= 0 by optimizing ranges, i.e. relaxing %2.2f%%: "
+                        % (relaxFactor, len(map2), n1, 100 * relaxFactor))
+
+                # ------------- estimated areas of triangle overapproximation at all neurons -------------
+                areas = 0.5 * (abs(ub[map2]) * abs(lb[map2]))
+                # print("\n areas ------------------------ \n", areas)
+                midx = np.argsort(areas)[::-1]
+                # print("\n midx ------------------------ \n", midx)
+
+                # ------------- neurons with optimized ranged -------------
+                map21 = map2[midx[0:n1]]
+                # print("\n map21 ------------------------ \n", map21)
+                # ------------- neurons without optimized ranges -------------
+                map22 = map2[midx[n1 + 0:len(map2)]]
+                # print("\n map22 ------------------------ \n", map22)
+                lb1 = lb[map22]
+                # print("\n lb1 ------------------------ \n", lb1)
+                ub1 = ub[map22]
+                # print("\n ub1 ------------------------ \n", ub1)
+                if dis_opt == 'display':
+                    print("\n Optimize upper bounds of %d neurons: " %
+                          (len(map21)))
+                xmax = I.getMaxs(map21, option, dis_opt, lp_solver)
+                # print("\n xmax ------------------------ \n", xmax)
+                map3 = np.argwhere(xmax <= 0).flatten()
+                # print("\n map3 ------------------------ \n", map3)
+
+                n = len(map3)
+                # print("\n n ------------------------ \n", n)
+                map4 = np.zeros([n, 1]).flatten()
+                for i in range(n):
+                    map4[i] = map21[map3[i]]
+                # print("\n map4 ------------------------ \n", map4)
+                map11 = np.hstack([map1, map4])
+                # print("\n map11 ------------------------ \n", map11)
+                # ------------- reset to zero at the element having ub <= 0 -------------
+                if map11.size:
+                    In = copy.deepcopy(I)
+                    In = In.resetRow(map11)
+                else:
+                    In = copy.deepcopy(I)
+                # print("\n In ------------------------ \n", In.__repr__())
+
+                # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+                # ------------- apply the over-approximation rule for ReLU -------------
+                map5 = np.argwhere(xmax > 0).flatten()
+                # print("\n map5 ------------------------ \n", map5)
+                # ------------- all indexes having ub > 0 -------------
+                map6 = map21[map5]
+                # print("\n map6 ------------------------ \n", map6)
+                # ------------- upper bound of all neurons having ub > 0 -------------
+                xmax1 = xmax[map5]
+                # print("\n xmax1 ------------------------ \n", xmax1)
+                if dis_opt == 'display':
+                    print("\n Optimize lower bounds of %d neurons: " %
+                          (len(map6)))
+
+                xmin = I.getMins(map6, option, dis_opt, lp_solver)
+                # print("\n xmin ------------------------ \n", xmin)
+                map7 = np.argwhere(xmin < 0).flatten()
+                # print("\n map7 ------------------------ \n", map7)
+                # ------------- all indexes having lb < 0 & ub > 0 -------------
+                map8 = map6[map7]
+                # print("\n map8 ------------------------ \n", map8)
+                # ------------- lower bound of all indexes having lb < 0 & ub > 0 -------------
+                lb2 = xmin[map7]
+                # print("\n lb2 ------------------------ \n", lb2)
+                # ------------- upper bound of all neurons having lb < 0 & ub > 0 -------------
+                ub2 = xmax1[map7]
+                # print("\n ub2 ------------------------ \n", ub2)
+
+                map9 = np.hstack([map22, map8])
+                # print("\n map9 ------------------------ \n", map9)
+                lb3 = np.hstack([lb1, lb2])
+                # print("\n lb3 ------------------------ \n", lb3)
+                ub3 = np.hstack([ub1, ub2])
+                # print("\n ub3 ------------------------ \n", ub3)
+                if dis_opt == 'display':
+                    print("\n %d/%d neurons have lb < 0 & ub > 0: " %
+                          (len(map9), len(ub)))
+                    print(
+                        "\n Construct new star set, %d new predicate variables are introduced: "
+                        % (len(map9)))
+                S = PosLin.multipleStepReachStarApprox_at_one(
+                    In, map9, lb3, ub3)
+                # S = PosLin.reach_star_approx(In)
+                return S
+
+    def reach_relaxed_star_bound(*args):
+        """
+        a relaxed star-approx method using lower bound and upper bound heuristic
+        optimize ranges of neurons that have largest lower bounds and upper bounds
+        
+        Args:
+            @I: star input set
+            @relaxFactor: a relaxFactor
+
+        Returns:
+            @S: star output set
+        """
+
+        len_args = len(args)
+        if len_args == 2:
+            [I, relaxFactor] = args
+            option = 'single'
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 3:
+            [I, relaxFactor, option] = args
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 4:
+            [I, relaxFactor, option, dis_opt] = args
+            lp_solver = 'gurobi'
+        elif len_args == 5:
+            [I, relaxFactor, option, dis_opt, lp_solver] = args
+        else:
+            'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+        assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
+
+        if not isinstance(I, Star):
+            S = np.array([])
+        else:
+            [lb, ub] = Star.estimateRanges(I)
+            # print("\n lb ------------------------ \n", lb)
+            # print("\n ub ------------------------ \n", ub)
+            if not lb.size or not ub.size:
+                S = np.array([])
+                return S
+            else:
+                # ------------- find all indexes having ub <= 0, then reset the -------------
+                # ------------- values of the elements corresponding to these indexes to 0 -------------
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding all neurons (in %d neurons) with ub <= 0...: "
+                        % (len(ub)))
+                # ------------- computation map -------------
+                map1 = np.argwhere(ub <= 0).flatten()
+                # print("\n map1 ------------------------ \n", map1)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with ub <= 0 are found by estimating ranges: "
+                        % (len(map1)))
+                map2_lb = np.argwhere(lb < 0).flatten()
+                map2_ub = np.argwhere(ub > 0).flatten()
+                map2_float = np.intersect1d([map2_lb], [map2_ub])
+                map2 = np.array(map2_float, dtype=np.int)
+                # print("\n map2 ------------------------ \n", map2)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with lb < 0 & ub > 0 are found by estimating ranges: "
+                        % (len(map2)))
+                # ------------- number of LP need to solve -------------
+                n1 = round((1 - relaxFactor) * len(map2))
+                # print("\n n1 ------------------------ \n", n1)
+
+                N = len(ub[map2])
+                # print("\n N ------------------------ \n", N)
+                lu = np.hstack([ub[map2], abs(lb[map2])])
+                # print("\n lu ------------------------ \n", lu)
+                midx = np.argsort(lu)[::-1]
+                # print("\n midx ------------------------ \n", midx)
+                # ------------- neurons with optimized ranges -------------
+                midx1 = midx[0:2 * n1]
+                # print("\n midx1 ------------------------ \n", midx1)
+                # ------------- neurons having upperbound optimized -------------
+                ub_idx = midx1[midx1 <= N - 1]
+                # print("\n ub_idx ------------------------ \n", ub_idx)
+                # ------------- neurons having lowerbound optimized -------------
+                lb_idx = midx1[midx1 > N - 1] - N
+                # print("\n lb_idx ------------------------ \n", lb_idx)
+                map21 = map2[ub_idx[:]]
+                # print("\n map21 ------------------------ \n", map21)
+                map22 = map2[lb_idx[:]]
+                # print("\n map22 ------------------------ \n", map22)
+
+                if dis_opt == 'display':
+                    print("\n Optimize %d upper bounds of %d neurons: " %
+                          (len(map21), len(map2)))
+
+                if map21.size:
+                    xmax = I.getMaxs(map21, option, dis_opt, lp_solver)
+                    # print("\n xmax ------------------------ \n", xmax)
+                    map3 = np.argwhere(xmax <= 0).flatten()
+                    # print("\n map3 ------------------------ \n", map3)
+                    if dis_opt == 'display':
+                        print(
+                            "\n %d neurons (in %d neurons) with ub <= 0 are found by optimizing ranges: "
+                            % (len(map3), len(map21)))
+                    n = len(map3)
+                    # print("\n n ------------------------ \n", n)
+                    map4 = np.zeros([n, 1]).flatten()
+                    # print("\n map4 ------------------------ \n", map4)
+                    for i in range(n):
+                        map4[i] = map21[map3[i]]
+                    # print("\n map4 ------------------------ \n", map4)
+                    map5 = np.argwhere(xmax > 0).flatten()
+                    # print("\n map5 ------------------------ \n", map5)
+                    map6 = map21[map5[:]]
+                    # print("\n map6 ------------------------ \n", map6)
+                    map11 = np.hstack([map1, map4])
+                    # print("\n map11 ------------------------ \n", map11)
+                else:
+                    map11 = map1
+                    # print("\n midx1 ------------------------ \n", midx1)
+                    map5 = np.array([])
+                    map6 = np.array([])
+                    map4 = np.array([])
+                # ------------- reset to zero at the element having ub <= 0 -------------
+                if map11.size:
+                    In = copy.deepcopy(I)
+                    In = In.resetRow(map11)
+                else:
+                    In = copy.deepcopy(I)
+                # print("\n In ------------------------ \n", In.__repr__())
+
+                if dis_opt == 'display' and map21.size:
+                    print("\n (%d+%d =%d)/%d neurons have ub <= 0: " %
+                          (len(map1), len(map3), len(map11), len(ub)))
+
+                if map4.size:
+                    map23 = np.setdiff1d(map2, map4)
+                    # print("\n map23 ------------------------ \n", map23)
+                else:
+                    map23 = map22
+                    # print("\n map23 ------------------------ \n", map23)
+
+                # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+                # ------------- apply the over-approximation rule for ReLU -------------
+                if dis_opt == 'display':
+                    print("\n Optimize %d lower bounds of %d neurons: " %
+                          (len(map23), len(map2)))
+
+                if map23.size:
+                    xmin = I.getMins(map23, option, dis_opt, lp_solver)
+                    # print("\n xmin ------------------------ \n", xmin)
+                    map7 = np.argwhere(xmin < 0).flatten()
+                    # print("\n map7 ------------------------ \n", map7)
+                    map8 = map23[map7[:]]
+                    # print("\n map8 ------------------------ \n", map8)
+                    map9 = np.argwhere(xmin >= 0).flatten()
+                    # print("\n map9 ------------------------ \n", map9)
+                    map10 = map23[map9[:]]
+                    # print("\n map10 ------------------------ \n", map10)
+                else:
+                    map8 = np.array([])
+                    map10 = np.array([])
+
+                if map4.size:
+                    map24 = np.setdiff1d(map2, map4)
+                    # print("\n map24 ------------------------ \n", map24)
+                else:
+                    map24 = map2
+                    # print("\n map24 ------------------------ \n", map24)
+
+                if map10.size:
+                    map24 = np.setdiff1d(map24, map10)
+                    # print("\n map24 ------------------------ \n", map24)
+
+                if map6.size:
+                    ub[map6] = xmax[map5]
+                    # print("\n ub ------------------------ \n", ub)
+                if map8.size:
+                    lb[map8] = xmin[map7]
+                    # print("\n lb ------------------------ \n", lb)
+
+                ub1 = ub[map24]
+                # print("\n ub1 ------------------------ \n", ub1)
+                lb1 = lb[map24]
+                # print("\n lb1 ------------------------ \n", lb1)
+
+                if dis_opt == 'display':
+                    print(
+                        "\n Construct new star set, %d new predicate variables are introduced: "
+                        % (len(map24)))
+                S = PosLin.multipleStepReachStarApprox_at_one(
+                    In, map24, lb1, ub1)
+                # S = PosLin.reach_star_approx(In)
+                return S
+
+    def reach_relaxed_star_ub(*args):
+        """
+        a relaxed star-approx method using upper bound heuristic
+        optimize ranges of neurons that have largest lower bounds and upper bounds
+        
+        Args:
+            @I: star input set
+            @relaxFactor: a relaxFactor
+
+        Returns:
+            @S: star output set
+        """
+
+        len_args = len(args)
+        if len_args == 2:
+            [I, relaxFactor] = args
+            option = 'single'
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 3:
+            [I, relaxFactor, option] = args
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 4:
+            [I, relaxFactor, option, dis_opt] = args
+            lp_solver = 'gurobi'
+        elif len_args == 5:
+            [I, relaxFactor, option, dis_opt, lp_solver] = args
+        else:
+            'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+        assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
+
+        if not isinstance(I, Star):
+            S = np.array([])
+        else:
+            [lb, ub] = Star.estimateRanges(I)
+            # print("\n lb ------------------------ \n", lb)
+            # print("\n ub ------------------------ \n", ub)
+            if not lb.size or not ub.size:
+                S = np.array([])
+                return S
+            else:
+                # ------------- find all indexes having ub <= 0, then reset the -------------
+                # ------------- values of the elements corresponding to these indexes to 0 -------------
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding all neurons (in %d neurons) with ub <= 0...: "
+                        % (len(ub)))
+                # ------------- computation map -------------
+                map1 = np.argwhere(ub <= 0).flatten()
+                # print("\n map1 ------------------------ \n", map1)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with ub <= 0 are found by estimating ranges: "
+                        % (len(map1)))
+                map2_lb = np.argwhere(lb < 0).flatten()
+                map2_ub = np.argwhere(ub > 0).flatten()
+                map2_float = np.intersect1d([map2_lb], [map2_ub])
+                map2 = np.array(map2_float, dtype=np.int)
+                # print("\n map2 ------------------------ \n", map2)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with lb < 0 & ub > 0 are found by estimating ranges: "
+                        % (len(map2)))
+                # ------------- number of LP need to solve -------------
+                n1 = round((1 - relaxFactor) * len(map2))
+                # print("\n n1 ------------------------ \n", n1)
+
+                N = len(ub[map2])
+                # print("\n N ------------------------ \n", N)
+                midx_u = np.argsort(ub[map2])[::-1]
+                # print("\n midx_u ------------------------ \n", midx_u)
+                midx_l = np.argsort(abs(ub[map2]))[::-1]
+                # print("\n midx_l ------------------------ \n", midx_l)
+                if 2 * n1 <= N:
+                    ub_idx = midx_u[0:2 * n1]
+                    # print("\n ub_idx ------------------------ \n", ub_idx)
+                    map21 = map2[ub_idx]
+                    # print("\n map21 ------------------------ \n", map21)
+                    map22 = np.array([])
+                else:
+                    ub_idx = midx_u[0:N]
+                    # print("\n ub_idx ------------------------ \n", ub_idx)
+                    map21 = map2[ub_idx]
+                    # print("\n map21 ------------------------ \n", map21)
+                    lb_idx = midx_l[0:2 * n1 - N]
+                    # print("\n lb_idx ------------------------ \n", lb_idx)
+                    map22 = map2[lb_idx]
+                    # print("\n map22 ------------------------ \n", map22)
+
+                if dis_opt == 'display':
+                    print("\n Optimize %d upper bounds of %d neurons: " %
+                          (len(map21), len(map2)))
+
+                if map21.size:
+                    xmax = I.getMaxs(map21, option, dis_opt, lp_solver)
+                    # print("\n xmax ------------------------ \n", xmax)
+                    map3 = np.argwhere(xmax <= 0).flatten()
+                    # print("\n map3 ------------------------ \n", map3)
+                    if dis_opt == 'display':
+                        print(
+                            "\n %d neurons (in %d neurons) with ub <= 0 are found by optimizing ranges: "
+                            % (len(map3), len(map21)))
+                    n = len(map3)
+                    # print("\n n ------------------------ \n", n)
+                    map4 = np.zeros([n, 1]).flatten()
+                    for i in range(n):
+                        map4[i] = map21[map3[i]]
+                    # print("\n map4 ------------------------ \n", map4)
+                    map5 = np.argwhere(xmax > 0).flatten()
+                    # print("\n map5 ------------------------ \n", map5)
+                    map6 = map21[map5[:]]
+                    # print("\n map6 ------------------------ \n", map6)
+                    map11 = np.hstack([map1, map4])
+                    # print("\n map11 ------------------------ \n", map11)
+                else:
+                    map11 = map1
+                    # print("\n map11 ------------------------ \n", map11)
+                    map5 = np.array([])
+                    map6 = np.array([])
+                    map4 = np.array([])
+                # ------------- reset to zero at the element having ub <= 0 -------------
+                if map11.size:
+                    In = copy.deepcopy(I)
+                    In = In.resetRow(map11)
+                else:
+                    In = copy.deepcopy(I)
+                # print("\n In ------------------------ \n", In.__repr__())
+
+                if dis_opt == 'display' and map21.size:
+                    print("\n (%d+%d =%d)/%d neurons have ub <= 0: " %
+                          (len(map1), len(map3), len(map11), len(ub)))
+
+                if map22.size:
+                    if map4.size:
+                        map23 = np.setdiff1d(map22, map4)
+                        # print("\n map23 ------------------------ \n", map23)
+                    else:
+                        map23 = map22
+                        # print("\n map23 ------------------------ \n", map23)
+                else:
+                    map23 = map22
+                    # print("\n map23 ------------------------ \n", map23)
+
+                # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+                # ------------- apply the over-approximation rule for ReLU -------------
+                if dis_opt == 'display':
+                    print("\n Optimize %d lower bounds of %d neurons: " %
+                          (len(map23), len(map2)))
+
+                if map23.size:
+                    xmin = I.getMins(map23, option, dis_opt, lp_solver)
+                    # print("\n xmin ------------------------ \n", xmin)
+                    map7 = np.argwhere(xmin < 0).flatten()
+                    # print("\n map7 ------------------------ \n", map7)
+                    map8 = map23[map7[:]]
+                    # print("\n map8 ------------------------ \n", map8)
+                    map9 = np.argwhere(xmin >= 0).flatten()
+                    # print("\n map9 ------------------------ \n", map9)
+                    map10 = map23[map9[:]]
+                    # print("\n map10 ------------------------ \n", map10)
+                else:
+                    map8 = np.array([])
+                    map10 = np.array([])
+
+                if map4.size:
+                    map24 = np.setdiff1d(map2, map4)
+                    # print("\n map24 ------------------------ \n", map24)
+                else:
+                    map24 = map2
+                    # print("\n map24 ------------------------ \n", map24)
+
+                if map10.size:
+                    map24 = np.setdiff1d(map24, map10)
+                    # print("\n map24 ------------------------ \n", map24)
+
+                if map6.size:
+                    ub[map6] = xmax[map5]
+                    # print("\n ub ------------------------ \n", ub)
+                if map8.size:
+                    lb[map8] = xmin[map7]
+                    # print("\n lb ------------------------ \n", lb)
+
+                ub1 = ub[map24]
+                # print("\n ub1 ------------------------ \n", ub1)
+                lb1 = lb[map24]
+                # print("\n lb1 ------------------------ \n", lb1)
+
+                if dis_opt == 'display':
+                    print(
+                        "\n Construct new star set, %d new predicate variables are introduced: "
+                        % (len(map24)))
+
+                S = PosLin.multipleStepReachStarApprox_at_one(
+                    In, map24, lb1, ub1)
+                # S = PosLin.reach_star_approx(In)
+                return S
+
+    def reach_relaxed_star_random(*args):
+        """
+        a relaxed star-approx method using random heuristic
+        optimize ranges of randomly selected neurons
+        
+        Args:
+            @I: star input set
+            @relaxFactor: a relaxFactor
+
+        Returns:
+            @S: star output set
+        """
+
+        len_args = len(args)
+        if len_args == 2:
+            [I, relaxFactor] = args
+            option = 'single'
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 3:
+            [I, relaxFactor, option] = args
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 4:
+            [I, relaxFactor, option, dis_opt] = args
+            lp_solver = 'gurobi'
+        elif len_args == 5:
+            [I, relaxFactor, option, dis_opt, lp_solver] = args
+        else:
+            'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+        assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
+
+        if not isinstance(I, Star):
+            S = np.array([])
+        else:
+            [lb, ub] = Star.estimateRanges(I)
+            # print("\n lb ------------------------ \n", lb)
+            # print("\n ub ------------------------ \n", ub)
+            if not lb.size or not ub.size:
+                S = np.array([])
+                return S
+            else:
+                # ------------- find all indexes having ub <= 0, then reset the -------------
+                # ------------- values of the elements corresponding to these indexes to 0 -------------
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding all neurons (in %d neurons) with ub <= 0...: "
+                        % (len(ub)))
+                map1 = np.argwhere(ub <= 0).flatten()
+                # print("\n map1 ------------------------ \n", map1)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with ub <= 0 are found by estimating ranges: "
+                        % (len(map1)))
+                map2_lb = np.argwhere(lb < 0).flatten()
+                map2_ub = np.argwhere(ub > 0).flatten()
+                map2_float = np.intersect1d([map2_lb], [map2_ub])
+                map2 = np.array(map2_float, dtype=np.int)
+                # print("\n map2 ------------------------ \n", map2)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with lb < 0 & ub > 0 are found by estimating ranges: "
+                        % (len(map2)))
+                # ------------- number of LP need to solve -------------
+                n1 = round((1 - relaxFactor) * len(map2))
+                # print("\n n1 ------------------------ \n", n1)
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding neurons (in (1-%.3f) x %d neurons = %d) with ub <= 0 by optimizing ranges, i.e. relaxing %2.2f%%: "
+                        % (relaxFactor, len(map2), n1, 100 * relaxFactor))
+
+                midx = np.random.permutation(len(map2))[0:n1]
+                # print("\n midx ------------------------ \n", midx)
+                midx = midx.transpose()
+                # print("\n midx ------------------------ \n", midx)
+                # ------------- neurons with optimized ranged -------------
+                map21 = map2[midx[0:n1]]
+                # print("\n map21 ------------------------ \n", map21)
+                map22 = np.setdiff1d(map2, map21)
+                # print("\n map22 ------------------------ \n", map22)
+                lb1 = lb[map22]
+                # print("\n lb1 ------------------------ \n", lb1)
+                ub1 = ub[map22]
+                # print("\n ub1 ------------------------ \n", ub1)
+
+                if dis_opt == 'display':
+                    print("\n Optimize upper bounds of %d neurons: " %
+                          (len(map21)))
+                xmax = I.getMaxs(map21, option, dis_opt, lp_solver)
+                # print("\n xmax ------------------------ \n", xmax)
+                map3 = np.argwhere(xmax <= 0).flatten()
+                # print("\n map3 ------------------------ \n", map3)
+                n = len(map3)
+                # print("\n n ------------------------ \n", n)
+                map4 = np.zeros([n, 1]).flatten()
+                for i in range(n):
+                    map4[i] = map21[map3[i]]
+                # print("\n map4 ------------------------ \n", map4)
+                map11 = np.hstack([map1, map4])
+                # print("\n map11 ------------------------ \n", map11)
+                # ------------- reset to zero at the element having ub <= 0 -------------
+                if map11.size:
+                    In = copy.deepcopy(I)
+                    In = In.resetRow(map11)
+                else:
+                    In = copy.deepcopy(I)
+                # print("\n In ------------------------ \n", In.__repr__())
+
+                # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+                # ------------- apply the over-approximation rule for ReLU -------------
+                map5 = np.argwhere(xmax > 0).flatten()
+                # print("\n map5 ------------------------ \n", map5)
+                # ------------- all indexes having ub > 0 -------------
+                map6 = map21[map5]
+                # print("\n map6 ------------------------ \n", map6)
+                # ------------- upper bound of all neurons having ub > 0 -------------
+                xmax1 = xmax[map5]
+                # print("\n xmax1 ------------------------ \n", xmax1)
+
+                if dis_opt == 'display':
+                    print("\n Optimize lower bounds of %d neurons: " %
+                          (len(map6)))
+
+                xmin = I.getMins(map6, option, dis_opt, lp_solver)
+                # print("\n xmin ------------------------ \n", xmin)
+                map7 = np.argwhere(xmin < 0).flatten()
+                # print("\n map7 ------------------------ \n", map7)
+                # ------------- all indexes having lb < 0 & ub > 0 -------------
+                map8 = map6[map7]
+                # print("\n map8 ------------------------ \n", map8)
+                # ------------- lower bound of all indexes having lb < 0 & ub > 0 -------------
+                lb2 = xmin[map7]
+                # print("\n lb2 ------------------------ \n", lb2)
+                # ------------- upper bound of all neurons having lb < 0 & ub > 0 -------------
+                ub2 = xmax1[map7]
+                # print("\n ub2 ------------------------ \n", ub2)
+
+                map9 = np.hstack([map22, map8])
+                # print("\n map9 ------------------------ \n", map9)
+                lb3 = np.hstack([lb1, lb2])
+                # print("\n lb3 ------------------------ \n", lb3)
+                ub3 = np.hstack([ub1, ub2])
+                # print("\n ub3 ------------------------ \n", ub3)
+
+                if dis_opt == 'display':
+                    print("\n %d/%d neurons have lb < 0 & ub > 0: " %
+                          (len(map9), len(ub)))
+                    print(
+                        "\n Construct new star set, %d new predicate variables are introduced: "
+                        % (len(map9)))
+
+                S = PosLin.multipleStepReachStarApprox_at_one(
+                    In, map9, lb3, ub3)
+                # S = PosLin.reach_star_approx(In)
+                return S
+
+    def reach_relaxed_star_static(*args):
+        """
+        a relaxed star-approx method using static heuristic
+        optimize ranges of the first n neurons
+        
+        Args:
+            @I: star input set
+            @relaxFactor: a relaxFactor
+
+        Returns:
+            @S: star output set
+        """
+
+        len_args = len(args)
+        if len_args == 2:
+            [I, relaxFactor] = args
+            option = 'single'
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 3:
+            [I, relaxFactor, option] = args
+            dis_opt = ''
+            lp_solver = 'gurobi'
+        elif len_args == 4:
+            [I, relaxFactor, option, dis_opt] = args
+            lp_solver = 'gurobi'
+        elif len_args == 5:
+            [I, relaxFactor, option, dis_opt, lp_solver] = args
+        else:
+            'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
+
+        from star import Star
+        assert isinstance(I, Star), 'error: input set is not a star set'
+        assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
+
+        if not isinstance(I, Star):
+            S = np.array([])
+        else:
+            [lb, ub] = Star.estimateRanges(I)
+            # print("\n lb ------------------------ \n", lb)
+            # print("\n ub ------------------------ \n", ub)
+            if not lb.size or not ub.size:
+                S = np.array([])
+                return S
+            else:
+                # ------------- find all indexes having ub <= 0, then reset the -------------
+                # ------------- values of the elements corresponding to these indexes to 0 -------------
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding all neurons (in %d neurons) with ub <= 0...: "
+                        % (len(ub)))
+                # ------------- computation map -------------
+                map1 = np.argwhere(ub <= 0).flatten()
+                # print("\n map1 ------------------------ \n", map1)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with ub <= 0 are found by estimating ranges: "
+                        % (len(map1)))
+                map2_lb = np.argwhere(lb < 0).flatten()
+                map2_ub = np.argwhere(ub > 0).flatten()
+                map2_float = np.intersect1d([map2_lb], [map2_ub])
+                map2 = np.array(map2_float, dtype=np.int)
+                # print("\n map2 ------------------------ \n", map2)
+                if dis_opt == 'display':
+                    print(
+                        "\n %d neurons with lb < 0 & ub > 0 are found by estimating ranges: "
+                        % (len(map2)))
+                # ------------- number of LP need to solve -------------
+                n1 = round((1 - relaxFactor) * len(map2))
+                # print("\n n1 ------------------------ \n", n1)
+
+                if dis_opt == 'display':
+                    print(
+                        "\n Finding neurons (in (1-%.3f) x %d neurons = %d) with ub <= 0 by optimizing ranges, i.e. relaxing %2.2f%%: "
+                        % (relaxFactor, len(map2), n1, 100 * relaxFactor))
+                # ------------- neurons with optimized ranged -------------
+                map21 = map2[0:n1]
+                # print("\n map21 ------------------------ \n", map21)
+                map22 = map2[n1 + 0:len(map2)]
+                # print("\n map22 ------------------------ \n", map22)
+                lb1 = lb[map22]
+                # print("\n lb1 ------------------------ \n", lb1)
+                ub1 = ub[map22]
+                # print("\n ub1 ------------------------ \n", ub1)
+                if dis_opt == 'display':
+                    print("\n Optimize upper bounds of %d neurons: " %
+                          (len(map21)))
+                xmax = I.getMaxs(map21, option, dis_opt, lp_solver)
+                # print("\n xmax ------------------------ \n", xmax)
+                map3 = np.argwhere(xmax <= 0).flatten()
+                # print("\n map3 ------------------------ \n", map3)
+                n = len(map3)
+                # print("\n n ------------------------ \n", n)
+                map4 = np.zeros([n, 1]).flatten()
+                for i in range(n):
+                    map4[i] = map21[map3[i]]
+                # print("\n map4 ------------------------ \n", map4)
+                map11 = np.hstack([map1, map4])
+                # print("\n map11 ------------------------ \n", map11)
+
+                # ------------- reset to zero at the element having ub <= 0 -------------
+                if map11.size:
+                    In = copy.deepcopy(I)
+                    In = In.resetRow(map11)
+                else:
+                    In = copy.deepcopy(I)
+                # print("\n In ------------------------ \n", In.__repr__())
+
+                # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+                # ------------- apply the over-approximation rule for ReLU -------------
+                map5 = np.argwhere(xmax > 0).flatten()
+                # print("\n map5 ------------------------ \n", map5)
+                # ------------- all indexes having ub > 0 -------------
+                map6 = map21[map5]
+                # print("\n map6 ------------------------ \n", map6)
+                # ------------- upper bound of all neurons having ub > 0 -------------
+                xmax1 = xmax[map5]
+                # print("\n xmax1 ------------------------ \n", xmax1)
+
+                if dis_opt == 'display':
+                    print("\n Optimize lower bounds of %d neurons: " %
+                          (len(map6)))
+
+                xmin = I.getMins(map6, option, dis_opt, lp_solver)
+                # print("\n xmin ------------------------ \n", xmin)
+                map7 = np.argwhere(xmin < 0).flatten()
+                # print("\n map7 ------------------------ \n", map7)
+                # ------------- all indexes having lb < 0 & ub > 0 -------------
+                map8 = map6[map7]
+                # print("\n map8 ------------------------ \n", map8)
+                # ------------- lower bound of all indexes having lb < 0 & ub > 0 -------------
+                lb2 = xmin[map7]
+                # print("\n lb2 ------------------------ \n", lb2)
+                # ------------- upper bound of all neurons having lb < 0 & ub > 0 -------------
+                ub2 = xmax1[map7]
+                # print("\n ub2 ------------------------ \n", ub2)
+
+                map9 = np.hstack([map22, map8])
+                # print("\n map9 ------------------------ \n", map9)
+                lb3 = np.hstack([lb1, lb2])
+                # print("\n lb3 ------------------------ \n", lb3)
+                ub3 = np.hstack([ub1, ub2])
+                # print("\n ub3 ------------------------ \n", ub3)
+
+                if dis_opt == 'display':
+                    print("\n %d/%d neurons have lb < 0 & ub > 0: " %
+                          (len(map9), len(ub)))
+                    print(
+                        "\n Construct new star set, %d new predicate variables are introduced: "
+                        % (len(map9)))
+
+                S = PosLin.multipleStepReachStarApprox_at_one(
+                    In, map9, lb3, ub3)
+                # S = PosLin.reach_star_approx(In)
+                return S
+
     # ------------- over-approximate reachability analysis use zonotope -------------
     def stepReachZonoApprox(I, index, lb, ub):
         """
@@ -760,8 +2046,10 @@ class PosLin:
         # elif method == 'exact-polyhedron': # exact analysis using polyhedron
         #     R = PosLin.reach_polyhedron_exact(I, option, dis_opt)
         elif method == 'approx-star':  # over-approximate analysis using star
-            # R = PosLin.reach_star_approx(I, option, dis_opt, lp_solver)
             R = PosLin.reach_star_approx(I)
+            return [R]
+        elif method == 'approx-star2':  # over-approximate analysis using star
+            R = PosLin.reach_star_approx2(I, option, dis_opt, lp_solver)
             return [R]
         elif method == 'approx-zono':  # over-approximate analysis using zonotope
             R = PosLin.reach_zono_approx(I, dis_opt)
@@ -892,190 +2180,159 @@ class PosLin:
 #                 S = np.column_stack([S1, S2])
 #                 return S
 
-# # step reach approximation using star
-# def multipleStepReachStarApprox_at_one(I, index, lb, ub):
-#     # @I: star set input
-#     # @index: index of the neurons performing stepReach
-#     # @lb: lower bound of x[index]
-#     # @ub: upper bound of x[index]
-#
-#     from star import Star
-#     assert isinstance(I, Star), 'error: input set is not a star set'
-#
-#     N = I.dim
-#     m = len(index) # number of neurons involved (number of new predicate variables introduced)
-#
-#     # construct new basis array
-#     V1 = copy.deepcopy(I.V) # originaial basis array
-#     V1[index, :] = 0
-#     V2 = np.zeros([N, m]) # basis array for new predicates
-#     for i in range (m):
-#         V2[index[i], i] = 1
-#     new_V = np.column_stack([V1, V2]) # new basis for over-approximate star set
-#
-#     # construct new constraints on new predicate variables
-#     # case 0: keep the old constraints on the old predicate variable
-#     n = I.nVar # number of old predicate variables
-#     C0 = np.column_stack([I.C, np.zeros([I.C.shape[0], m])])
-#     d0 = copy.deepcopy(I.d)
-#
-#     # case 1: y[index] >= 0
-#     C1 = np.column_stack([np.zeros([m, n]), -np.identity([m])])
-#     d1 = np.zeros([m ,1])
-#
-#     # case 2: y[index] >= x[index]
-#     C2 = np.column_stack([I.V[index, 1:n+1], -V2[index, 0:m]])
-#     d2 = copy.deepcopy(-I.V[index, 0])
-#
-#     # case 3: y[index] <= (ub/(ub - lb))*(x-lb)
-#     # add....
-#     a = ub/(ub-lb) # devide element-wise
-#     b = np.multiply(a, lb) # multiply element-wise
-#     C3 = np.column_stack([np.multiply(-a, I.V[index, 1:n+1]), V2[index, 0:m]])
-#     d3 = np.multiply(a, I.V[index, 0]) - b
-#
-#     new_C = np.vstack([C0, C1, C2, C3])
-#     new_d = np.vstack([d0, d1, d2, d3])
-#
-#     new_pred_lb = np.vstack([I.predicate_lb, np.zeros([m, 1])])
-#     new_pred_ub = np.vstack([I.predicate_ub, ub])
-#
-#     S = Star(V=new_V, C=new_C, d=new_d, pred_lb=new_pred_lb, pred_ub=new_pred_ub)
-#     return S
-
-# # more efficient method by doing multiple stepReach at one time
-# # over-approximate reachability analysis using Star
 # def reach_star_approx2(*args):
-#     # @I: star input set
-#     # @option: 'parallel' or single
-#     # @S: star output set
-#
-#     if len(args) == 1:
+#     """
+#     more efficient method by doing multiple stepReach at one time
+#     over-approximate reachability analysis using Star
+
+#     Args:
+#         @I: star set input
+#         @option: 'parallel' or single
+
+#     Returns:
+#         @S: star output set
+#     """
+#     len_args = len(args)
+#     if len_args == 1:
 #         I = args[0]
 #         option = 'single'
 #         dis_opt = ''
 #         lp_solver = 'glpk'
-#     elif len(args) == 2:
-#         I = args[0]
-#         option = args[1]
+#     elif len_args == 2:
+#         [I, option] = args
 #         dis_opt = ''
 #         lp_solver = 'glpk'
-#     elif len(args) == 3:
-#         I = args[0]
-#         option = args[1]
-#         dis_opt = args[2]
+#     elif len_args == 3:
+#         [I, option, dis_opt] = args
 #         lp_solver = 'glpk'
-#     elif len(args) == 4:
-#         I = args[0]
-#         option = args[1]
-#         dis_opt = args[2]
-#         lp_solver = args[3]
+#     elif len_args == 4:
+#         [I, option, dis_opt, lp_solver] = args
 #     else:
 #         'error: Invalid number of input arguments, should be 1, 2, 3, or 4'
-#
+
 #     from star import Star
 #     assert isinstance(I, Star), 'error: input set is not a star set'
-#
+
 #     if Star.isEmptySet(I):
 #         S = np.array([])
 #         return S
 #     else:
-#         [lb, ub] = I.estimateRanges;
+#         [lb, ub] = I.estimateRanges
 #         if len(lb) == 0 or len(ub) == 0:
 #             S = np.array([])
 #             return S
 #         else:
-#             # find all indexes having ub <= 0, then reset the
-#             # values of the elements corresponding to these indexes to 0
+#             # ------------- find all indexes having ub <= 0, then reset the -------------
+#             # ------------- values of the elements corresponding to these indexes to 0 -------------
 #             flatten_ub = np.ndarray.flatten(ub, 'F')
 #             flatten_lb = np.ndarray.flatten(lb, 'F')
-#
+
 #             if dis_opt == 'display':
-#                 print('\nFinding all neurons (in %d neurons) with ub <= 0...', len(ub))
-#
+#                 print(
+#                     '\n Finding all neurons (in %d neurons) with ub <= 0...: '
+#                     % len(ub))
+
 #             map = np.argwhere(flatten_ub <= 0)
 #             map1 = np.array([])
 #             for i in range(len(map)):
-# index = map[i][1] * len(flatten_ub[0]) + map[0][i]
+#                 index = map[i][1] * len(flatten_ub[0]) + map[0][i]
 #                 index = map[i][1]
 #                 map1 = np.append(map1, index)
-#
+
 #             if dis_opt == 'display':
-#                 print('\n%d neurons with ub <= 0 are found by estimating ranges', len(map1))
-#
+#                 print(
+#                     '\n %d neurons with ub <= 0 are found by estimating ranges: '
+#                     % len(map1))
+
 #             map = np.argwhere(flatten_lb < 0)
 #             lb_map = np.array([])
 #             for i in range(len(map)):
-# index = map[i][1] * len(flatten_lb[0]) + map[0][i]
+#                 index = map[i][1] * len(flatten_lb[0]) + map[0][i]
 #                 index = map[i][1]
 #                 lb_map = np.append(lb_map, index)
-#
+
 #             map = np.argwhere(flatten_ub > 0)
 #             ub_map = np.array([])
 #             for i in range(len(map)):
-# index = map[i][1] * len(flatten_ub[0]) + map[0][i]
+#                 index = map[i][1] * len(flatten_ub[0]) + map[0][i]
 #                 index = map[i][1]
 #                 ub_map = np.append(ub_map, index)
-#
+
 #             map2 = np.intersect1d([lb_map], [ub_map])
-#
+
 #             if dis_opt == 'display':
-#                 print('\nFinding neurons (in %d neurons) with ub <= 0 by optimizing ranges: ', len(map2))
-#
+#                 print(
+#                     '\n Finding neurons (in %d neurons) with ub <= 0 by optimizing ranges: '
+#                     % len(map2))
+
 #             xmax = I.getMaxs(map2, option, dis_opt, lp_solver)
 #             flatten_xmax = np.ndarray.flatten(xmax, 'F')
 #             map = np.argwhere(flatten_xmax <= 0)
 #             map3 = np.array([])
 #             for i in range(len(map)):
-# index = map[i][1] * len(flatten_xmax[0]) + map[0][i]
+#                 index = map[i][1] * len(flatten_xmax[0]) + map[0][i]
 #                 index = map[i][1]
 #                 map3 = np.append(map3, index)
-#
+
 #             if dis_opt == 'display':
-#                 print('\n%d neurons (in %d neurons) with ub <= 0 are found by optimizing ranges', len(map3), len(map2))
-#
+#                 print(
+#                     '\n %d neurons (in %d neurons) with ub <= 0 are found by optimizing ranges: '
+#                     % (len(map3), len(map2)))
+
 #             n = len(map3)
 #             map4 = np.zeros([n, 1])
-#             for i in range (n):
+#             for i in range(n):
 #                 map4[i] = map2[map3[i]]
-#
+
 #             map11 = np.vstack([map1, map4])
-#             In = I.resetRow(map11) # reset to zero at the element having ub <= 0, need to add resetRow func in star
+#             In = I.resetRow(map11)
+#             # ------------- reset to zero at the element having ub <= 0, need to add resetRow func in star -------------
 #             if dis_opt == 'display':
-#                 print('\n(%d+%d =%d)/%d neurons have ub <= 0', len(map1), len(map3), len(map11), len(ub))
-#
-#             # find all indexes that have lb < 0 & ub > 0, then
-#             # apply the over-approximation rule for ReLU
-#
+#                 print('\n (%d+%d =%d)/%d neurons have ub <= 0: ' %
+#                       (len(map1), len(map3), len(map11), len(ub)))
+
+#             # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
+#             # ------------- apply the over-approximation rule for ReLU -------------
+
 #             if dis_opt == 'display':
-#                 print("\nFinding all neurons (in %d neurons) with lb < 0 & ub >0: ", len(ub))
-#
+#                 print(
+#                     "\n Finding all neurons (in %d neurons) with lb < 0 & ub >0: "
+#                     % len(ub))
+
 #             map = np.argwhere(flatten_xmax > 0)
 #             map5 = np.array([])
 #             for i in range(len(map)):
-# index = map[i][1] * len(flatten_xmax[0]) + map[0][i]
+#                 index = map[i][1] * len(flatten_xmax[0]) + map[0][i]
 #                 index = map[i][1]
 #                 map5 = np.append(map5, index)
-#
-#             map6 = map2[map5[:]] # all indexes having ub > 0
-#             xmax1 = xmax[map5[:]] # upper bound of all neurons having ub > 0
-#
+#             # ------------- all indexes having ub > 0 -------------
+#             map6 = map2[map5[:]]
+#             # ------------- upper bound of all neurons having ub > 0 -------------
+#             xmax1 = xmax[map5[:]]
+
 #             xmin = I.getMins(map6, option, dis_opt, lp_solver)
 #             flatten_xmin = np.ndarray.flatten(xmin, 'F')
 #             map = np.argwhere(flatten_xmin < 0)
 #             map7 = np.array([])
 #             for i in range(len(map)):
-# index = map[i][1] * len(flatten_xmin[0]) + map[0][i]
+#                 index = map[i][1] * len(flatten_xmin[0]) + map[0][i]
 #                 index = map[i][1]
 #                 map7 = np.append(map7, index)
-#
-#             map8 = map6[map7[:]] # all indexes habing lb < 0 & ub > 0
-#             lb1 = xmin[map7[:]] # lower bound of all indexes having lb < 0 & ub > 0
-#             ub1 = xmax1[map7[:]] # upper bound of all neurons having lb < 0 & ub > 0
-#
+
+#             # ------------- all indexes habing lb < 0 & ub > 0 -------------
+#             map8 = map6[map7[:]]
+#             # ------------- lower bound of all indexes having lb < 0 & ub > 0 -------------
+#             lb1 = xmin[map7[:]]
+#             # ------------- upper bound of all neurons having lb < 0 & ub > 0 -------------
+#             ub1 = xmax1[map7[:]]
+
 #             if dis_opt == 'display':
-#                 print('\n%d/%d neurons have lb < 0 & ub > 0', len(map8), len(ub))
-#                 print('\nConstruct new star set, %d new predicate variables are introduced', len(map8))
-#
-#             S = PosLin.multipleStepReachStarApprox_at_one(In, map8, lb1, ub1) # one-shot approximation
+#                 print('\n %d/%d neurons have lb < 0 & ub > 0: ',
+#                       len(map8) % len(ub))
+#                 print(
+#                     '\n Construct new star set, %d new predicate variables are introduced: '
+#                     % len(map8))
+#             # ------------- one-shot approximation -------------
+#             S = PosLin.multipleStepReachStarApprox_at_one(
+#                 In, map8, lb1, ub1)
 #             return S
