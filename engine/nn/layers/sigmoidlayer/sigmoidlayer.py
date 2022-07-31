@@ -73,7 +73,7 @@ class SigmoidLayer:
         else:
             raise Exception(SIGMOIDL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
-    def evaluate(_, input):
+    def evaluate(self, input):
         """
             Evaluates the layer on the given input
             input : np.array([*]) -> a 2- or 3-dimensional array
@@ -81,7 +81,9 @@ class SigmoidLayer:
             returns the result of apllying ReLU activation to the given input
         """
             
-        return np.reshape(LogSig.evaluate(torch.reshape(torch.FloatTensor(input),(np.prod(input.shape), 1)).cpu().detach().numpy()), input.shape)
+        return LogSig.evaluate(torch.FloatTensor(input), self.attributes[SIGNL_MODE_ID])
+            
+        #return np.reshape(LogSig.evaluate(torch.reshape(torch.FloatTensor(input),(np.prod(input.shape), 1)).cpu().detach().numpy()), input.shape)
     
     def reach_star_single_input(self, input, method, option = [], relax_factor = SIGMOIDL_DEFAULT_RELAXFACTOR):
         """

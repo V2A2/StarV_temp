@@ -1427,3 +1427,23 @@ class Star:
     
     #------------------------------- Need to Test this function ---------------------------------#
     # def merge_stars()
+    
+################################ UTILS ###############################
+         
+    def deep_copy(self, new_star):
+        self.V = copy.deepcopy(new_star.V)
+        self.C = copy.deepcopy(new_star.C)
+        self.d = copy.deepcopy(new_star.d)
+        
+        self.predicate_lb = copy.deepcopy(new_star.predicate_lb)
+        self.predicate_ub = copy.deepcopy(new_star.predicate_ub)
+        
+        self.state_lb = copy.deepcopy(new_star.state_lb)
+        self.state_ub = copy.deepcopy(new_star.state_ub)
+        
+        self.dim, self.nVar = self.V.shape
+        self.nVar -= 1
+        
+        self.Z = Zono(copy.deepcopy(new_star.Z.c), copy.deepcopy(new_star.Z.V))
+        
+        

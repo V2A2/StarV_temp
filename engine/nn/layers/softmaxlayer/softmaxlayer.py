@@ -29,7 +29,15 @@ SOFTMAXL_REACH_ARGS_OPTION_ID = 1
 SOFTMAXL_REACH_ARGS_METHOD_ID = 2
 SOFTMAXL_REACH_ARGS_RELAX_FACTOR_ID = 3
 
-SOFTMAXL_DEFAULT_NAME = 'relu_layer'
+SOFTMAXL_DEFAULT_NAME = 'softmax_layer'
+
+SINGL_DEFAULT_DISPLAY_OPTION = []
+
+sys.path.insert(0, "engine/set/star")
+from star import *
+
+sys.path.insert(0, "engine/set/imagestar")
+from imagestar import *
 
 class SoftmaxLayer:
     """
@@ -37,7 +45,7 @@ class SoftmaxLayer:
         Contains constructor and reachability analysis methods
     """
     
-    def SOFTMAXLayer(self, *args):
+    def __init__(self, *args):
         """
             Constructor
         """
@@ -62,7 +70,7 @@ class SoftmaxLayer:
         else:
             raise Exception(SOFTMAXL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
-    def evaluate(_, input):
+    def evaluate(self, input):
         """
             Evaluates the layer on the given input
             input : np.array([*]) -> a 2- or 3-dimensional array
