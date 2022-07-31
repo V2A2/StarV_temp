@@ -407,10 +407,12 @@ class Star:
         new_d = np.hstack([self.d, d1])
 
         S = Star(self.V, new_C, new_d, self.predicate_lb, self.predicate_ub)
+        empty = 0
 
         if S.isEmptySet():
             S = np.array([])
-        return S
+            empty = 1
+        return [S, empty]
     
     def scalarMap(self, alp_max):
         """
