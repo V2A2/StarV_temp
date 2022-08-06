@@ -300,7 +300,8 @@ class SatLin:
 
         assert isinstance(I, list), 'error: input is not an array star sets'
         # print("\n I_list ------------------------ \n", I)
-        assert isinstance(I[0], Star), 'error: input is not a star set'
+        assert isinstance(I[0],
+                          Star), 'error: input at index 0 is not a star set'
         # print("\n I[0] ------------------------ \n", I[0])
 
         p = len(I)
@@ -315,15 +316,6 @@ class SatLin:
                 # print("\n S1 ------------------------ \n", (S1))
                 S.extend(S1)
                 # print("\n S ------------------------ \n", len(S))
-
-                #  ------------- Dont need to extend the S again  -------------
-                # if len(S):
-                # temp = len(S)
-                # S.extend(S)
-                # S.extend(S1)
-                # del S[:temp]
-                # else:
-                # S.extend(S1)
             return S
 
         # ------------- TODO: Fix parallel part -------------
@@ -364,29 +356,21 @@ class SatLin:
         from zono import Zono
 
         # ------------- TODO: Fix gurobi license -------------
-        # if not Star.isEmptySet(I):
+        # if not I.isEmptySet():
         if isinstance(I, Star):
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             map1 = np.argwhere(ub <= 0)  # computation map
             # print("\n map1 ------------------------ \n", map1)
             V = copy.deepcopy(I.V)
             # print("\n V ------------------------ \n", V)
-
-            # ------------- TODO: Check if this is needed -------------
-            # if (map1.size()):
-            #     V[map1, :] = 0
             V[map1, :] = 0
             # print("\n V ------------------------ \n", V)
             # ------------- update outer zono -------------
             map2 = np.argwhere(lb >= 1)
             # print("\n map2 ------------------------ \n", map2)
 
-            # ------------- TODO: Check if this is needed -------------
-            # if (map2.size()):
-            #     V[map1, :] = 0
-            #     V[map1, 0] = 1
             # ------------- TODO: should this be map2? -------------
             V[map1, :] = 0
             V[map1, 0] = 1
@@ -403,13 +387,6 @@ class SatLin:
                 # print("\n V1 ------------------------ \n", V1)
                 # print("\n c1 ------------------------ \n", c1)
 
-                # ------------- TODO: Check if this is needed -------------
-                # if (map1.size()):
-                #     c1[map1, :] = 0
-                #     V1[map, :] = 0
-                #     if (map2.size()):
-                #         c1[map2] = 1
-                #         V1[map2, :] = 0
                 new_Z = Zono(c1, V1)
                 # print("\n new_Z ------------------------ \n", new_Z)
             else:
@@ -424,9 +401,9 @@ class SatLin:
             # print("\n ub_map ------------------------n", ub_map)
             map_float = np.intersect1d([lb_map], [ub_map])
             map = np.array(map_float, dtype=np.int)
-            map_to_list = map.tolist()
+            # map_to_list = map.tolist()
             # print("\n map_to_list ------------------------ \n", map_to_list)
-            m = len(map_to_list)
+            m = len(map)
             # print("\n m ------------------------n", m)
 
             In_list = []
@@ -435,10 +412,10 @@ class SatLin:
                 # print("\n i ------------------------ \n", i)
                 if dis_opt == 'display':
                     print("\n Performing exact PosLin_%d operation using Star",
-                          map_to_list[i])
+                          map[i])
                 # print("\n In_list ------------------------ before \n", In_list)
                 In_list = SatLin.stepReachMultipleInputs(
-                    In_list, map_to_list[i], option, lp_solver)
+                    In_list, map[i], option, lp_solver)
                 # print("\n In_list ------------------------ after \n", In_list)
             S = In_list
             return S
@@ -665,8 +642,8 @@ class SatLin:
         assert isinstance(I, Star), 'error: input set is not a star set'
 
         # ------------- TODO: Fix gurobi license -------------
-        if Star.isEmptySet(I):
-            # if I.V.shape[0] == 0:
+        if I.isEmptySet():
+        # if I.V.shape[0] == 0:
             S = []
             return S
         else:
@@ -679,7 +656,7 @@ class SatLin:
                 # print("\n lp_solver ------------------------ \n", lp_solver)
                 In = SatLin.stepReachStarApprox(In, i, lp_solver)
                 # print("\n In ------------------------ \n", In.__repr__())
-            S = In
+            S = [In]
             return S
 
     # ------------- over-approximate reachability analysis use zonotope -------------
@@ -811,7 +788,7 @@ class SatLin:
             In = SatLin.stepReachZonoApprox(In, i)
             # print("\n In ------------------------ \n", In.__repr__())
 
-        Z = In
+        Z = [In]
         return Z
 
     # ------------- main reach method -------------

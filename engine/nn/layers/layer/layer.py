@@ -2,11 +2,12 @@
 from random import seed
 import numpy as np
 import sys
+import copy
 
 sys.path.insert(0, "engine/nn/funcs/poslin/")
 sys.path.insert(0, "engine/nn/funcs/satlin/")
-# sys.path.insert(0, "engine/nn/fnn/FFNN/")
-# from Operation import Operation
+sys.path.insert(0, "engine/nn/fnn/ffnn/")
+from Operation import Operation
 from poslin import PosLin
 from satlin import SatLin
 
@@ -108,20 +109,33 @@ class Layer:
         evaluation of this layer with a specific vector
         """
 
-        #assert isinstance(x, np.array), 'error: x is not a np array'
-
-        if x.shape[0] != self.W.shape[1] or x.shape[1] != 1:
+        assert isinstance(x, np.ndarray), 'error: x is not a np array'
+        b = copy.deepcopy(self.b)
+        b = b.reshape(-1, 1)
+        # print("\n x ------------------------ \n", x)
+        # print("\n self.b ------------------------ \n", self.b)
+        # print("\n self.W ------------------------ \n", self.W)
+        if x.shape[0] != self.W.shape[1]:
             'error: invalid or inconsistent input vector'
-        y1 = self.W * x + self.b
-        y1_len = y1.shape[0]
-        if self.f == 'poslin':
-            for i in range(y1_len):
-                y1[i] = max(0, y1[i])
+        y1 = self.W @ x
+        # print("\n y1 ------------------------ \n", y1)
 
+        if x.shape[1] != 1:
+            n = x.shape[1]
+            for i in range(n):
+                y1[:, i] = y1[:, 1] + b
+        else:
+            y1 = y1 + b
+        # print("\n y1 ------------------------ \n", y1)
+
+        y = np.array([])
+        if self.f == 'poslin':
+            y = np.maximum(y1, 0)
+            # print("\n y ------------------------ \n", y)
         # ...... other functions
         else:
             'error: unknown or unsupported activation function'
-        return y1
+        return y
 
     def sample(self, V):
         """
@@ -130,10 +144,16 @@ class Layer:
 
         assert isinstance(V, np.ndarray), 'error: V is not a np array'
         n = V.shape[1]
-        Y = []
+        # print("\n V ------------------------ \n", V)
+        # print("\n n ------------------------ \n", n)
+        # Y = np.array([])
         for j in range(n):
             y = self.evaluate(V[:, j])
-            Y.append(y)
+            # print("\n y ------------------------ \n", y)
+            if Y.size:
+                Y = np.column_stack([Y, y])
+            else:
+                Y = y
         return Y
 
     def reach(*args):
@@ -201,86 +221,54 @@ class Layer:
 
                 # ------------- add more supported function if needed -------------
                 if f1 == 'poslin':
-                    S.append(
-                        PosLin.reach(I1, method, '', obj.relaxFactor,
-                                     obj.dis_opt, obj.lp_solver))
+                    S += PosLin.reach(I1, method, '', obj.relaxFactor,
+                                      obj.dis_opt, obj.lp_solver)
                 elif f1 == 'satlin':
-                    S.append(
-                        SatLin.reach(I1, method, '', obj.dis_opt,
-                                     obj.lp_solver))
+                    S += SatLin.reach(I1, method, '', obj.dis_opt,
+                                      obj.lp_solver)
                 else:
                     'error: Unsupported activation function, currently support purelin, poslin(ReLU), satlin, satlins, logsig, tansig, softmax'
                 return S
 
+    def flatten(obj, reachMethod):
+        """
+        flattening a layer into a sequence of operation
 
-# ------------- Unused Functions -------------
-# def __init__(
-#     obj,
-#     W=np.array([]),  # weight_mat
-#     b=np.array([]),  # bias vector
-#     f='',  # activation function
-#     N=0,  # number of neurons
-#     gamma=0,  # used only for leakReLU layer
-#     option='',  # parallel option, 'parallel' or '' '
-#     dis_opt='',  # display option, 'display' or '' '
-#     lp_solver='gurobi',  # lp solver option, 'gurobi'
-#     relaxFactor=0  # use only for approx-star method
-# ):
+        Args:
+            @reachMethod: reachability method
 
-#     assert isinstance(W, np.ndarray), 'error: weight_mat is not an ndarray'
-#     assert isinstance(b, np.ndarray), 'error: bias is not an ndarray'
+        Returns:
+            @Ops: an array of operations for the reachability of the layer
+        """
 
-#     if W.size and b.size and len(f):
-#         obj.W = W
-#         obj.b = b
-#         obj.N = N
-#         obj.option = option
-#         obj.dis_opt = dis_opt
-#         obj.lp_solver = lp_solver
-#         obj.relaxFactor = relaxFactor
-#         if gamma != 0:
-#             obj.gamma = gamma
-#     else:
-#         'error: Invalid number of input arguments, should be 3 or 4'
+        Ops = []
+        # print("\n obj.W ------------------------ \n", obj.W)
+        # print("\n obj.b ------------------------ \n", obj.b)
+        O1 = Operation('AffineMap', obj.W, obj.b)
+        O2 = []
 
-#     if W.shape[0] == b.shape[0]:
-#         # double precision here
-#         # obj.W = double(W)
-#         # obj.b = double(b)
-#         obj.N = W.shape[0]
-#     else:
-#         'error: Insonsistent dimensions between Weights matrix and bias vector'
+        if obj.f == 'poslin':
+            # print("\n reachMethod ------------------------ \n", reachMethod)
+            if reachMethod == 'exact-star':
+                for i in range(obj.N):
+                    O2.append(Operation('PosLin_stepExactReach', i))
+            elif reachMethod == 'approx-star':
+                O2.append(Operation('PosLin_approxReachStar'))
+            elif reachMethod == 'approx-zono':
+                O2.append(Operation('PosLin_approxReachZono'))
+        elif obj.f == 'satlin':
+            if reachMethod == 'exact-star':
+                for i in range(obj.N):
+                    O2.append(Operation('SatLin_stepExactReach', i))
+            elif reachMethod == 'approx-star':
+                O2.append(Operation('SatLin_approxReachStar'))
+            elif reachMethod == 'approx-zono':
+                O2.append(Operation('SatLin_approxReachZono'))
 
-#     if gamma >= 1:
-#         'error: Invalid parameter for leakyReLu, gamma should be <= 1'
+        Ops.append(O1)
+        if (len(O2)):
+            Ops += O2
+        # print("\n O1 ------------------------ \n", O1.__repr__())
+        # print("\n O2 ------------------------ \n", O2.__repr__())
 
-#     obj.f = f
-#     obj.gamma = gamma
-
-#     return
-#     raise Exception('error: failed to create Layers')
-
-# # flattening a layer into a sequence of operation
-# def flatten(obj, reachMethod):
-#     # @reachMethod: reachability method
-#     # @Ops: an array of operations for the reachability of
-#     # the layer
-
-#     Ops = []
-#     O1 = Operation('AffineMap', obj.W, obj.b)
-
-#     if obj.f == 'poslin':
-#         if reachMethod == 'exact-star':
-#             # O2[obj.N] = Operation
-#             O2 = []
-#             for i in range(obj.N):
-#                 O2.append(Operation('PosLin_stepExactReach', i))
-#         elif reachMethod == 'approx-star':
-#             O2 = Operation('PosLin_approxReachStar')
-#         elif reachMethod == 'approx-zono':
-#             O2 = Operation('PosLin_approxReachZono')
-
-#     Ops.append(O1)
-#     Ops.append(O2)
-
-#     return Ops
+        return Ops

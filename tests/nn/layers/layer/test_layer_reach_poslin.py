@@ -65,7 +65,7 @@ class TestLayerReachPosLin(unittest.TestCase):
         I_list = []
         I_list.append(I)
         S = L.reach(I_list, 'exact-star')
-        print("\n S size ------------------------ \n", len(S[0]))
+        print("\n S size ------------------------ \n", len(S))
         print("\n S ------------------------ \n", S.__repr__())
         S1 = L.reach(I_list, 'approx-star')
         print("\n S1 ------------------------ \n", S1.__repr__())

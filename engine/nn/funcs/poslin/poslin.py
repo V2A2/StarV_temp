@@ -35,16 +35,6 @@ class PosLin:
             n, if 0 <= n
         """
 
-        # n = len(x)
-        # if (len(x)[0] != 1):
-        #     'error: x is not a vector'
-        # y = np.zeros([n, 1])
-        # for i in range(1,n):
-        #     if x[i][1] < 0:
-        #         y[i][1] == 0
-        #     else:
-        #         y[i][1] = x[i][1]
-        # return y
         return np.maximum(x, 0)
 
     def stepReach(*args):
@@ -182,7 +172,8 @@ class PosLin:
         from star import Star
 
         assert isinstance(I, list), 'error: input is not an array star sets'
-        assert isinstance(I[0], Star), 'error: input is not a star set'
+        assert isinstance(I[0],
+                          Star), 'error: input at index 0 is not a star set'
         # print("\n I[0] ------------------------ \n", I[0])
 
         p = len(I)
@@ -192,18 +183,9 @@ class PosLin:
             for i in range(p):
                 S1 = PosLin.stepReach(I[i], index, lp_solver)
                 # print("\n S1 ------------------------ \n", S1)
-                # S = np.array([S, S1]) if S.size else S1
                 S.extend(S1)
                 # print("\n S ------------------------ \n", len(S))
-                return S
-                #  ------------- Dont need to extend the S again  -------------
-                # if len(S):
-                # temp = len(S)
-                # S.extend(S)
-                # S.extend(S1)
-                # del S[:temp]
-                # else:
-                # S.extend(S1)
+            return S
 
         # ------------- TODO: Fix parallel part -------------
         # elif option == 'parellel':
@@ -243,27 +225,16 @@ class PosLin:
         from zono import Zono
 
         # ------------- TODO: Fix gurobi license -------------
-        # if not Star.isEmptySet(I):
+        # if not I.isEmptySet():
         if isinstance(I, Star):
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
 
-            if len(lb) == 0 or len(ub) == 0:
-                # S = np.array([])
+            if not lb.size or not ub.size:
                 S = []
                 return S
             else:
-                # ------------- Old Flattened Map -------------
-                # flatten_ub = np.ndarray.flatten(ub, "F")
-                # map = np.argwhere(flatten_ub <= 0)
-                # ub_map = np.array([])
-                # for i in range(len(map)):
-                #     # index = map[i][1] * len(flatten_ub[0]) + map[0][i]
-                #     index = map[i][1]
-                #     ub_map = np.append(ub_map, index)
-                # print("\n ub_map ------------------------ \n", ub_map)
-                # ------------- Old Flattened Map -------------
 
                 map = np.argwhere(ub <= 0)  # computation map
                 # print("\n map ------------------------ \n", map)
@@ -296,44 +267,22 @@ class PosLin:
                 # print("\n ub_map ------------------------ \n", ub_map)
                 map_float = np.intersect1d([lb_map], [ub_map])
                 map = np.array(map_float, dtype=np.int)
-                map_to_list = map.tolist()
+                # print("\n map ------------------------ \n", map)
+                # map_to_list = map.tolist()
                 # print("\n map_to_list ------------------------ \n", map_to_list)
-                m = len(map_to_list)
+                m = len(map)
                 # print("\n m ------------------------ \n", m)
 
-                # ------------- Old Flattened Map -------------
-                # flatten_lb = np.ndarray.flatten(lb, "F")
-                # map = np.argwhere(flatten_lb < 0)
-                # lb_map = np.array([])
-                # for i in range(len(map)):
-                #     # index = map[i][1] * len(flatten_lb[0]) + map[0][i]
-                #     index = map[i][1]
-                #     lb_map = np.append(lb_map, index)
-
-                # map = np.argwhere(flatten_ub > 0)
-                # ub_map = np.array([])
-                # for i in range(len(map)):
-                #     # index = map[i][1] * len(flatten_ub[0]) + map[0][i]
-                #     index = map[i][1]
-                #     ub_map = np.append(ub_map, index)
-
-                # lu_map_float = np.intersect1d([lb_map], [ub_map])
-                # lu_map = np.array(lu_map_float, dtype=np.int)
-                # listed_lu_map = lu_map.tolist()
-                # m = len(listed_lu_map)
-                # ------------- Old Flattened Map -------------
-
-                # In = np.array([In])
                 In_list = []
                 In_list.append(In)
                 for i in range(m):
                     if dis_opt == 'display':
                         print(
                             "\n Performing exact PosLin_%d operation using Star",
-                            map_to_list[i])
+                            map[i])
                     # print("\n In_list ------------------------ \n", In_list)
                     In_list = PosLin.stepReachMultipleInputs(
-                        In_list, map_to_list[i], option, lp_solver)
+                        In_list, map[i], option, lp_solver)
                 S = In_list
                 return S
         else:
@@ -365,26 +314,19 @@ class PosLin:
         else:
             'error: Invalid number of input arguments, should be 2, 3, or 4'
 
-        # print("\n In: ------------------------ \n ", In)
+        print("\n In: ------------------------ \n ", In)
+        from star import Star
+        assert isinstance(In, list), 'error: input is not an array star sets'
+        assert isinstance(In[0],
+                          Star), 'error: input at index 0 is not a star set'
         n = len(In)
-        # S = np.array([])
         S = []
         if len(option) == 0 or option == 'single':
             #print("\n option: ------------------------ \n", option)
             for i in range(n):
-                S1 = PosLin.reach_star_exact(In[i], [], dis_opt, lp_solver)
-                S.extend(S1)
-
-                #  ------------- Dont need to extend the S again  -------------
-                # if len(S):
-                # temp = len(S)
-                # S.extend(S)
-                # S.extend(S1)
-                # del S[:temp]
-                # else:
-                # S.extend(S1)
-                # S = np.vstack([S, PosLin.reach_star_exact(In[i], [], dis_opt, lp_solver)])
-                return S
+                S1 = PosLin.reach_star_exact(In[i], '', dis_opt, lp_solver)
+                S += S1
+            return S
         # elif option == 'parallel':
         #     for i in prange (n):
         #         S = np.vstack([S, PosLin.reach_star_exact(In[i], [], dis_opt, lp_solver)])
@@ -410,7 +352,7 @@ class PosLin:
         assert isinstance(I, Star), 'error: input set is not a star set'
 
         # [lb, ub] = I.estimateRange(index)
-        # ------------- TODO: Call get Mins Maxs -------------
+        # ------------- TODO: Call get Min Max -------------
         lb = I.getMin(index)
         # print("\n lb ------------------------ \n", lb)
 
@@ -439,7 +381,8 @@ class PosLin:
                 S = Star(V, I.C, I.d, I.predicate_lb, I.predicate_ub, new_Z)
                 return S
             else:
-                print("\n Add a new predicate variables at index = %d", index)
+                print("\n Add a new predicate variables at index = %d " %
+                      index)
                 n = I.nVar + 1
                 # print("\n n ------------------------ \n", n)
                 # ------------- over-approximation constraints -------------
@@ -526,13 +469,13 @@ class PosLin:
         assert isinstance(I, Star), 'error: input set is not a star set'
 
         # ------------- TODO: Fix gurobi license -------------
-        # if Star.isEmptySet(I):
+        # if I.isEmptySet():
         if I.V.shape[0] == 0:
             # S = np.array([])
             S = []
             return S
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if len(lb) == 0 or len(ub) == 0:
@@ -540,17 +483,6 @@ class PosLin:
                 S = []
                 return S
             else:
-                # ------------- Old Flattened Map -------------
-                # flatten_ub = np.ndarray.flatten(ub, "F")
-                # map = np.argwhere(flatten_ub <= 0)
-                # ub_map = np.array([])
-                # for i in range(len(map)):
-                #     # index = map[i][1] * len(flatten_ub[0]) + map[0][i]
-                #     index = map[i][1]
-                #     print(index)
-                #     ub_map = np.append(ub_map, index)
-                # ------------- Old Flattened Map -------------
-
                 map = np.argwhere(ub <= 0)
                 # print("\n ub_map ------------------------ \n", ub_map)
                 V = copy.deepcopy(I.V)
@@ -577,40 +509,18 @@ class PosLin:
                 # print("\n ub_map ------------------------ \n", ub_map)
                 map_float = np.intersect1d([lb_map], [ub_map])
                 map = np.array(map_float, dtype=np.int)
-                map_to_list = map.tolist()
+                # map_to_list = map.tolist()
                 # print("\n map_to_list ------------------------ \n", map_to_list)
-                m = len(map_to_list)
+                m = len(map)
                 # print("\n m ------------------------ \n", m)
-
-                # ------------- Old Flattened Map -------------
-                # flatten_lb = np.ndarray.flatten(lb, "F")
-                # map = np.argwhere(flatten_lb < 0)
-                # lb_map = np.array([])
-                # for i in range(len(map)):
-                #     # index = map[i][1] * len(flatten_lb[0]) + map[0][i]
-                #     index = map[i][1]
-                #     lb_map = np.append(lb_map, index)
-
-                # map = np.argwhere(flatten_ub > 0)
-                # ub_map = np.array([])
-                # for i in range(len(map)):
-                #     # index = map[i][1] * len(flatten_ub[0]) + map[0][i]
-                #     index = map[i][1]
-                #     ub_map = np.append(ub_map, index)
-
-                # lu_map_float = np.intersect1d([lb_map], [ub_map])
-                # lu_map = np.array(lu_map_float, dtype=np.int)
-                # listed_lu_map = lu_map.tolist()
-                # m = len(listed_lu_map)
-                # ------------- Old Flattened Map -------------
 
                 for i in range(m):
                     print(
-                        "\n Performing approximate PosLin_%d operation using Star"
-                        % map_to_list[i])
-                    In = PosLin.stepReachStarApprox(In, map_to_list[i])
+                        "\n Performing approximate PosLin_ %d operation using Star"
+                        % map[i])
+                    In = PosLin.stepReachStarApprox(In, map[i])
                     # print("\n In ------------------------ \n", In.__repr__())
-                S = In
+                S = [In]
                 return S
 
     def multipleStepReachStarApprox_at_one(I, index, lb, ub):
@@ -743,15 +653,15 @@ class PosLin:
         from star import Star
         assert isinstance(I, Star), 'error: input set is not a star set'
 
-        if Star.isEmptySet(I):
-            S = np.array([])
+        if I.isEmptySet():
+            S = []
             return S
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if len(lb) == 0 or len(ub) == 0:
-                S = np.array([])
+                S = []
                 return S
             else:
                 # ------------- find all indexes having ub <= 0, then reset the -------------
@@ -849,8 +759,10 @@ class PosLin:
                         '\n Construct new star set, %d new predicate variables are introduced: '
                         % len(map8))
                 # ------------- one-shot approximation -------------
-                S = PosLin.multipleStepReachStarApprox_at_one(
-                    In, map8, lb1, ub1)
+                S = [
+                    PosLin.multipleStepReachStarApprox_at_one(
+                        In, map8, lb1, ub1)
+                ]
                 return S
 
     # ------------- reachability analysis using relax-star method -------------
@@ -904,18 +816,18 @@ class PosLin:
             'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
 
         from star import Star
-        assert isinstance(I, Star), 'error: input set is not a star set'
+        # assert isinstance(I, Star), 'error: input set is not a star set'
         # print("\n relaxFactor ------------------------ \n", relaxFactor)
         assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
 
         if not isinstance(I, Star):
-            S = np.array([])
+            S = []
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if not lb.size or not ub.size:
-                S = np.array([])
+                S = []
                 return S
             else:
                 # ------------- find all indexes having ub <= 0, then reset the -------------
@@ -1023,8 +935,10 @@ class PosLin:
                     print(
                         "\n Construct new star set, %d new predicate variables are introduced: "
                         % (len(map9)))
-                S = PosLin.multipleStepReachStarApprox_at_one(
-                    In, map9, lb3, ub3)
+                S = [
+                    PosLin.multipleStepReachStarApprox_at_one(
+                        In, map9, lb3, ub3)
+                ]
                 # S = PosLin.reach_star_approx(In)
                 return S
 
@@ -1060,17 +974,17 @@ class PosLin:
             'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
 
         from star import Star
-        assert isinstance(I, Star), 'error: input set is not a star set'
+        # assert isinstance(I, Star), 'error: input set is not a star set'
         assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
 
         if not isinstance(I, Star):
-            S = np.array([])
+            S = []
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if not lb.size or not ub.size:
-                S = np.array([])
+                S = []
                 return S
             else:
                 # ------------- find all indexes having ub <= 0, then reset the -------------
@@ -1183,8 +1097,10 @@ class PosLin:
                     print(
                         "\n Construct new star set, %d new predicate variables are introduced: "
                         % (len(map9)))
-                S = PosLin.multipleStepReachStarApprox_at_one(
-                    In, map9, lb3, ub3)
+                S = [
+                    PosLin.multipleStepReachStarApprox_at_one(
+                        In, map9, lb3, ub3)
+                ]
                 # S = PosLin.reach_star_approx(In)
                 return S
 
@@ -1220,17 +1136,17 @@ class PosLin:
             'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
 
         from star import Star
-        assert isinstance(I, Star), 'error: input set is not a star set'
+        # assert isinstance(I, Star), 'error: input set is not a star set'
         assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
 
         if not isinstance(I, Star):
-            S = np.array([])
+            S = []
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if not lb.size or not ub.size:
-                S = np.array([])
+                S = []
                 return S
             else:
                 # ------------- find all indexes having ub <= 0, then reset the -------------
@@ -1378,8 +1294,8 @@ class PosLin:
                     print(
                         "\n Construct new star set, %d new predicate variables are introduced: "
                         % (len(map24)))
-                S = PosLin.multipleStepReachStarApprox_at_one(
-                    In, map24, lb1, ub1)
+                S = [PosLin.multipleStepReachStarApprox_at_one(
+                    In, map24, lb1, ub1)]
                 # S = PosLin.reach_star_approx(In)
                 return S
 
@@ -1415,17 +1331,17 @@ class PosLin:
             'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
 
         from star import Star
-        assert isinstance(I, Star), 'error: input set is not a star set'
+        # assert isinstance(I, Star), 'error: input set is not a star set'
         assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
 
         if not isinstance(I, Star):
-            S = np.array([])
+            S = []
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if not lb.size or not ub.size:
-                S = np.array([])
+                S = []
                 return S
             else:
                 # ------------- find all indexes having ub <= 0, then reset the -------------
@@ -1579,8 +1495,8 @@ class PosLin:
                         "\n Construct new star set, %d new predicate variables are introduced: "
                         % (len(map24)))
 
-                S = PosLin.multipleStepReachStarApprox_at_one(
-                    In, map24, lb1, ub1)
+                S = [PosLin.multipleStepReachStarApprox_at_one(
+                    In, map24, lb1, ub1)]
                 # S = PosLin.reach_star_approx(In)
                 return S
 
@@ -1616,17 +1532,17 @@ class PosLin:
             'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
 
         from star import Star
-        assert isinstance(I, Star), 'error: input set is not a star set'
+        # assert isinstance(I, Star), 'error: input set is not a star set'
         assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
 
         if not isinstance(I, Star):
-            S = np.array([])
+            S = []
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if not lb.size or not ub.size:
-                S = np.array([])
+                S = []
                 return S
             else:
                 # ------------- find all indexes having ub <= 0, then reset the -------------
@@ -1738,8 +1654,8 @@ class PosLin:
                         "\n Construct new star set, %d new predicate variables are introduced: "
                         % (len(map9)))
 
-                S = PosLin.multipleStepReachStarApprox_at_one(
-                    In, map9, lb3, ub3)
+                S = [PosLin.multipleStepReachStarApprox_at_one(
+                    In, map9, lb3, ub3)]
                 # S = PosLin.reach_star_approx(In)
                 return S
 
@@ -1775,17 +1691,17 @@ class PosLin:
             'error: Invalid number of input arguments, should be 2, 3, 4 or 5'
 
         from star import Star
-        assert isinstance(I, Star), 'error: input set is not a star set'
+        # assert isinstance(I, Star), 'error: input set is not a star set'
         assert relaxFactor > 0 and relaxFactor < 1, 'error: Invalid relax factor'
 
         if not isinstance(I, Star):
-            S = np.array([])
+            S = []
         else:
-            [lb, ub] = Star.estimateRanges(I)
+            [lb, ub] = I.estimateRanges()
             # print("\n lb ------------------------ \n", lb)
             # print("\n ub ------------------------ \n", ub)
             if not lb.size or not ub.size:
-                S = np.array([])
+                S = []
                 return S
             else:
                 # ------------- find all indexes having ub <= 0, then reset the -------------
@@ -1894,8 +1810,8 @@ class PosLin:
                         "\n Construct new star set, %d new predicate variables are introduced: "
                         % (len(map9)))
 
-                S = PosLin.multipleStepReachStarApprox_at_one(
-                    In, map9, lb3, ub3)
+                S = [PosLin.multipleStepReachStarApprox_at_one(
+                    In, map9, lb3, ub3)]
                 # S = PosLin.reach_star_approx(In)
                 return S
 
@@ -1992,7 +1908,7 @@ class PosLin:
             In = PosLin.stepReachZonoApprox(In, i, lb[i], ub[i])
             # print("\n In ------------------------ \n", In.__repr__())
 
-        Z = In
+        Z = [In]
 
         return Z
 
@@ -2037,6 +1953,7 @@ class PosLin:
         # ------------- TODO: Fix parallel -------------
         option = ''
         if method == 'exact-star':  # exact analysis using star
+            # ------------- needs to convert to a list if using multi input function -------------
             Inputs = []
             Inputs.append(I)
             R = PosLin.reach_star_exact_multipleInputs(Inputs, option, dis_opt,
@@ -2047,13 +1964,13 @@ class PosLin:
         #     R = PosLin.reach_polyhedron_exact(I, option, dis_opt)
         elif method == 'approx-star':  # over-approximate analysis using star
             R = PosLin.reach_star_approx(I)
-            return [R]
+            return R
         elif method == 'approx-star2':  # over-approximate analysis using star
             R = PosLin.reach_star_approx2(I, option, dis_opt, lp_solver)
-            return [R]
+            return R
         elif method == 'approx-zono':  # over-approximate analysis using zonotope
             R = PosLin.reach_zono_approx(I, dis_opt)
-            return [R]
+            return R
 
 
 # ------------- Unused Functions -------------
@@ -2179,160 +2096,3 @@ class PosLin:
 #
 #                 S = np.column_stack([S1, S2])
 #                 return S
-
-# def reach_star_approx2(*args):
-#     """
-#     more efficient method by doing multiple stepReach at one time
-#     over-approximate reachability analysis using Star
-
-#     Args:
-#         @I: star set input
-#         @option: 'parallel' or single
-
-#     Returns:
-#         @S: star output set
-#     """
-#     len_args = len(args)
-#     if len_args == 1:
-#         I = args[0]
-#         option = 'single'
-#         dis_opt = ''
-#         lp_solver = 'glpk'
-#     elif len_args == 2:
-#         [I, option] = args
-#         dis_opt = ''
-#         lp_solver = 'glpk'
-#     elif len_args == 3:
-#         [I, option, dis_opt] = args
-#         lp_solver = 'glpk'
-#     elif len_args == 4:
-#         [I, option, dis_opt, lp_solver] = args
-#     else:
-#         'error: Invalid number of input arguments, should be 1, 2, 3, or 4'
-
-#     from star import Star
-#     assert isinstance(I, Star), 'error: input set is not a star set'
-
-#     if Star.isEmptySet(I):
-#         S = np.array([])
-#         return S
-#     else:
-#         [lb, ub] = I.estimateRanges
-#         if len(lb) == 0 or len(ub) == 0:
-#             S = np.array([])
-#             return S
-#         else:
-#             # ------------- find all indexes having ub <= 0, then reset the -------------
-#             # ------------- values of the elements corresponding to these indexes to 0 -------------
-#             flatten_ub = np.ndarray.flatten(ub, 'F')
-#             flatten_lb = np.ndarray.flatten(lb, 'F')
-
-#             if dis_opt == 'display':
-#                 print(
-#                     '\n Finding all neurons (in %d neurons) with ub <= 0...: '
-#                     % len(ub))
-
-#             map = np.argwhere(flatten_ub <= 0)
-#             map1 = np.array([])
-#             for i in range(len(map)):
-#                 index = map[i][1] * len(flatten_ub[0]) + map[0][i]
-#                 index = map[i][1]
-#                 map1 = np.append(map1, index)
-
-#             if dis_opt == 'display':
-#                 print(
-#                     '\n %d neurons with ub <= 0 are found by estimating ranges: '
-#                     % len(map1))
-
-#             map = np.argwhere(flatten_lb < 0)
-#             lb_map = np.array([])
-#             for i in range(len(map)):
-#                 index = map[i][1] * len(flatten_lb[0]) + map[0][i]
-#                 index = map[i][1]
-#                 lb_map = np.append(lb_map, index)
-
-#             map = np.argwhere(flatten_ub > 0)
-#             ub_map = np.array([])
-#             for i in range(len(map)):
-#                 index = map[i][1] * len(flatten_ub[0]) + map[0][i]
-#                 index = map[i][1]
-#                 ub_map = np.append(ub_map, index)
-
-#             map2 = np.intersect1d([lb_map], [ub_map])
-
-#             if dis_opt == 'display':
-#                 print(
-#                     '\n Finding neurons (in %d neurons) with ub <= 0 by optimizing ranges: '
-#                     % len(map2))
-
-#             xmax = I.getMaxs(map2, option, dis_opt, lp_solver)
-#             flatten_xmax = np.ndarray.flatten(xmax, 'F')
-#             map = np.argwhere(flatten_xmax <= 0)
-#             map3 = np.array([])
-#             for i in range(len(map)):
-#                 index = map[i][1] * len(flatten_xmax[0]) + map[0][i]
-#                 index = map[i][1]
-#                 map3 = np.append(map3, index)
-
-#             if dis_opt == 'display':
-#                 print(
-#                     '\n %d neurons (in %d neurons) with ub <= 0 are found by optimizing ranges: '
-#                     % (len(map3), len(map2)))
-
-#             n = len(map3)
-#             map4 = np.zeros([n, 1])
-#             for i in range(n):
-#                 map4[i] = map2[map3[i]]
-
-#             map11 = np.vstack([map1, map4])
-#             In = I.resetRow(map11)
-#             # ------------- reset to zero at the element having ub <= 0, need to add resetRow func in star -------------
-#             if dis_opt == 'display':
-#                 print('\n (%d+%d =%d)/%d neurons have ub <= 0: ' %
-#                       (len(map1), len(map3), len(map11), len(ub)))
-
-#             # ------------- find all indexes that have lb < 0 & ub > 0, then -------------
-#             # ------------- apply the over-approximation rule for ReLU -------------
-
-#             if dis_opt == 'display':
-#                 print(
-#                     "\n Finding all neurons (in %d neurons) with lb < 0 & ub >0: "
-#                     % len(ub))
-
-#             map = np.argwhere(flatten_xmax > 0)
-#             map5 = np.array([])
-#             for i in range(len(map)):
-#                 index = map[i][1] * len(flatten_xmax[0]) + map[0][i]
-#                 index = map[i][1]
-#                 map5 = np.append(map5, index)
-#             # ------------- all indexes having ub > 0 -------------
-#             map6 = map2[map5[:]]
-#             # ------------- upper bound of all neurons having ub > 0 -------------
-#             xmax1 = xmax[map5[:]]
-
-#             xmin = I.getMins(map6, option, dis_opt, lp_solver)
-#             flatten_xmin = np.ndarray.flatten(xmin, 'F')
-#             map = np.argwhere(flatten_xmin < 0)
-#             map7 = np.array([])
-#             for i in range(len(map)):
-#                 index = map[i][1] * len(flatten_xmin[0]) + map[0][i]
-#                 index = map[i][1]
-#                 map7 = np.append(map7, index)
-
-#             # ------------- all indexes habing lb < 0 & ub > 0 -------------
-#             map8 = map6[map7[:]]
-#             # ------------- lower bound of all indexes having lb < 0 & ub > 0 -------------
-#             lb1 = xmin[map7[:]]
-#             # ------------- upper bound of all neurons having lb < 0 & ub > 0 -------------
-#             ub1 = xmax1[map7[:]]
-
-#             if dis_opt == 'display':
-#                 print('\n %d/%d neurons have lb < 0 & ub > 0: ',
-#                       len(map8) % len(ub))
-#                 print(
-#                     '\n Construct new star set, %d new predicate variables are introduced: '
-#                     % len(map8))
-#             # ------------- one-shot approximation -------------
-#             S = PosLin.multipleStepReachStarApprox_at_one(
-#                 In, map8, lb1, ub1)
-#             return S

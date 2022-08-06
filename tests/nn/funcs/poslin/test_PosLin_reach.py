@@ -41,9 +41,9 @@ class TestPosLinReach(unittest.TestCase):
         I1 = I.toStar()
         print("\n I1 ------------------------ \n ", I1)
 
-        I1_toList = []
-        I1_toList.append(I1)
-        S1 = PosLin.reach(I1_toList, 'exact-star')
+        # I1_toList = []
+        # I1_toList.append(I1)
+        S1 = PosLin.reach(I1, 'exact-star')
         # exact reach set using star
         print("\n S1 ------------------------ \n", S1)
         S2 = PosLin.reach(I1, 'approx-star')
