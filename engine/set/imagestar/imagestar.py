@@ -3,19 +3,18 @@ import numpy as np
 import gurobipy as gp
 from gurobipy import GRB 
 import sys, os
+import copy
 
 import sys
 import operator
 
-sys.path.insert(0, "engine/set/star")
+sys.path.insert(0, "../star")
 from star import *
 
-sys.path.insert(0, "engine/set/zono")
+sys.path.insert(0, "../zono")
 from zono import *
 
 ############################ ERROR MESSAGES ############################
-
-#INVALID_PARAM_NUMBER_MSG = "ImageStar does not support this number of parameters"
 
 ERRMSG_INCONSISTENT_CONSTR_DIM = "Inconsistent dimension between constraint matrix and constraint vector"
 ERRMSG_INCONSISTENT_PRED_BOUND_DIM = "Number of predicates is different from the size of the lower bound or upper bound predicate vector"
@@ -63,74 +62,9 @@ ERRMSG_UNK_MP_LAYER_NAME = "Unknown name of the maxpooling layer"
 ESTIMATE_RANGE_STAGE_STARTED = "Ranges estimation started..."
 ESTIMATE_RANGE_STAGE_OVER = "Ranges estimation finished..."
 
-DISPLAY_ON_OPTION = "disp"
-############################ PARAMETERS IDS ############################
+ERRMSG_INCONSISTENT_SOLVER_INPUT = "The given solver is not supported. Use \'glpk\' for GNU Linear Programming Kit or \'linprog\' for Gurobi"
 
-##### ATTRIBUTES:
-V_ID = 0
-C_ID = 1
-D_ID = 2
-PREDLB_ID = 3
-PREDUB_ID = 4
-IM_LB_ID = 5
-IM_UB_ID = 6
-IM_ID = 7
-LB_ID = 8
-UB_ID = 9
-
-NUMPRED_ID = 10
-HEIGHT_ID = 11
-WIDTH_ID = 12
-NUM_CHANNELS_ID = 13
-FLATTEN_ORDER_ID = 14
-MAX_IDS_ID = 15
-MAX_INPUT_SIZES_ID = 16
-
-LAST_ATTRIBUTE_ID = MAX_INPUT_SIZES_ID
-
-##### ARGUMENTS:
-VERT_ID = 0
-HORIZ_ID = 1
-CHANNEL_ID = 2
-
-POINTS_ID = 0
-
-START_POINT_ID = 0
-POOL_SIZE_ID = 1
-
-P1_ID = 0
-P2_ID = 1
-#####################
-
-############################ PARAMETERS NUMBERS ############################
-IMAGESTAR_ATTRIBUTES_NUM = LAST_ATTRIBUTE_ID + 1
-PREDICATE_IMGBOUNDS_INIT_ARGS_NUM = 7
-PREDICATE_INIT_ARGS_NUM = 5
-IMAGE_INIT_ARGS_NUM = 3
-BOUNDS_INIT_ARGS_NUM = 2
-
-
-MAX_MAP_ID = 0
-ORI_IMAGE_ID = 1
-CENTER_ID = 2
-OTHERS_ID = 3
-#####################
-
-IM_OFFSET = 7
-IMAGE_INIT_ARGS_OFFSET = IM_ID
-BOUNDS_INIT_ARGS_OFFSET = IM_LB_ID
-
-DEFAULT_DISP_OPTION = ""
-
-COLUMN_FLATTEN = 'F'
-############################## DEFAULT VALUES ##############################
-
-DEFAULT_SOLVER_ARGS_NUM = 3
-CUSTOM_SOLVER_ARGS_NUM = 4
-
-IMAGESTAR_DEFAULT_MAX_ID_NAME_KEY = 'name'
-IMAGESTAR_DEFAULT_MAX_ID_IDX_KEY = 'id'
-
+DEFAULT_DISP_OPTION = []
 
 class ImageStar:
     """Class for representing set of images using Star set
@@ -235,142 +169,143 @@ class ImageStar:
             =============================================================
         """
         
-        self.validate_params(args)
-        
-        self.attributes = []       
-        
-        for i in range(IMAGESTAR_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
-        
-        self.scalar_attributes_ids = [
-                NUMPRED_ID, HEIGHT_ID, WIDTH_ID, NUM_CHANNELS_ID
-            ]
-        
-        self.attributes[FLATTEN_ORDER_ID] = COLUMN_FLATTEN
-        
-        self.attributes[MAX_IDS_ID] = []
-        self.attributes[MAX_INPUT_SIZES_ID] = []
-        
-        if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM or len(args) == PREDICATE_INIT_ARGS_NUM:    
-            if np.size(args[V_ID]) and np.size(args[C_ID]) and np.size(args[D_ID]) and np.size(args[PREDLB_ID]) and np.size(args[PREDUB_ID]):
-                assert (args[C_ID].shape[0] == 1 and np.size(args[D_ID]) == 1) or (args[C_ID].shape[0] == args[D_ID].shape[0]), \
+        self.init_attributes()
+                        
+        if len(args) == 7 or len(args) == 5:
+            v = args[0]
+            C = args[1]
+            d = args[2]
+            pred_lb = args[3]
+            pred_ub = args[4]
+            
+            if np.size(v) and np.size(C) and np.size(d) and np.size(pred_lb) and np.size(pred_ub):
+                assert (C.shape[0] == 1 and np.size(d) == 1) or (C.shape[0] == d.shape[0]), \
                        'error: %s' % ERRMSG_INCONSISTENT_CONSTR_DIM
                 
-                assert (np.size(args[D_ID]) == 1) or (len(np.shape(args[D_ID])) == 1) or (len(np.shape(args[D_ID])) == 2 and np.shape(args[D_ID])[1] == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
+                assert (np.size(d) == 1) or (len(np.shape(d)) == 1) or (len(np.shape(d)) == 2 and np.shape(d)[1] == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
                 
-                self.attributes[NUMPRED_ID] = args[C_ID].shape[1]
-                self.attributes[C_ID] = args[C_ID].astype('float64')
-                self.attributes[D_ID] = args[D_ID].astype('float64')
+                self.numpred = C.shape[1]
                 
-                assert args[C_ID].shape[1] == args[PREDLB_ID].shape[0] == args[PREDUB_ID].shape[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
+                assert C.shape[1] == pred_lb.shape[0] == pred_ub.shape[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
                 
-                assert len(args[PREDLB_ID].shape) == len(args[PREDUB_ID].shape) == 1 or args[PREDUB_ID].shape[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
+                self.C = C.astype('float64')
+                self.d = d.astype('float64')
                 
-                self.attributes[PREDLB_ID] = args[PREDLB_ID].astype('float64')
-                self.attributes[PREDUB_ID] = args[PREDUB_ID].astype('float64')
                 
-                n = args[V_ID].shape
+                assert len(pred_lb.shape) == len(pred_ub.shape) == 1 or pred_ub.shape[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
+                
+                self.pred_lb = pred_lb.astype('float64')
+                self.pred_ub = pred_ub.astype('float64')
+                
+                n = v.shape
                 
                 if len(n) < 2:
                     raise Exception('error: %s' % ERRMSG_INVALID_BASE_MATRIX)
                 else:
-                    self.attributes[HEIGHT_ID] = n[0]
-                    self.attributes[WIDTH_ID] = n[1]
+                    self.height = n[0]
+                    self.width = n[1]
                     
-                    self.attributes[V_ID] = args[V_ID]
+                    self.V = v
                     
                     if len(n) == 4:
-                        assert n[3] == self.attributes[NUMPRED_ID] + 1, 'error: %s' % ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM
+                        assert n[3] == self.numpred + 1, 'error: %s' % ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM
                         
-                        self.attributes[NUM_CHANNELS_ID] = n[2]
+                        self.num_channels = n[2]
                     else:
                         # TODO: ASK WHY THIS HAPPENS AFTER THE ASSIGNMENT IN LINE 205
-                        #self.attributes[NUMPRED_ID] = 0
+                        #self.numpred = 0
                         
                         if len(n) == 3:
-                            self.attributes[NUM_CHANNELS_ID] = n[2]
+                            self.num_channels = n[2]
                         elif len(n) == 2:
-                            self.attributes[NUM_CHANNELS_ID] = 1
+                            self.num_channels = 1
                 
-                if len(args) == PREDICATE_IMGBOUNDS_INIT_ARGS_NUM: 
-                    if args[IM_LB_ID].shape[0] != 0 and (args[IM_LB_ID].shape[0] != self.attributes[HEIGHT_ID] or args[IM_LB_ID].shape[1] != self.attributes[WIDTH_ID]):
+                if len(args) == 7:
+                    im_lb = args[6]
+                    im_ub = args[7]
+                    
+                    if im_lb.shape[0] != 0 and (im_lb.shape[0] != self.height or im_lb.shape[1] != self.width):
                         raise Exception('error: %s' % ERRMSG_INCONSISTENT_LB_DIM)
                     else:
-                        self.attributes[IM_LB_ID] = args[IM_LB_ID].astype('float64')      
+                        self.im_lb = im_lb.astype('float64')      
                         
-                    if args[IM_UB_ID].shape[0] != 0 and (args[IM_UB_ID].shape[0] != self.attributes[HEIGHT_ID] or args[IM_UB_ID].shape[1] != self.attributes[WIDTH_ID]):
+                    if im_ub.shape[0] != 0 and (im_ub.shape[0] != self.height or im_ub.shape[1] != self.width):
                         raise Exception('error: %s' % ERRMSG_INCONSISTENT_UB_DIM)
                     else:
-                        self.attributes[IM_UB_ID] = args[IM_UB_ID].astype('float64')
+                        self.im_ub = im_ub.astype('float64')
                     
-        elif len(args) == IMAGE_INIT_ARGS_NUM:
-            args = self.offset_args(args, IMAGE_INIT_ARGS_OFFSET)
-            if np.size(args[IM_ID]) and np.size(args[LB_ID]) and np.size(args[UB_ID]) and args[V_ID].shape[0] == 0:
-                n = args[IM_ID].shape
-                l = args[LB_ID].shape
-                u = args[UB_ID].shape
+        elif len(args) == 3:
+            im = args[0]
+            lb = args[1]
+            ub = args[2]
+            
+            if np.size(im) and np.size(lb) and np.size(ub) and self.V.shape[0] == 0:
+                n = im.shape
+                l = lb.shape
+                u = ub.shape
                 
                 assert (n[0] == l[0] == u[0] and n[1] == l[1] == u[1]) and (len(n) == len(l) == len(u)), 'error: %s' % ERRMSG_INCONSISTENT_CENTER_IMG_ATTACK_MATRIX
                             
                 assert len(n) == len(l) == len(u), 'error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM
                 
-                self.attributes[IM_ID] = args[IM_ID].astype('float64')
-                self.attributes[LB_ID] = args[LB_ID].astype('float64')
-                self.attributes[UB_ID] = args[UB_ID].astype('float64')
+                self.im = im.astype('float64')
+                self.lb = lb.astype('float64')
+                self.ub = ub.astype('float64')
                 
-                self.attributes[HEIGHT_ID] = n[0]
-                self.attributes[WIDTH_ID] = n[1]
+                self.height = n[0]
+                self.width = n[1]
                 
                 if len(n) == 2:
-                    self.attributes[NUM_CHANNELS_ID] = 2
+                    self.num_channels = 2
                 elif len(n) == 3:
-                    self.attributes[NUM_CHANNELS_ID] = 3
+                    self.num_channels = 3
                 else:
                     raise Exception('error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM)
                 
-                self.attributes[IM_LB_ID] = self.attributes[IM_ID] + self.attributes[LB_ID]
-                self.attributes[IM_UB_ID] = self.attributes[IM_ID] + self.attributes[UB_ID]
+                self.im_lb = self.im + self.lb
+                self.im_ub = self.im + self.ub
                 
-                n = self.attributes[IM_LB_ID].shape
+                n = self.im_lb.shape
                 
                 I = 0
                 
                 if len(n) == 3:
-                    #TODO: Star returns 'can't create Star set' error because StarV Star constructor initialization does not correspond to the implementation in NNV
-                    I = Star(self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]), self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]))
-                    self.attributes[V_ID] = np.reshape(I.V, (I.nVar + 1, n[0] * n[1] * n[2]))
+                    I = Star(self.im_lb.flatten(order=self.flatten_mode), self.im_ub.flatten(order=self.flatten_mode))
+                    self.V = np.reshape(I.V, (I.nVar + 1, n[0] * n[1] * n[2]))
                 else:
-                    I = Star(self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]), self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID]))
-                    self.attributes[V_ID] = np.reshape(I.V, (I.nVar + 1, n[0] * n[1]))
+                    I = Star(self.im_lb.flatten(order=self.flatten_mode), self.im_ub.flatten(order=self.flatten_mode))
+                    self.V = np.reshape(I.V, (I.nVar + 1, n[0] * n[1]))
                     
-                self.attributes[C_ID] = I.C
-                self.attributes[D_ID] = I.d
+                self.C = I.C
+                self.d = I.d
                 
                 # TODO: ask why does Star have predicate_lb and ImageStar pred_lb?
-                self.attributes[PREDLB_ID]  = I.predicate_lb
-                self.attributes[PREDUB_ID] = I.predicate_ub
+                self.pred_lb  = I.predicate_lb
+                self.pred_ub = I.predicate_ub
                 
-                self.attributes[NUMPRED_ID] = I.nVar
-        elif len(args) == BOUNDS_INIT_ARGS_NUM:
-            args = self.offset_args(args, BOUNDS_INIT_ARGS_OFFSET)
-            if np.size(args[IM_LB_ID]) and np.size(args[IM_UB_ID]) and args[V_ID].shape[0] == 0: #and np.shape(args[IM_ID])[0] == 0:
-                lb_shape = args[IM_LB_ID].shape
-                ub_shape = args[IM_UB_ID].shape
+                self.numpred = I.nVar
+        elif len(args) == 2:                
+            im_lb = args[0]
+            im_ub = args[1]
+            
+            if np.size(im_lb) and np.size(im_ub) and self.V.shape[0] == 0:
+                lb_shape = im_lb.shape
+                ub_shape = im_ub.shape
                 
                 assert len(lb_shape) == len(ub_shape), 'error: %s' % ERRMSG_INCONSISTENT_LB_UB_DIM
                 
                 for i in range(len(lb_shape)):
                     assert lb_shape[i] == ub_shape[i], 'error: %s' % ERRMSG_INCONSISTENT_LB_UB_DIM
                     
-                lb = args[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
-                ub = args[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+                lb = im_lb.flatten(order=self.flatten_mode)
+                ub = im_ub.flatten(order=self.flatten_mode)
                 
                 S = Star(lb, ub)
                     
                 self.copy_deep(S.toImageStar(lb_shape[0], lb_shape[1], (lb_shape[2] if len(lb_shape) == 3 else 1)))
                     
-                self.attributes[IM_LB_ID] = args[IM_LB_ID].astype('float64')
-                self.attributes[IM_UB_ID] = args[IM_UB_ID].astype('float64')
+                self.im_lb = im_lb.astype('float64')
+                self.im_ub = im_ub.astype('float64')
         elif self.isempty_init(args):
             self.init_empty_imagestar()
         else:
@@ -384,14 +319,13 @@ class ImageStar:
             return -> set of images
         """
         
-        assert (not self.isempty(self.attributes[V_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        assert (not self.isempty(self.V)), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
-        if self.isempty(self.attributes[C_ID]) or self.isempty(self.attributes[D_ID]):
-            return self.attributes[IM_ID]
+        if self.isempty(self.C) or self.isempty(self.d):
+            return self.im
         else:
-            new_V = np.hstack((np.zeros((self.attributes[NUMPRED_ID], 1)), np.eye(self.attributes[NUMPRED_ID])))
-            #TODO: Star returns an error when checking the dimensions even though they match
-            S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
+            new_V = np.hstack((np.zeros((self.numpred, 1)), np.eye(self.numpred)))
+            S = Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
             pred_samples = S.sample(N)
             
             images = []
@@ -409,19 +343,19 @@ class ImageStar:
             return -> evaluated image
         """            
         
-        assert (not self.isempty(self.attributes[V_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        assert (not self.isempty(self.V)), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
         assert len(pred_val.shape) == 1, 'error: %s' % ERRMSG_INVALID_PREDICATE_VEC
         
-        assert pred_val.shape[0] == self.attributes[NUMPRED_ID], 'error: %s' % ERRMSG_INCONSISTENT_PREDVEC_PREDNUM
+        assert pred_val.shape[0] == self.numpred, 'error: %s' % ERRMSG_INCONSISTENT_PREDVEC_PREDNUM
         
-        image = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
+        image = np.zeros((self.height, self.width, self.num_channels))
         
-        for i in range(self.attributes[NUM_CHANNELS_ID]):
-            image[:, :, i] = self.attributes[V_ID][:, :, i, 1]
+        for i in range(self.num_channels):
+            image[:, :, i] = self.V[:, :, i, 1]
             
-            for j in range(2, self.attributes[NUMPRED_ID] + 1):
-                image[:, :, i] = image[:, :, i] + pred_val[j - 1] * self.attributes[V_ID][:, :, i, j]
+            for j in range(2, self.numpred + 1):
+                image[:, :, i] = image[:, :, i] + pred_val[j - 1] * self.V[:, :, i, j]
  
         return image
  
@@ -434,20 +368,20 @@ class ImageStar:
             return -> a new ImageStar
         """
  
-        assert (self.isempty(scale) or self.is_scalar(scale) or len(scale.shape) == self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
+        assert (self.isempty(scale) or self.is_scalar(scale) or len(scale.shape) == self.num_channels), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
         
         new_V = 0
         
         if not self.isempty(scale):
-            new_V = np.multiply(scale, self.attributes[V_ID])
+            new_V = np.multiply(scale, self.V)
         else:
-            new_V = self.attributes[V_ID]
+            new_V = self.V
         
         # Affine Mapping changes the center
         if not self.isempty(offset):
             new_V[:, :, :, 0] = new_V[:, :, :, 0] + offset
             
-        return ImageStar(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
+        return ImageStar(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
     
     def to_star(self):
         from star import Star
@@ -457,33 +391,33 @@ class ImageStar:
             return -> created Star
         """
  
-        pixel_num = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
+        pixel_num = self.height * self.width * self.num_channels
         
-        new_V = np.zeros((pixel_num, self.attributes[NUMPRED_ID] + 1))
+        new_V = np.zeros((pixel_num, self.numpred + 1))
         
         if self.isempty(new_V):
             # TODO: error: failed to create Star set
             return Star()
         else:
                     
-            v_shape = self.attributes[V_ID].shape
+            v_shape = self.V.shape
                     
             if(len(v_shape) == 3):
-                 self.attributes[V_ID] = np.reshape(self.attributes[V_ID], (v_shape[0], v_shape[1], 1, v_shape[2]))
+                 self.V = np.reshape(self.V, (v_shape[0], v_shape[1], 1, v_shape[2]))
                  
-            for i in range(self.attributes[NUM_CHANNELS_ID]):
-                for j in range(self.attributes[NUMPRED_ID] + 1):        
-                    new_V[:, j] = self.attributes[V_ID][:, :, i, j].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+            for i in range(self.num_channels):
+                for j in range(self.numpred + 1):        
+                    new_V[:, j] = self.V[:, :, i, j].flatten(order=self.flatten_mode)
                 
-            if not self.isempty(self.attributes[IM_LB_ID]) and not self.isempty(self.attributes[IM_UB_ID]):
-                state_lb = self.attributes[IM_LB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
-                state_ub = self.attributes[IM_UB_ID].flatten(order=self.attributes[FLATTEN_ORDER_ID])
+            if not self.isempty(self.im_lb) and not self.isempty(self.im_ub):
+                state_lb = self.im_lb.flatten(order=self.flatten_mode)
+                state_ub = self.im_ub.flatten(order=self.flatten_mode)
                 
                 # TODO: error: failed to create Star set
-                S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID], state_lb, state_ub)
+                S = Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub, state_lb, state_ub)
             else:
                 # TODO: error: failed to create Star set
-                S = Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
+                S = Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
                 
             return S
  
@@ -509,13 +443,13 @@ class ImageStar:
         img_size = image.shape
         
         if len(img_size) == 2: # one channel image
-            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and self.attributes[NUM_CHANNELS_ID] == 1), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
+            assert (img_size[0] == self.height and img_size[1] == self.width and self.num_channels == 1), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
         elif len(img_size) == 3:
-            assert (img_size[0] == self.attributes[HEIGHT_ID] and img_size[1] == self.attributes[WIDTH_ID] and img_size[2] == self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
+            assert (img_size[0] == self.height and img_size[1] == self.width and img_size[2] == self.num_channels), 'error: %s' % ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR
         else:
             raise Exception('error: %s' % ERRMSG_INVALID_INPUT_IMG)
             
-        image_vec = image.flatten(order=self.attributes[FLATTEN_ORDER_ID])
+        image_vec = image.flatten(order=self.flatten_mode)
         
         # TODO: error: failed to create Star set
         S = self.to_star()
@@ -532,18 +466,18 @@ class ImageStar:
         """
             
         assert (len(point1) == 3 and len(point2) == 3), 'error: %s' % ERRMSG_INVALID_INPUT_POINT
-        assert self.validate_point_dim(point1, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_FIRST_INPUT_POINT
-        assert self.validate_point_dim(point2, self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_SECOND_INPUT_POINT
+        assert self.validate_point_dim(point1, self.height, self.width), 'error: %s' % ERRMSG_INVALID_FIRST_INPUT_POINT
+        assert self.validate_point_dim(point2, self.height, self.width), 'error: %s' % ERRMSG_INVALID_SECOND_INPUT_POINT
         
-        n = self.attributes[NUMPRED_ID] + 1
+        n = self.numpred + 1
         
         new_V = np.zeros((2, n))
         
         for i in range(n):
-            new_V[0, i] = self.attributes[V_ID][point1[0], point1[1], point1[2], i]
-            new_V[1, i] = self.attributes[V_ID][point2[0], point2[1], point2[2], i]
+            new_V[0, i] = self.V[point1[0], point1[1], point1[2], i]
+            new_V[1, i] = self.V[point2[0], point2[1], point2[2], i]
             
-        return Star(new_V, self.attributes[C_ID], self.attributes[D_ID], self.attributes[PREDLB_ID], self.attributes[PREDUB_ID])
+        return Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
         
         
     def get_range(self, *args):
@@ -563,68 +497,92 @@ class ImageStar:
                         ])
         """
         
-        assert (len(args) == DEFAULT_SOLVER_ARGS_NUM or len(args) == CUSTOM_SOLVER_ARGS_NUM), 'error: %s' % ERRMSG_GETRANGES_INVALID_ARGS_NUM   
-        assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        vert_id = None
+        horiz_id = None
+        channel_id = None
+        solver = None
+        options = None
         
-        # TODO: THIS SHOULD BE ACCOUNTED FOR WHEN THE DATA IS PASSED
-        # input_args = np.array([
-        #         args[VERT_ID] - 1,
-        #         args[HORIZ_ID] - 1,
-        #         args[CHANNEL_ID] - 1
-        #     ], dtype=int)
-        
-        #input_args = input_args + 1
-        
-        # TODO: account for potential custom solver identifier
-        #args = input_args
-        
-        assert (args[VERT_ID] > -1 and args[VERT_ID] < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
-        assert (args[HORIZ_ID] > -1 and args[HORIZ_ID] < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
-        assert (args[CHANNEL_ID] > -1 and args[CHANNEL_ID] < self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM
+        if len(args) == 3:
+            vert_id = args[0]
+            horiz_id = args[1]
+            channel_id = args[2]
+            solver = 'glpk'
+            options = []
+        elif len(args) == 4:
+            vert_id = args[0]
+            horiz_id = args[1]
+            channel_id = args[2]
+            solver = args[3]
+            options = []
+        elif len(args) == 5:
+            vert_id = args[0]
+            horiz_id = args[1]
+            channel_id = args[2]
+            solver = args[3]
+            options = args[4]
+        else:
+            raise Exception('\nInvalid number of input arguments. Should be 3, 4 or 5')
+            
+        assert (not self.isempty(self.C) and not self.isempty(self.d)), 'error: %s' % ERRMSG_IMGSTAR_EMPTY        
+        assert (vert_id > -1 and vert_id < self.height), 'error: %s' % ERRMSG_INVALID_VERT_ID
+        assert (horiz_id > -1 and horiz_id < self.width), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
+        assert (channel_id > -1 and channel_id < self.num_channels), 'error: %s' % ERRMSG_INCONSISTENT_CHANNELS_NUM
+        self.validate_solver_name(solver)
+        self.validate_options_list(options)
         
         bounds = [np.array([]), np.array([])]
         
-        f = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 1:self.attributes[NUMPRED_ID] + 1]
+        f = self.V[vert_id, horiz_id, channel_id, 1:self.numpred + 1]
         
         if (f == 0).all():
-            bounds[XMIN_ID] = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
-            bounds[XMAX_ID] = self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
-        else:
+            bounds[0] = self.V[vert_id, horiz_id, channel_id, 0]
+            bounds[1] = self.V[vert_id, horiz_id, channel_id, 0]
+        elif solver == 'linprog':
+            if 'disp' in options:
+                print('Calculating the lower and upper bounds using Gurobi...')
+                
             min_ = gp.Model()
             min_.Params.LogToConsole = 0
             min_.Params.OptimalityTol = 1e-9
-            if self.attributes[PREDLB_ID].size and self.attributes[PREDUB_ID].size:
-                x = min_.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
+            if self.pred_lb.size and self.pred_ub.size:
+                x = min_.addMVar(shape=self.numpred, lb=self.pred_lb, ub=self.pred_ub)
             else:
-                x = min_.addMVar(shape=self.attributes[NUMPRED_ID])
+                x = min_.addMVar(shape=self.numpred)
             min_.setObjective(f @ x, GRB.MINIMIZE)
-            C = sp.csr_matrix(self.attributes[C_ID])
-            d = np.array(self.attributes[D_ID]).flatten(order=self.attributes[FLATTEN_ORDER_ID])
+            C = sp.csr_matrix(self.C)
+            d = np.array(self.d).flatten(order=self.flatten_mode)
             min_.addConstr(C @ x <= d)
             min_.optimize()
 
             if min_.status == 2:
-                xmin = min_.objVal + self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
+                xmin = min_.objVal + self.V[vert_id, horiz_id, channel_id, 0]
             else:
                 raise Exception('error: cannot find an optimal solution, exitflag = %d' % (min_.status))
 
             max_ = gp.Model()
             max_.Params.LogToConsole = 0
             max_.Params.OptimalityTol = 1e-9
-            if self.attributes[PREDLB_ID].size and self.attributes[PREDUB_ID].size:
-                x = max_.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
+            if self.pred_lb.size and self.pred_ub.size:
+                x = max_.addMVar(shape=self.numpred, lb=self.pred_lb, ub=self.pred_ub)
             else:
-                x = max_.addMVar(shape=self.attributes[NUMPRED_ID])
+                x = max_.addMVar(shape=self.numpred)
             max_.setObjective(f @ x, GRB.MAXIMIZE)
-            C = sp.csr_matrix(self.attributes[C_ID])
-            d = np.array(self.attributes[D_ID]).flatten(order=self.attributes[FLATTEN_ORDER_ID])
+            C = sp.csr_matrix(self.C)
+            d = np.array(self.d).flatten(order=self.flatten_mode)
             max_.addConstr(C @ x <= d)
             max_.optimize()
 
             if max_.status == 2:
-                xmax = max_.objVal + self.attributes[V_ID][args[VERT_ID], args[HORIZ_ID], args[CHANNEL_ID], 0]
+                xmax = max_.objVal + self.V[vert_id, horiz_id, channel_id, 0]
             else:
                 raise Exception('error: cannot find an optimal solution, exitflag = %d' % (max_.status))
+        else:
+            # TODO: add glpk here
+            if 'disp' in options:
+                print('Calculating the lower and upper bounds using GLPK...')
+                
+            print('GLPK is not implemented for this method yet')
 
         return np.array([xmin, xmax])
 
@@ -639,96 +597,110 @@ class ImageStar:
             return -> [xmin, xmax]
         """
 
-        assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        assert (not self.isempty(self.C) and not self.isempty(self.d)), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
         
         height_id = int(height_id)
         width_id = int(width_id)
         channel_id = int(channel_id)
         
-        assert (height_id > -1 and height_id < self.attributes[HEIGHT_ID]), 'error: %s' % ERRMSG_INVALID_VERT_ID
-        assert (width_id > -1 and width_id < self.attributes[WIDTH_ID]), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
-        assert (channel_id > -1 and channel_id < self.attributes[NUM_CHANNELS_ID]), 'error: %s' % ERRMSG_INVALID_CHANNEL_ID 
+        assert (height_id > -1 and height_id < self.height), 'error: %s' % ERRMSG_INVALID_VERT_ID
+        assert (width_id > -1 and width_id < self.width), 'error: %s' % ERRMSG_INVALID_HORIZ_ID
+        assert (channel_id > -1 and channel_id < self.num_channels), 'error: %s' % ERRMSG_INVALID_CHANNEL_ID 
         
-        f = self.attributes[V_ID][height_id, width_id, channel_id, 0:self.attributes[NUMPRED_ID] + 1]
+        f = self.V[height_id, width_id, channel_id, 0:self.numpred + 1]
         xmin = f[0]
         xmax = f[0]
         
-        for i in range(1, self.attributes[NUMPRED_ID] + 1):
+        for i in range(1, self.numpred + 1):
             if f[i] >= 0:
-                xmin = xmin + f[i] * self.attributes[PREDLB_ID][i - 1]
-                xmax = xmax + f[i] * self.attributes[PREDUB_ID][i - 1]
+                xmin = xmin + f[i] * self.pred_lb[i - 1]
+                xmax = xmax + f[i] * self.pred_ub[i - 1]
             else:
-                xmin = xmin + f[i] * self.attributes[PREDUB_ID][i - 1]
-                xmax = xmax + f[i] * self.attributes[PREDLB_ID][i - 1]
+                xmin = xmin + f[i] * self.pred_ub[i - 1]
+                xmax = xmax + f[i] * self.pred_lb[i - 1]
 
         return np.array([xmin, xmax])
 
-    def estimate_ranges(self, dis_opt = DEFAULT_DISP_OPTION):
+    def estimate_ranges(self, options = DEFAULT_DISP_OPTION):
         """
             Estimates the ranges using only a predicate bound information
             
-            dis_opt : string -> display option
+            options : string -> a set of options
             
             return -> [image_lb, image_ub]
         """
+                
+        assert (not self.isempty(self.C) and not self.isempty(self.d)), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
+        self.validate_options_list(options)
         
-        assert (not self.isempty(self.attributes[C_ID]) and not self.isempty(self.attributes[D_ID])), 'error: %s' % ERRMSG_IMGSTAR_EMPTY
-        
-        if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
-            image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
-            image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
+        if self.isempty(self.im_lb) or self.isempty(self.im_ub):
+            image_lb = np.zeros((self.height, self.width, self.num_channels))
+            image_ub = np.zeros((self.height, self.width, self.num_channels))
             
-            size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
+            size = self.height * self.width * self.num_channels
             
-            disp_flag = False
-            if dis_opt == DISPLAY_ON_OPTION:
-                disp_flag = True
+            if 'disp' in options:
                 print(ESTIMATE_RANGE_STAGE_STARTED)
                 
-            for i in range(self.attributes[HEIGHT_ID]):
-                for j in range(self.attributes[WIDTH_ID]):
-                    for k in range(self.attributes[NUM_CHANNELS_ID]):
+            for i in range(self.height):
+                for j in range(self.width):
+                    for k in range(self.num_channels):
                         image_lb[i, j, k], image_ub[i, j, k] = self.estimate_range(i, j, k)
                         
-                        if disp_flag:
+                        if 'disp' in options:
                             print(ESTIMATE_RANGE_STAGE_OVER)
                 
-            self.attributes[IM_LB_ID] = image_lb
-            self.attributes[IM_UB_ID] = image_ub
+            self.im_lb = image_lb
+            self.im_ub = image_ub
         else:
-            image_lb = self.attributes[IM_LB_ID]
-            image_ub = self.attributes[IM_UB_ID]
+            image_lb = self.im_lb
+            image_ub = self.im_ub
             
         return np.array([image_lb, image_ub])
     
-    def get_ranges(self, dis_opt = DEFAULT_DISP_OPTION):
+    def get_ranges(self, *args):
         """
             Computes the lower and upper bound images of the ImageStar
             
             return -> [image_lb : np.array([]) -> lower bound image,
                        image_ub : np.array([]) -> upper bound image]
         """
+        solver = None
+        options = None
+        
+        if len(args) == 0:
+            solver = 'glpk'
+            options = []
+        elif len(args) == 1:
+            solver = args[0]
+            options = []
+        elif len(args) == 2:
+            solver = args[0]
+            options = args[1]
+        else:
+            raise Exception('\nInvalid number of input arguments. Should be 0, 1 or 2')
+        
+        self.validate_solver_name(solver)
+        self.validate_options_list(options)
                 
-        image_lb = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
-        image_ub = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
+        image_lb = np.zeros((self.height, self.width, self.num_channels))
+        image_ub = np.zeros((self.height, self.width, self.num_channels))
 
-        size = self.attributes[HEIGHT_ID] * self.attributes[WIDTH_ID] * self.attributes[NUM_CHANNELS_ID]
+        size = self.height * self.width * self.num_channels
             
-        disp_flag = False
-        if dis_opt == DISPLAY_ON_OPTION:
-            disp_flag = True
+        if 'disp' in options:
             print(ESTIMATE_RANGE_STAGE_STARTED)
                 
-        for i in range(self.attributes[HEIGHT_ID]):
-            for j in range(self.attributes[WIDTH_ID]):
-                for k in range(self.attributes[NUM_CHANNELS_ID]):
-                    image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i, j, k)
+        for i in range(self.height):
+            for j in range(self.width):
+                for k in range(self.num_channels):
+                    image_lb[i, j, k], image_ub[i, j, k] = self.get_range(i, j, k, solver, options)
                         
-                    if disp_flag:
+                    if 'disp' in options:
                         print(ESTIMATE_RANGE_STAGE_OVER)
                 
-        self.attributes[IM_LB_ID] = image_lb
-        self.attributes[IM_UB_ID] = image_ub
+        self.im_lb = image_lb
+        self.im_ub = image_ub
             
         return np.array([image_lb, image_ub])
             
@@ -738,10 +710,25 @@ class ImageStar:
             
             points : np.array([*]) -> local points = [x1 y1 c1; x2 y2 c2; ...]
         """
+        
+        if len(args == 0):
+            solver = 'glpk'
+            options = []
+        elif len(args == 1):
+            solver = args[0]
+            options = []
+        elif len(args == 2):
+            solver = args[0]
+            options = args[1]
+        else:
+            raise Exception('\nInvalid number of input arguments. Should be 0, 1 or 2')
+        
         updated_ranges = []
         
-        for i in range(len(args[POINTS_ID])):
-            updated_ranges.append(self.get_range(args[POINTS_ID][i][0], args[POINTS_ID][i][1], args[POINTS_ID][i][2]))
+        points = args[0]
+        
+        for i in range(len(points)):
+            updated_ranges.append(self.get_range(points[i][0], points[i][1], points[i][2]), solver, options)
                                   
         return updated_ranges
             
@@ -754,11 +741,11 @@ class ImageStar:
             return : int -> the number of pixels
         """
         
-        V1 = np.zeros((self.attributes[HEIGHT_ID], self.attributes[WIDTH_ID], self.attributes[NUM_CHANNELS_ID]))
+        V1 = np.zeros((self.height, self.width, self.num_channels))
         V3 = V1
         
-        for i in range(1, self.attributes[NUMPRED_ID] + 1):
-            V2 = (self.attributes[V_ID][:,:,:,i] != V1)
+        for i in range(1, self.numpred + 1):
+            V2 = (self.V[:,:,:,i] != V1)
             V3 = V3 + V2
             
         V4 = np.amax(V3, 2)
@@ -778,24 +765,49 @@ class ImageStar:
             
         """
         
-        points = self.get_local_points(args[START_POINT_ID], args[POOL_SIZE_ID])
+        start_points = None
+        pool_size = None
+        channel_id = None
+        solver = None
+        options = None
+        
+        if len(args) == 3:
+            start_point = args[0]
+            pool_size = args[1]
+            channel_id = args[2]
+            solver = 'glpk'
+            options = []
+        elif len(args) == 4:
+            start_point = args[0]
+            pool_size = args[1]
+            channel_id = args[2]
+            solver = args[3]
+            options = []
+        elif len(args) == 5:
+            start_point = args[0]
+            pool_size = args[1]
+            channel_id = args[2]
+            solver = args[3]
+            options = args[4]
+        
+        points = self.get_local_points(start_point, pool_size)
         points_num = len(points)
         
-        if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
-            image_lb, image_ub = self.get_ranges()
+        if self.isempty(self.im_lb) or self.isempty(self.im_ub):
+            image_lb, image_ub = self.get_ranges(solver, options)
         else:
-            image_lb = self.attributes[IM_LB_ID]
-            image_ub = self.attributes[IM_UB_ID]
+            image_lb = self.im_lb
+            image_ub = self.im_ub
         
-        lb = image_lb[int(points[0,0]), int(points[0,1]), args[CHANNEL_ID]]
-        ub = image_ub[int(points[0,0]), int(points[0,1]), args[CHANNEL_ID]]
+        lb = image_lb[int(points[0,0]), int(points[0,1]), channel_id]
+        ub = image_ub[int(points[0,0]), int(points[0,1]), channel_id]
         
         for i in range(1, points_num):
-            if image_lb[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]] < lb:
-                lb = image_lb[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]]
+            if image_lb[int(points[i,0]), int(points[i,1]), channel_id] < lb:
+                lb = image_lb[int(points[i,0]), int(points[i,1]), channel_id]
             
-            if image_ub[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]] > ub:
-                ub = image_ub[int(points[i,0]), int(points[i,1]), args[CHANNEL_ID]]
+            if image_ub[int(points[i,0]), int(points[i,1]), channel_id] > ub:
+                ub = image_ub[int(points[i,0]), int(points[i,1]), channel_id]
                 
         return [lb, ub]
             
@@ -816,8 +828,8 @@ class ImageStar:
         h = pool_size[0] # height of the MaxPooling layer
         w = pool_size[1] # width of the MaxPooling layer
         
-        assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 < self.attributes[HEIGHT_ID] \
-                        and y0 + w - 1 < self.attributes[WIDTH_ID]), \
+        assert (x0 >= 0 and y0 >= 0 and x0 + h - 1 < self.height \
+                        and y0 + w - 1 < self.width), \
                         'error: %s' % ERRMSG_INVALID_STARTPOINT_POOLSIZE 
                         
         points = np.zeros((h * w, 2))
@@ -849,14 +861,43 @@ class ImageStar:
             
             return -> max_id
         """
+        start_point = None
+        pool_size = None
+        channel_id = None
+        solver = None
+        options = None
         
-        points = self.get_local_points(args[START_POINT_ID], args[POOL_SIZE_ID])
+        if len(args) == 3:
+            start_point = args[0]
+            pool_size = args[1]
+            channel_id = args[2]
+            solver = 'glpk'
+            options = []
+        elif len(args) == 4:
+            start_point = args[0]
+            pool_size = args[1]
+            channel_id = args[2]
+            solver = args[3]
+            options = []
+        elif len(args) == 5:
+            start_point = args[0]
+            pool_size = args[1]
+            channel_id = args[2]
+            solver = args[3]
+            options = args[4]
+        else:
+            raise Exception('\nInvalid number of input arguments. Should be 4, 5 or 6')
+        
+        self.validate_solver_name(solver)
+        self.validate_options_list(options)
+        
+        points = self.get_local_points(start_point, pool_size)
     
-        if self.isempty(self.attributes[IM_LB_ID]) or self.isempty(self.attributes[IM_UB_ID]):
+        if self.isempty(self.im_lb) or self.isempty(self.im_ub):
             self.estimate_ranges()
     
-        height = args[POOL_SIZE_ID][0]
-        width = args[POOL_SIZE_ID][0]
+        height = pool_size[0]
+        width = pool_size[0]
         size = height * width
         
         lb = np.zeros((size, 1))
@@ -865,8 +906,8 @@ class ImageStar:
         for i in range(size):
             current_point = points[i, :].astype('int')
             
-            lb[i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
-            ub[i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], args[CHANNEL_ID]]
+            lb[i] = self.im_lb[current_point[0], current_point[1], channel_id]
+            ub[i] = self.im_ub[current_point[0], current_point[1], channel_id]
         
             
         [max_lb_id, max_lb_val] = max(enumerate(lb), key=operator.itemgetter(1))
@@ -876,7 +917,7 @@ class ImageStar:
         a = np.delete(a, np.argwhere(a==max_lb_id)[:,0])
         
         if self.isempty(a):
-            max_id = np.array([np.append(points[max_lb_id, :].astype('int'), args[CHANNEL_ID])])
+            max_id = np.array([np.append(points[max_lb_id, :].astype('int'), channel_id)])
         else:
             candidates = a1
             
@@ -887,10 +928,10 @@ class ImageStar:
             
             for i in range(candidates_num):
                 selected_points = points[candidates[i], :].astype('int')
-                new_points.append(np.append(selected_points, args[CHANNEL_ID]))
+                new_points.append(np.append(selected_points, channel_id))
                 new_points1[i, :] = selected_points
                
-            self.update_ranges(new_points)
+            self.update_ranges(new_points, solver, options)
             
             lb = np.zeros((candidates_num,1))
             ub = np.zeros((candidates_num,1))
@@ -899,8 +940,8 @@ class ImageStar:
                 #TODO: THIS SHOULD BE INITIALLY INT
                 current_point = points[candidates[i], :]
                 
-                lb[i] = self.attributes[IM_LB_ID][int(current_point[0]), int(current_point[1]), int(args[CHANNEL_ID])]
-                ub[i] = self.attributes[IM_UB_ID][int(current_point[0]), int(current_point[1]), int(args[CHANNEL_ID])]
+                lb[i] = self.im_lb[int(current_point[0]), int(current_point[1]), int(channel_id)]
+                ub[i] = self.im_ub[int(current_point[0]), int(current_point[1]), int(channel_id)]
                 
             [max_lb_id, max_lb_val] = max(enumerate(lb), key=operator.itemgetter(1))
             
@@ -916,13 +957,14 @@ class ImageStar:
                 candidates1[candidates1 == max_lb_id] == []
                 candidates_num = len(candidates1)
                 
-                max_id1 = np.append(max_id, args[CHANNEL_ID])
+                max_id1 = np.append(max_id, channel_id)
                 
                 for j in range(candidates_num):
                     p1 = new_points[np.argwhere(candidates1 == True)[:,0][j]]
                     
-                    if self.is_p1_larger_p2(np.array([p1[0], p1[1], args[CHANNEL_ID]]), \
-                                            np.array([max_id[0], max_id[1], int(args[CHANNEL_ID])])):
+                    if self.is_p1_larger_p2(np.array([p1[0], p1[1], channel_id]), \
+                                            np.array([max_id[0], max_id[1], int(channel_id)]), \
+                                            solver, options):
                         max_id1 = np.vstack((max_id1, p1))
                         
                         
@@ -956,8 +998,8 @@ class ImageStar:
         for i in range(size):
             current_point = points[i, :].astype(int)
             
-            lb[i] = self.attributes[IM_LB_ID][current_point[0], current_point[1], channel_id]
-            ub[i] = self.attributes[IM_UB_ID][current_point[0], current_point[1], channel_id]
+            lb[i] = self.im_lb[current_point[0], current_point[1], channel_id]
+            ub[i] = self.im_ub[current_point[0], current_point[1], channel_id]
         
             
         [max_lb_id, max_lb_val] = max(enumerate(lb), key=operator.itemgetter(1))
@@ -976,13 +1018,13 @@ class ImageStar:
                                   corresponding to the max_id
         """
         
-        ids_num = len(self.attributes[MAX_IDS])
+        ids_num = len(self.max_ids)
         
         unk_layer_num = 0
         
         for i in range(ids_num):
-            if self.attributes[MAX_IDS][i].get_name() == name:
-                self.attributes[MAX_IDS][i].get_max_ids()[pos[0], pos[1], pos[2]] = max_id
+            if self.max_ids[i].get_name() == name:
+                self.max_ids[i].get_max_ids()[pos[0], pos[1], pos[2]] = max_id
                 break
             else:
                 unk_layer_num += 1
@@ -1004,39 +1046,66 @@ class ImageStar:
             
         """
         
-        C1 = np.zeros(self.attributes[NUMPRED_ID])
+        if len(args == 2):
+            p1 = args[0]
+            p2 = args[1]
+            solver = 'glpk'
+            options = []
+        elif len(args == 3):
+            p1 = args[0]
+            p2 = args[2]
+            solver = args[3]
+            options = []
+        elif len(args == 4):
+            p1 = args[0]
+            p2 = args[1]
+            solver = args[2]
+            options = args[3]
+        else:
+            raise Exception('\nInvalid number of input arguments. Should be 2, 3 or 4')
         
-        for i in range(1, self.attributes[NUMPRED_ID] + 1):
-            C1[i-1] = self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], i] - \
-                      self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], i]
+        C1 = np.zeros(self.numpred)
+        
+        for i in range(1, self.numpred + 1):
+            C1[i-1] = self.V[p12[0], p12[1], p12[2], i] - \
+                      self.V[p1[0], p1[1], p1[2], i]
                       
-        d1 = self.attributes[V_ID][args[P1_ID][0], args[P1_ID][1], args[P1_ID][2], 0] - \
-                 self.attributes[V_ID][args[P2_ID][0], args[P2_ID][1], args[P2_ID][2], 0]
+        d1 = self.V[p1[0], p1[1], p1[2], 0] - \
+                 self.V[p12[0], p12[1], p12[2], 0]
                  
-        new_C = np.vstack((self.attributes[C_ID], C1))
-        new_d = np.vstack((self.attributes[D_ID], d1))
+        new_C = np.vstack((self.C, C1))
+        new_d = np.vstack((self.d, d1))
                 
         if len(new_d.shape) == 2 and new_d.shape[1] == 1:
             new_d = np.reshape(new_d, (2,))
                 
-        f = np.zeros(self.attributes[NUMPRED_ID])
-        m = gp.Model()
-        # prevent optimization information
-        m.Params.LogToConsole = 0
-        m.Params.OptimalityTol = 1e-9
-        x = m.addMVar(shape=self.attributes[NUMPRED_ID], lb=self.attributes[PREDLB_ID], ub=self.attributes[PREDUB_ID])
-        m.setObjective(f @ x, GRB.MINIMIZE)
-        A = sp.csr_matrix(new_C)
-        b = new_d
-        m.addConstr(A @ x <= b)     
-        m.optimize()
-
-        if m.status == 2:   #feasible solution exist
-            return True
-        elif m.status == 3:
-            return False
-        else:
-            raise Exception('error: exitflat = %d' % (m.status)) 
+        f = np.zeros(self.numpred)
+        
+        if solver == 'linprog':
+            if 'disp' in options:
+                print('Optimising using Gurobi...')
+            m = gp.Model()
+            # prevent optimization information
+            m.Params.LogToConsole = 0
+            m.Params.OptimalityTol = 1e-9
+            x = m.addMVar(shape=self.numpred, lb=self.pred_lb, ub=self.pred_ub)
+            m.setObjective(f @ x, GRB.MINIMIZE)
+            A = sp.csr_matrix(new_C)
+            b = new_d
+            m.addConstr(A @ x <= b)     
+            m.optimize()
+    
+            if m.status == 2:   #feasible solution exist
+                return True
+            elif m.status == 3:
+                return False
+            else:
+                raise Exception('error: exitflat = %d' % (m.status)) 
+        elif solver == 'glpk':
+            if 'disp' in options:
+                print('Optimizing using GLPK...')
+            #TODO: implement glpk here
+            print('GLPK is not implemented for this method yet')
             
     @staticmethod
     def is_max(*args):
@@ -1056,47 +1125,77 @@ class ImageStar:
             return -> a new predicate
         """
         
-        size = args[OTHERS_ID].shape[0]
+        if len(args == 4):
+            max_map = args[0]
+            ori_image = args[1]
+            center = args[2]
+            others = args[3]
+            solver = 'glpk'
+            options = []
+        elif len(args == 5):
+            max_map = args[0]
+            ori_image = args[1]
+            center = args[2]
+            others = args[3]
+            solver = args[4]
+            options = []
+        elif len(args == 6):
+            max_map = args[0]
+            ori_image = args[1]
+            center = args[2]
+            others = args[3]
+            solver = args[4]
+            options = args[5]
+        else:
+            raise Exception('\nInvalid number of input arguments. Should be 4, 5 or 6')
         
-        new_C = np.zeros((size, args[MAX_MAP_ID].get_num_pred()))
+        size = others.shape[0]
+        
+        new_C = np.zeros((size, max_map.get_num_pred()))
         new_d = np.zeros((size, 1))
         
         for i in range(size):
-            new_d[i] = args[ORI_IMAGE_ID].get_V()[args[CENTER_ID][0], args[CENTER_ID][1], args[CENTER_ID][2], 0] - \
-                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][i][0], args[OTHERS_ID][i][1], args[OTHERS_ID][i][2], 0]
+            new_d[i] = ori_image.get_V()[center[0], center[1], center[2], 0] - \
+                       ori_image.get_V()[others[i][0], others[i][1], others[i][2], 0]
         
-            for j in range(args[MAX_MAP_ID].get_num_pred()):
-                new_C[i, j] = - args[ORI_IMAGE_ID].get_V()[args[CENTER_ID][0], args[CENTER_ID][1], args[CENTER_ID][2], j + 1] + \
-                       args[ORI_IMAGE_ID].get_V()[args[OTHERS_ID][i][0], args[OTHERS_ID][i][1], args[OTHERS_ID][i][2], j + 1]
+            for j in range(max_map.get_num_pred()):
+                new_C[i, j] = - ori_image.get_V()[center[0], center[1], center[2], j + 1] + \
+                       ori_image.get_V()[others[i][0], others[i][1], others[i][2], j + 1]
         
-        C1 = np.vstack((args[MAX_MAP_ID].get_C(), new_C))
-        d1 = np.vstack((args[MAX_MAP_ID].get_d(), new_d))
+        C1 = np.vstack((max_map.get_C(), new_C))
+        d1 = np.vstack((max_map.get_d(), new_d))
         
         # TODO: remove redundant constraints here
         E = np.hstack((C1, d1))
         E = np.unique(E, axis = 0)
         
-        new_C = E[:, 0:args[ORI_IMAGE_ID].get_num_pred()]
-        new_d_gurobi = E[:, args[ORI_IMAGE_ID].get_num_pred()]
+        new_C = E[:, 0:ori_image.get_num_pred()]
+        new_d_gurobi = E[:, ori_image.get_num_pred()]
         new_d = np.reshape(new_d_gurobi, (new_d_gurobi.shape[0], 1))
                 
-        f = np.zeros(args[ORI_IMAGE_ID].get_num_pred())
-        m = gp.Model()
-        # prevent optimization information
-        m.Params.LogToConsole = 0
-        m.Params.OptimalityTol = 1e-9
-        x = m.addMVar(shape=args[ORI_IMAGE_ID].get_num_pred(), lb=args[ORI_IMAGE_ID].get_pred_lb(), ub=args[ORI_IMAGE_ID].get_pred_ub())
-        m.setObjective(f @ x, GRB.MINIMIZE)
-        A = sp.csr_matrix(new_C)
-        b = new_d_gurobi
-        m.addConstr(A @ x <= b)     
-        m.optimize()
-
-        if m.status != 2:   #feasible solution exist
-             Exception('error: exitflat = %d' % (m.status))
-
+        f = np.zeros(ori_image.get_num_pred())
         
-        return new_C, new_d
+        if solver == 'linprog':
+            m = gp.Model()
+            # prevent optimization information
+            m.Params.LogToConsole = 0
+            m.Params.OptimalityTol = 1e-9
+            x = m.addMVar(shape=ori_image.get_num_pred(), lb=ori_image.get_pred_lb(), ub=ori_image.get_pred_ub())
+            m.setObjective(f @ x, GRB.MINIMIZE)
+            A = sp.csr_matrix(new_C)
+            b = new_d_gurobi
+            m.addConstr(A @ x <= b)     
+            m.optimize()
+    
+            if m.status != 2:   #feasible solution exist
+                 Exception('error: exitflat = %d' % (m.status))
+            
+            return new_C, new_d
+        elif solver == 'glpk':
+            if 'disp' in options:
+                print('Optimizing using GLPK...')
+            #TODO: implement glpk here
+            print('GLPK is not implemented for this method yet')
     
     @staticmethod
     def reshape(input, new_shape):
@@ -1137,7 +1236,6 @@ class ImageStar:
             return -> [new_C, new_d] - a new predicate
         """
         
-        # assert input.__module__ is 'imagestar', 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
         assert isinstance(input, ImageStar), 'error: %s' % ERRMSG_INPUT_NOT_IMAGESTAR
         
         new_d = input.get_V()[p2[0], p2[1], p2[2], 1] - input.get_V()[p2[0], p2[1], p2[2], 1]
@@ -1163,7 +1261,7 @@ class ImageStar:
                 'id' : id
             }
         
-        self.attributes[MAX_IDS_ID].append(new_max_id)
+        self.max_ids.append(new_max_id)
         
     
     def add_input_size(self, name, input_size):
@@ -1179,7 +1277,7 @@ class ImageStar:
                 'input_size' : id
             }
         
-        self.attributes[MAX_INPUT_SIZES_ID].append(new_input_size)
+        self.max_input_sizes.append(new_input_size)
       
     def update_max_idx(self, name, max_id, pos):
         """
@@ -1191,13 +1289,13 @@ class ImageStar:
             orresponding to the maxIdx
         """
         
-        max_indices_size = len(self.attributes[MAX_IDS_ID])
+        max_indices_size = len(self.max_ids)
         
         for i in range(max_indices_size):
-            curr_index = self.attributes[MAX_IDS_ID][i]
+            curr_index = self.max_ids[i]
             
-            if curr_index[IMAGESTAR_DEFAULT_MAX_ID_NAME_KEY] == name:
-                curr_index[IMAGESTAR_DEFAULT_MAX_ID_IDX_KEY][pos[0]][pos[1]][pos[2]] = max_id
+            if curr_index['name'] == name:
+                curr_index['id'][pos[0]][pos[1]][pos[2]] = max_id
                 return
                 
         raise Exception(ERRMSG_UNK_MP_LAYER_NAME)
@@ -1209,105 +1307,114 @@ class ImageStar:
             return -> the center and the basis matrix of the ImageStar
         """
         
-        return self.attributes[V_ID]
+        return self.V
         
     def get_C(self):
         """
             return -> the predicate of the ImageStar
         """
         
-        return self.attributes[C_ID]
+        return self.C
         
     def get_d(self):
         """
             return -> the free vector of the ImageStar
         """
         
-        return self.attributes[D_ID]
+        return self.d
         
     def get_pred_lb(self):
         """
             return -> the predicate lowerbound of the ImageStar
         """
         
-        return self.attributes[PREDLB_ID]
+        return self.pred_lb
         
     def get_pred_ub(self):
         """
             return -> the predicate upperbound of the ImageStar
         """
         
-        return self.attributes[PREDUB_ID]
+        return self.pred_ub
   
     def get_im_lb(self):
         """
             return -> the lowerbound image of the ImageStar
         """
         
-        return self.attributes[IM_LB_ID]
+        return self.im_lb
         
     def get_im_ub(self):
         """
             return -> the upperbound image of the ImageStar
         """
         
-        return self.attributes[IM_UB_ID]
+        return self.im_ub
+    
+    def get_IM(self):
+        return self.im
+    
+    def get_LB(self):
+        return self.lb
+    
+    def get_UB(self):
+        return self.ub
     
     def get_height(self):
         """
             return -> the height of the ImageStar
         """
         
-        return self.attributes[HEIGHT_ID]
+        return self.height
     
     def get_width(self):
         """
             return -> the width of the ImageStar
         """
         
-        return self.attributes[WIDTH_ID]
+        return self.width
     
     def get_num_channel(self):
         """
             return -> the channel of the ImageStar
         """
         
-        return self.attributes[NUM_CHANNELS_ID]
+        return self.num_channels
     
     def get_num_pred(self):
         """
             return -> the channel of the ImageStar
         """
         
-        return self.attributes[NUMPRED_ID]
+        return self.numpred
     
     def get_max_indices(self):
         """
             return -> max indices of the ImageStar
         """
         
-        return self.attributes[MAX_IDS_ID]
+        return self.max_ids
     
     def set_max_indices(self, new_max_indices):
         """
             sets max indices of the ImageStar
         """
         
-        self.attributes[MAX_IDS_ID] = new_max_indices
+        self.max_ids = new_max_indices
     
     def get_input_sizes(self):
         """
             return -> max input sizes of the ImageStar
         """
         
-        return self.attributes[MAX_INPUT_SIZES_ID]
+        return self.max_input_sizes
     
     def set_input_sizes(self, new_input_sizes):
         """
             sets max input sizes of the ImageStar
         """
         
-        self.attributes[MAX_INPUT_SIZES_ID] = new_input_sizes
+        self.max_input_sizes = new_input_sizes
         
 ########################## UTILS ##########################
 
@@ -1329,38 +1436,72 @@ class ImageStar:
     def isempty(self, param):
         return param.size == 0 or (param is np.array and param.shape[0] == 0)
             
-    def init_empty_imagestar(self):
-        for i in range(len(self.attributes)):
-            if self.is_scalar_attribute(i):
-                self.attributes[i] = 0
-            else:
-                self.attributes[i] = np.array([])
-
-    def copy_deep(self, imagestar):
-        for i in range(len(self.attributes)):
-            self.attributes[i] = imagestar.get_attribute(i)
+    def copy_deep(self, imagestar):            
+        self.V = copy.deepcopy(imagestar.get_V())
+        self.C = copy.deepcopy(imagestar.get_C())
+        self.d = copy.deepcopy(imagestar.get_d())
+        self.pred_lb = copy.deepcopy(imagestar.get_pred_lb())
+        self.pred_ub = copy.deepcopy(imagestar.get_pred_ub())
+        
+        self.im_lb = copy.deepcopy(imagestar.get_im_lb())
+        self.im_ub = copy.deepcopy(imagestar.get_im_ub())
+        
+        self.im = copy.deepcopy(imagestar.get_IM())
+        self.lb = copy.deepcopy(imagestar.get_LB())
+        self.ub = copy.deepcopy(imagestar.get_UB())
             
-        v_shape = self.attributes[V_ID].shape
+        self.height = imagestar.get_height()
+        self.width = imagestar.get_width()
+        self.num_channels = imagestar.get_num_channel()
+            
+        self.numpred = imagestar.get_num_pred()
+            
+        v_shape = self.V.shape
             
         if len(v_shape) == 3:
-            self.attributes[V_ID] = np.reshape(self.attributes[V_ID], (v_shape[0], v_shape[1], 1, v_shape[2]))
-            self.attributes[NUM_CHANNELS_ID] = 1
+            self.V = np.reshape(self.V, (v_shape[0], v_shape[1], 1, v_shape[2]))
+            self.num_channels = 1
 
     def validate_point_dim(self, point, height, width):
-        return (point[0] > -1) and (point[0] <= self.attributes[HEIGHT_ID]) and \
-               (point[1] > -1) and (point[1] <= self.attributes[WIDTH_ID]) and \
-               (point[2] > -1) and (point[2] <= self.attributes[NUM_CHANNELS_ID])
+        return (point[0] > -1) and (point[0] <= self.height) and \
+               (point[1] > -1) and (point[1] <= self.width) and \
+               (point[2] > -1) and (point[2] <= self.num_channels)
 
-    def offset_args(self, args, offset):
-        result = []
+    def validate_options_list(self, options):
+        # TODO: this should be unified
+        if not(type(options) == list):
+            raise Exception(ERRMSG_INCONSISTENT_OPTIONS_LIST)
         
-        for i in range(len(args) + offset):
-            result.append(np.array([]))
+        if options == []:
+            return
             
-            if i >= offset:
-                result[i] = args[i - offset]
+        available_options = ['disp']
+        
+        for option in options:
+            if not (option in available_options):
+                raise Exception(ERRMSG_INCONSISTENT_OPTIONS_LIST)
                 
-        return result
+        
+    
+    def init_attributes(self):
+        self.V = np.array([])
+        self.C = np.array([])
+        self.d = np.array([])
+        
+        self.im_lb = np.array([])
+        self.im_ub = np.array([])
+        
+        self.im = np.array([])
+        self.lb = np.array([])
+        self.ub = np.array([])
+    
+        self.flatten_mode = 'F'
+        
+        self.max_ids = []
+        self.max_input_sizes = []
+    
+    def validate_solver_name(self, name):
+        assert (name == 'glpk' or name == 'linprog'), 'error: %s' % ERRMSG_INCONSISTENT_SOLVER_INPUT
            
     def is_scalar(self, param):
         return isinstance(param, np.ndarray)
@@ -1375,16 +1516,16 @@ class ImageStar:
     #     from zono import Zono
     #     print('class: %s' % self.__class__)
     #     print('height: %s \nwidth: %s \nnumChannel: %s' % (self.get_height(), self.get_width(), self.get_num_channel()))
-    #     if self.attributes[IM_ID].size:
-    #         print('IM: [shape: %s | type: %s]' % (self.attributes[IM_ID].shape, self.attributes[IM_ID].dtype))
+    #     if self.im.size:
+    #         print('IM: [shape: %s | type: %s]' % (self.im.shape, self.im.dtype))
     #     else:
     #         print('IM: []')
-    #     if self.attributes[IM_LB_ID].size:
-    #         print('LB: [shape: %s | type: %s]' % (self.attributes[IM_LB_ID].shape, self.attributes[IM_LB_ID].dtype))
+    #     if self.im_lb.size:
+    #         print('LB: [shape: %s | type: %s]' % (self.im_lb.shape, self.im_lb.dtype))
     #     else:
     #         print('LB: []')
-    #     if self.attributes[IM_UB_ID].size:
-    #         print('UB: [shape: %s | type: %s]' % (self.attributes[IM_UB_ID].shape, self.attributes[IM_UB_ID].dtype))
+    #     if self.im_ub.size:
+    #         print('UB: [shape: %s | type: %s]' % (self.im_ub.shape, self.im_ub.dtype))
     #     else:
     #         print('UB: []')       
     #     print('V: [shape: %s | type: %s]' % (self.get_V().shape, self.get_V().dtype))
@@ -1412,13 +1553,13 @@ class ImageStar:
     #     else:
     #         print('im_ub: []')
     #
-    #     if self.attributes[MAX_IDS_ID].size:
-    #         print('MaxIdxs: [shape: %s | type: %s]' % (self.attributes[MAX_IDS_ID].shape, self.attributes[MAX_IDS_ID].dtype))
+    #     if self.max_ids.size:
+    #         print('MaxIdxs: [shape: %s | type: %s]' % (self.max_ids.shape, self.max_ids.dtype))
     #     else:
     #         print('MaxIdxs: []')
     #
-    #     if self.attributes[MAX_INPUT_SIZES_ID].size:
-    #         print('InputSizes: [shape: %s | type: %s]' % (self.attributes[MAX_INPUT_SIZES_ID].shape, self.attributes[MAX_INPUT_SIZES_ID].dtype))
+    #     if self.max_input_sizes.size:
+    #         print('InputSizes: [shape: %s | type: %s]' % (self.max_input_sizes.shape, self.max_input_sizes.dtype))
     #     else:
     #         print('InputSizes: []')     
     #     return '\n'
@@ -1430,19 +1571,19 @@ class ImageStar:
     #     """
     #     if mat_ver == False:
     #         return "class: %s \nheight: %s\nwidth: %s\nnumChannels: %s\nIM: \n%s\nLB: \n%s\nUB: \n%s\nV: \n%s \nC: \n%s \nd: %s\nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s\nim_lb: \n%s\nimb_ub: \n%s\nMaxIdxs: %s\nInputSizes: %s" % \
-    #             (self.__class__, self.get_height(), self.get_width(), self.get_num_channel(), self.attributes[IM_ID], self.attributes[IM_LB_ID], self.attributes[IM_UB_ID], self.get_V(), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub(), self.get_im_lb(), self.get_im_ub(),self.attributes[MAX_IDS_ID],self.attributes[MAX_INPUT_SIZES_ID])
+    #             (self.__class__, self.get_height(), self.get_width(), self.get_num_channel(), self.im, self.im_lb, self.im_ub, self.get_V(), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub(), self.get_im_lb(), self.get_im_ub(),self.max_ids,self.max_input_sizes)
     #     else:
     #         print("class: %s \nheight: %s\nwidth: %s\nnumChannels: %s" % (self.__class__, self.get_height(), self.get_width(), self.get_num_channel()))
-    #         if self.attributes[IM_ID].size:
-    #             print("IM: \n%s\n" % self.attributes[IM_ID].transpose([-1, 0, 1]))
+    #         if self.im.size:
+    #             print("IM: \n%s\n" % self.im.transpose([-1, 0, 1]))
     #         else:
     #             print('IM: []')
-    #         if self.attributes[IM_LB_ID].size:
-    #             print("LB: \n%s\n" % self.attributes[IM_LB_ID].transpose([-1, 0, 1]))
+    #         if self.im_lb.size:
+    #             print("LB: \n%s\n" % self.im_lb.transpose([-1, 0, 1]))
     #         else:
     #             print('LB: []')
-    #         if self.attributes[IM_UB_ID].size:
-    #             print("UB: \n%s\n" % self.attributes[IM_UB_ID].transpose([-1, 0, 1]))
+    #         if self.im_ub.size:
+    #             print("UB: \n%s\n" % self.im_ub.transpose([-1, 0, 1]))
     #         else:
     #             print('UB: []')
     #         print("V: \n%s \nC: \n%s \nd: %s \nnumPred: %s\npredicate_lb: %s \npredicate_ub: %s" % (self.get_V().transpose([3,2,0,1]), self.get_C(), self.get_d(), self.get_num_pred(), self.get_pred_lb(), self.get_pred_ub()))
@@ -1454,5 +1595,5 @@ class ImageStar:
     #             print("im_ub: \n%s" % self.get_im_ub().transpose([-1, 0, 1]))
     #         else:
     #             print("im_ub: []")
-    #         print("MaxIdxs: %s\nInputSizes: %s" % (self.attributes[MAX_IDS_ID], self.attributes[MAX_INPUT_SIZES_ID]))
+    #         print("MaxIdxs: %s\nInputSizes: %s" % (self.max_ids, self.max_input_sizes))
     #         return "" 
