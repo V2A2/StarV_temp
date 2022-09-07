@@ -4,7 +4,8 @@ import gurobipy as gp
 from gurobipy import GRB 
 import sys, os
 import copy
-import scipy as sp
+import scipy
+import scipy.sparse as sp
 from scipy.optimize import linprog
 import glpk
 

@@ -36,7 +36,7 @@ class TestImageStar(unittest.TestCase):
         self.currentResult = result # remember result for use in tearDown
         unittest.TestCase.run(self, result) # call superclass run method   
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_constructor_predicate_init(self):
         """
             Tests the initialization with:
@@ -57,11 +57,11 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         self.assertEqual(isinstance(test_star, ImageStar), True)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_constructor_image_init(self):
         """
             Tests the initialization with:
@@ -102,11 +102,11 @@ class TestImageStar(unittest.TestCase):
             print("UB: " + str(test_star.get_UB().shape))  
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         self.assertEqual(isinstance(test_star, ImageStar), True)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_constructor_bounds_init(self):
         """
             Tests the initialization with:
@@ -127,11 +127,11 @@ class TestImageStar(unittest.TestCase):
             print("im_ub: " + str(test_star.get_im_ub().shape))  
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         self.assertEqual(isinstance(test_star, ImageStar), True)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_add_constraints_basic(self):
         """
             Tests the ImageStar's method that compares two points of the ImageStar 
@@ -157,7 +157,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         current_C = test_star.get_C()
         current_d = test_star.get_d()
@@ -167,12 +167,12 @@ class TestImageStar(unittest.TestCase):
             print("Constraints added successfully............")
         except Exception as ex:
             print("Constraints addition failed............")
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         self.assertEqual((test_C.shape[0] == current_C.shape[0] + 1) and \
                          (test_d.shape[0] == current_d.shape[0] + 1), True)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_affine_mapping(self):
         """
             Test affine mapping -> ImageStar .* scale + offset
@@ -202,7 +202,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         print("Loading valid AM output from %s" % am_output_path)
         test_am_output = SourceLoader.load_ndim_array(am_output_path)
@@ -217,11 +217,11 @@ class TestImageStar(unittest.TestCase):
             print("Affine Mapping completed.............")
         except Exception as ex:
             print("Affine Mapping failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
             
         self.assertEqual(am_result.get_V().all(), test_am_output.all())    
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_affine_mapping_invalid_input(self):
         """
             Test affine mapping -> ImageStar .* scale + offset
@@ -249,7 +249,7 @@ class TestImageStar(unittest.TestCase):
         except Exception as ex:
             print("ImageStar initialization failed.............") 
             
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         exception_handled = False
         
@@ -259,14 +259,14 @@ class TestImageStar(unittest.TestCase):
             print("Affine Mapping completed.............")
         except Exception as ex:
             print("Affine Mapping failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
             
-            if str(ex) == "error: The input should be a numpy array":
+            if str(ex) == "error: Input should be a numpy array":
                 exception_handled = True
             
         self.assertEqual(exception_handled, True)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_affine_mapping_invalid_dims(self):
         """
             Test affine mapping -> ImageStar .* scale + offset
@@ -293,7 +293,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         exception_handled = False
         
@@ -303,14 +303,14 @@ class TestImageStar(unittest.TestCase):
             print("Affine Mapping completed.............")
         except Exception as ex:
             print("Affine Mapping failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
             
             if str(ex) == "error: Inconsistent number of channels between scale array and the ImageStar":
                 exception_handled = True
             
         self.assertEqual(exception_handled, True)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_containts_false(self):
         """
             Checks if the initialized ImageStar contains the given image
@@ -337,7 +337,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         print("Loading the input from %s" % false_input_path)
         test_scale = SourceLoader.load_ndim_array(false_input_path)
@@ -348,11 +348,11 @@ class TestImageStar(unittest.TestCase):
             print("Contains operation completed successfully.............")
         except Exception as ex:
             print("Contains operation failed.............")
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         self.assertEqual(test_result, False)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_containts_true(self):
         """
             Checks if the initialized ImageStar contains the given image
@@ -379,7 +379,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         print("Loading the input from %s" % false_input_path)
         test_scale = SourceLoader.load_ndim_array(false_input_path)
@@ -390,11 +390,11 @@ class TestImageStar(unittest.TestCase):
             print("Contains operation completed successfully.............")
         except Exception as ex:
             print("Contains operation failed.............")
-            print(ex)
+            print("Exception handled => " + str(ex))
 
         self.assertEqual(test_result, True)
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_estimate_range_valid_input(self):
         """
             Tests the ImageStar's range estimation method
@@ -423,7 +423,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
         
         print("Loading the input from %s" % range_input_path)
         range_input = SourceLoader.load_ndim_array(range_input_path)
@@ -438,11 +438,11 @@ class TestImageStar(unittest.TestCase):
             print("Estimation completed.............")
         except(Exception) as ex:
             print("Estimation failed.............")
-            print(ex)
+            print("Exception handled => " + str(ex))
         
         self.assertEqual(result.all(), range_output.all())
 
-    @unittest.skip("skip it")
+    #@unittest.skip("skip it")
     def test_estimate_range_empty_imgstar(self):
         """
             Tests the ImageStar's range estimation method
@@ -468,7 +468,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
         
         print("Loading the input from %s" % range_input_path)
         range_input = SourceLoader.load_ndim_array(range_input_path)        
@@ -480,7 +480,7 @@ class TestImageStar(unittest.TestCase):
             print("Estimation completed.............")
         except(Exception) as ex:
             print("Estimation failed.............")
-            print(ex)
+            print("Exception handled => " + str(ex))
             
             if str(ex) == "error: ImageStar is empty":
                 exception_handled = True
@@ -515,7 +515,7 @@ class TestImageStar(unittest.TestCase):
             print("C: " + str(test_star.get_C().shape))
         except Exception as ex:
             print("ImageStar initialization failed.............") 
-            print(ex)
+            print("Exception handled => " + str(ex))
         
         print("Loading the input from %s" % range_input_path)
         range_input = SourceLoader.load_ndim_array(range_input_path)
@@ -532,7 +532,7 @@ class TestImageStar(unittest.TestCase):
                 print("Estimation completed.............")
             except(Exception) as ex:
                 print("Estimation failed.............")
-                print(ex)
+                print("Exception handled => " + str(ex))
                 
                 if str(ex) == "error: Invalid index value":
                     exceptions_handled[i] = True
