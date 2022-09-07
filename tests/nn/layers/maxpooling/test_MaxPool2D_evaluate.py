@@ -3,6 +3,10 @@ import numpy as np
 import sys, os
 import mat73
 
+os.chdir("../../../../")
+print(os.getcwd())
+
+
 sys.path.insert(0, "engine/nn/layers/maxpooling")
 from maxpooling2dlayer import *
 

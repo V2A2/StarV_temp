@@ -2,12 +2,6 @@ import unittest
 import numpy as np
 import sys, os
 import mat73
-
-# sys.path.insert(0, "tests/nn/layers/relulayer")
-# from test_inputs.sources import *
-#
-# sys.path.insert(0, "engine/nn/layers/relulayer")
-# from relulayer import *
     
 from test_inputs.sources import *
 

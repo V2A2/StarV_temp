@@ -7,32 +7,6 @@ SIGNL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 SIGNL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
 SIGNL_ERRORMSG_INVALID_INPUT = 'The input should be either an ImageStar or ImageZono'
 
-SIGNL_ATTRIBUTES_NUM = 6
-
-SIGNL_FULL_ARGS_LEN = 6
-SIGNL_NAME_MODE_ARGS_LEN = 2
-SIGNL_NAME_ARGS_LEN = 1
-SIGNL_EMPTY_ARGS_LEN = 0
-
-SIGNL_NAME_ID = 0
-SIGNL_MODE_ID = 1
-SIGNL_NUM_INPUTS_ID = 2
-SIGNL_INPUT_NAMES_ID = 3
-SIGNL_NUM_OUTPUTS_ID = 4
-SIGNL_OUTPUT_NAMES_ID = 5
-
-SIGNL_ARGS_NAME_ID = 0
-SIGNL_ARGS_MODE_ID = 1
-SIGNL_ARGS_NUM_INPUTS_ID = 2
-SIGNL_ARGS_INPUT_NAMES_ID = 3
-SIGNL_ARGS_NUM_OUTPUTS_ID = 4
-SIGNL_ARGS_OUTPUT_NAMES_ID = 5
-
-SIGNL_REACH_ARGS_INPUT_IMAGES_ID = 0
-SIGNL_REACH_ARGS_METHOD_ID = 1
-SIGNL_REACH_ARGS_OPTION_ID = 2
-SIGNL_REACH_ARGS_RELAX_FACTOR_ID = 3
-
 SIGN_POLAR_ZERO_POS_ONE = 'polar_zero_to_pos_one'
 SIGN_NONNEGATIVE_ZERO_POS_ONE = 'nonnegative_zero_to_pos_one'
 
@@ -65,37 +39,32 @@ class SignLayer:
             Constructor
         """
         
-        self.attributes = []
-        
-        for i in range(SIGNL_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
-        
-        if len(args) <= SIGNL_FULL_ARGS_LEN and len(args) > SIGNL_EMPTY_ARGS_LEN:
-            assert isinstance(args[SIGNL_ARGS_NAME_ID], str), 'error: %s' % SIGNL_ERRMSG_NAME_NOT_STRING 
-            self.attributes[SIGNL_NAME_ID] = args[SIGNL_ARGS_NAME_ID]
+        if len(args) <= 6 and len(args) > 0:
+            assert isinstance(args[0], str), 'error: %s' % SIGNL_ERRMSG_NAME_NOT_STRING 
+            self.name = args[0]
             
-            if len(args) == SIGNL_FULL_ARGS_LEN:
-                self.attributes[SIGNL_NUM_INPUTS_ID] = args[SIGNL_ARGS_NUM_INPUTS_ID]
-                self.attributes[SIGNL_INPUT_NAMES_ID] = args[SIGNL_ARGS_INPUT_NAMES_ID]
-                self.attributes[SIGNL_NUM_OUTPUTS_ID] = args[SIGNL_ARGS_NUM_OUTPUTS_ID]
-                self.attributes[SIGNL_OUTPUT_NAMES_ID] = args[SIGNL_ARGS_OUTPUT_NAMES_ID]
+            if len(args) == 6:
+                self.num_inputs = args[2]
+                self.input_names = args[3]
+                self.num_outputs = args[4]
+                self.output_names = args[5]
             else:
-                self.attributes[SIGNL_NUM_INPUTS_ID] = SIGNL_DEFAULT_NUM_INPUTS
-                self.attributes[SIGNL_INPUT_NAMES_ID] = SIGNL_DEFAULT_INPUT_NAMES
-                self.attributes[SIGNL_NUM_OUTPUTS_ID] = SIGNL_DEFAULT_NUM_OUTPUTS
-                self.attributes[SIGNL_OUTPUT_NAMES_ID] = SIGNL_DEFAULT_OUTPUT_NAMES
+                self.num_inputs = SIGNL_DEFAULT_NUM_INPUTS
+                self.input_names = SIGNL_DEFAULT_INPUT_NAMES
+                self.num_outputs = SIGNL_DEFAULT_NUM_OUTPUTS
+                self.output_names = SIGNL_DEFAULT_OUTPUT_NAMES
                 
-            if len(args) == SIGNL_FULL_ARGS_LEN or len(args) == SIGNL_NAME_MODE_ARGS_LEN:
-                self.attributes[SIGNL_MODE_ID] = args[SIGNL_ARGS_MODE_ID]
+            if len(args) == 6 or len(args) == 2:
+                self.attributes[SIGNL_MODE_ID] = args[1]
             else:
                 self.attributes[SIGNL_MODE_ID] = SINGL_DEFAULT_MODE
-        elif len(args) == SIGNL_EMPTY_ARGS_LEN:
-            self.attributes[SIGNL_NAME_ID] = SINGL_DEFAULT_NAME
+        elif len(args) == 0:
+            self.name = SINGL_DEFAULT_NAME
             self.attributes[SIGNL_MODE_ID] = SINGL_DEFAULT_MODE  
-            self.attributes[SIGNL_NUM_INPUTS_ID] = SIGNL_DEFAULT_NUM_INPUTS
-            self.attributes[SIGNL_INPUT_NAMES_ID] = SIGNL_DEFAULT_INPUT_NAMES
-            self.attributes[SIGNL_NUM_OUTPUTS_ID] = SIGNL_DEFAULT_NUM_OUTPUTS
-            self.attributes[SIGNL_OUTPUT_NAMES_ID] = SIGNL_DEFAULT_OUTPUT_NAMES          
+            self.num_inputs = SIGNL_DEFAULT_NUM_INPUTS
+            self.input_names = SIGNL_DEFAULT_INPUT_NAMES
+            self.num_outputs = SIGNL_DEFAULT_NUM_OUTPUTS
+            self.output_names = SIGNL_DEFAULT_OUTPUT_NAMES          
         else:
             raise Exception(SIGNL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
@@ -174,8 +143,8 @@ class SignLayer:
             returns the output set(s)
         """
         
-        if args[SIGNL_REACH_ARGS_METHOD_ID] == 'approx-star' or args[SIGNL_REACH_ARGS_METHOD_ID] == 'exact-star':
-            IS = self.reach_star_multiple_inputs(args[SIGNL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGNL_REACH_ARGS_METHOD_ID])
+        if args[1] == 'approx-star' or args[1] == 'exact-star':
+            IS = self.reach_star_multiple_inputs(args[0], args[1])
         else:
             raise Exception(SIGNL_ERRMSG_UNK_REACH_METHOD)
             

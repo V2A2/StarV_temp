@@ -7,29 +7,6 @@ SIGMOIDL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 SIGMOIDL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
 SIGMOIDL_ERRORMSG_INVALID_INPUT = 'The input should be either an ImageStar or ImageZono'
 
-SIGMOIDL_ATTRIBUTES_NUM = 5
-
-SIGMOIDL_FULL_ARGS_LEN = 5
-SIGMOIDL_NAME_ARGS_LEN = 1
-SIGMOIDL_EMPTY_ARGS_LEN = 0
-
-SIGMOIDL_NAME_ID = 0
-SIGMOIDL_NUM_INPUTS_ID = 1
-SIGMOIDL_INPUT_NAMES_ID = 2
-SIGMOIDL_NUM_OUTPUTS_ID = 3
-SIGMOIDL_OUTPUT_NAMES_ID = 4
-
-SIGMOIDL_ARGS_NAME_ID = 0
-SIGMOIDL_ARGS_NUM_INPUTS_ID = 1
-SIGMOIDL_ARGS_INPUT_NAMES_ID = 2
-SIGMOIDL_ARGS_NUM_OUTPUTS_ID = 3
-SIGMOIDL_ARGS_OUTPUT_NAMES_ID = 4
-
-SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID = 0
-SIGMOIDL_REACH_ARGS_METHOD_ID = 1
-SIGMOIDL_REACH_ARGS_OPTION_ID = 2
-SIGMOIDL_REACH_ARGS_RELAX_FACTOR_ID = 3
-
 SIGMOIDL_DEFAULT_NAME = 'sigmoid_layer'
 SIGMOIDL_DEFAULT_RELAXFACTOR = 0
 
@@ -53,23 +30,18 @@ class SigmoidLayer:
             Constructor
         """
         
-        self.attributes = []
-        
-        for i in range(SIGMOIDL_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
-        
-        if len(args) == SIGMOIDL_FULL_ARGS_LEN:
-            self.attributes[SIGMOIDL_NAME_ID] = args[SIGMOIDL_ARGS_NAME_ID]
-            self.attributes[SIGMOIDL_NUM_INPUTS_ID] = args[SIGMOIDL_ARGS_NUM_INPUTS_ID]
-            self.attributes[SIGMOIDL_INPUT_NAMES_ID] = args[SIGMOIDL_ARGS_INPUT_NAMES_ID]
-            self.attributes[SIGMOIDL_NUM_OUTPUTS_ID] = args[SIGMOIDL_ARGS_NUM_OUTPUTS_ID]
-            self.attributes[SIGMOIDL_OUTPUT_NAMES_ID] = args[SIGMOIDL_ARGS_OUTPUT_NAMES_ID]
-        elif len(args) == SIGMOIDL_NAME_ARGS_LEN:
-            assert isinstance(args[SIGMOIDL_ARGS_NAME_ID], str), 'error: %s' % SIGMOIDL_ERRMSG_NAME_NOT_STRING
+        if len(args) == 5:
+            self.name = args[0]
+            self.num_inputs = args[1]
+            self.input_names = args[2]
+            self.num_outputs = args[3]
+            self.output_names = args[4]
+        elif len(args) == 1:
+            assert isinstance(args[0], str), 'error: %s' % SIGMOIDL_ERRMSG_NAME_NOT_STRING
 
-            self.attributes[SIGMOIDL_NAME_ID] = args[SIGMOIDL_ARGS_NAME_ID]
-        elif len(args) == SIGMOIDL_EMPTY_ARGS_LEN:
-            self.attributes[SIGMOIDL_NAME_ID] = SIGMOIDL_DEFAULT_NAME
+            self.name = args[0]
+        elif len(args) == 0:
+            self.name = SIGMOIDL_DEFAULT_NAME
         else:
             raise Exception(SIGMOIDL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
@@ -181,10 +153,10 @@ class SigmoidLayer:
             returns the output set(s)
         """
         
-        if args[SIGMOIDL_REACH_ARGS_METHOD_ID] == 'approx-star' or args[SIGMOIDL_REACH_ARGS_METHOD_ID] == 'exact-star':
-            IS = self.reach_star_multiple_inputs(args[SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGMOIDL_REACH_ARGS_METHOD_ID])
-        elif args[SIGMOIDL_REACH_ARGS_METHOD_ID] == 'approx-zono':
-            IS = self.reach_zono_multiple_inputs(args[SIGMOIDL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGMOIDL_REACH_ARGS_OPTION_ID])
+        if args[1] == 'approx-star' or args[1] == 'exact-star':
+            IS = self.reach_star_multiple_inputs(args[0], args[1])
+        elif args[1] == 'approx-zono':
+            IS = self.reach_zono_multiple_inputs(args[0], args[2])
         else:
             raise Exception(SIGMOIDL_ERRMSG_UNK_REACH_METHOD)
             

@@ -7,29 +7,6 @@ RELUL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 RELUL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
 RELUL_ERRORMSG_INVALID_INPUT = 'The input should be either an ImageStar or ImageZono'
 
-RELUL_ATTRIBUTES_NUM = 5
-
-RELUL_FULL_ARGS_LEN = 5
-RELUL_NAME_ARGS_LEN = 1
-RELUL_EMPTY_ARGS_LEN = 0
-
-RELUL_NAME_ID = 0
-RELUL_NUM_INPUTS_ID = 1
-RELUL_INPUT_NAMES_ID = 2
-RELUL_NUM_OUTPUTS_ID = 3
-RELUL_OUTPUT_NAMES_ID = 4
-
-RELUL_ARGS_NAME_ID = 0
-RELUL_ARGS_NUM_INPUTS_ID = 1
-RELUL_ARGS_INPUT_NAMES_ID = 2
-RELUL_ARGS_NUM_OUTPUTS_ID = 3
-RELUL_ARGS_OUTPUT_NAMES_ID = 4
-
-RELUL_REACH_ARGS_INPUT_IMAGES_ID = 0
-RELUL_REACH_ARGS_METHOD_ID = 1
-RELUL_REACH_ARGS_OPTION_ID = 2
-RELUL_REACH_ARGS_RELAX_FACTOR_ID = 3
-
 RELUL_DEFAULT_NAME = 'relu_layer'
 RELUL_DEFAULT_RELAXFACTOR = 0
 
@@ -64,21 +41,21 @@ class ReLULayer:
         
         self.attributes = []
         
-        for i in range(RELUL_ATTRIBUTES_NUM):
+        for i in range(5):
             self.attributes.append(np.array([]))
         
-        if len(args) == RELUL_FULL_ARGS_LEN:
-            self.attributes[RELUL_NAME_ID] = args[RELUL_ARGS_NAME_ID]
-            self.attributes[RELUL_NUM_INPUTS_ID] = args[RELUL_ARGS_NUM_INPUTS_ID]
-            self.attributes[RELUL_INPUT_NAMES_ID] = args[RELUL_ARGS_INPUT_NAMES_ID]
-            self.attributes[RELUL_NUM_OUTPUTS_ID] = args[RELUL_ARGS_NUM_OUTPUTS_ID]
-            self.attributes[RELUL_OUTPUT_NAMES_ID] = args[RELUL_ARGS_OUTPUT_NAMES_ID]
-        elif len(args) == RELUL_NAME_ARGS_LEN:
-            assert isinstance(args[RELUL_ARGS_NAME_ID], str), 'error: %s' % RELUL_ERRMSG_NAME_NOT_STRING
+        if len(args) == 5:
+            self.name = args[0]
+            self.num_inputs = args[1]
+            self.input_names = args[2]
+            self.num_outputs = args[3]
+            self.output_names = args[4]
+        elif len(args) == 1:
+            assert isinstance(args[0], str), 'error: %s' % RELUL_ERRMSG_NAME_NOT_STRING
 
-            self.attributes[RELUL_NAME_ID] = args[RELUL_ARGS_NAME_ID]
-        elif len(args) == RELUL_EMPTY_ARGS_LEN:
-            self.attributes[RELUL_NAME_ID] = RELUL_DEFAULT_NAME
+            self.name = args[0]
+        elif len(args) == 0:
+            self.name = RELUL_DEFAULT_NAME
         else:
             raise Exception(RELUL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
@@ -188,10 +165,10 @@ class ReLULayer:
             returns the output set(s)
         """
         
-        if args[RELUL_REACH_ARGS_METHOD_ID] == 'approx-star' or args[RELUL_REACH_ARGS_METHOD_ID] == 'exact-star':
-            IS = self.reach_star_multiple_inputs(args[RELUL_REACH_ARGS_INPUT_IMAGES_ID], args[RELUL_REACH_ARGS_METHOD_ID])
-        elif args[RELUL_REACH_ARGS_METHOD_ID] == 'approx-zono':
-            IS = self.reach_zono_multiple_inputs(args[RELUL_REACH_ARGS_INPUT_IMAGES_ID], args[RELUL_REACH_ARGS_OPTION_ID])
+        if args[1] == 'approx-star' or args[1] == 'exact-star':
+            IS = self.reach_star_multiple_inputs(args[0], args[1])
+        elif args[1] == 'approx-zono':
+            IS = self.reach_zono_multiple_inputs(args[0], args[2])
         else:
             raise Exception(RELUL_ERRMSG_UNK_REACH_METHOD)
             

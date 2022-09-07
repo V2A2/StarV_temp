@@ -28,50 +28,11 @@ MAXP2D_ERRORMSG_INVALID_IMGZ_INPUT = 'The input image should be an ImageZono'
 MAXP2D_ERRMSG_INVALID_SPLIT_INDEX = 'Invalid split index, it should have 3 columns and at least 1 row'
 
 
-MAXP2D_ATTRIBUTES_NUM = 8
+8 = 8
 
-MAXP2D_FULL_ARGS_LEN = 8
-MAXP2D_FULL_CALC_ARGS_LEN = 4
-MAXP2D_CALC_ARGS_LEN = 3
-
-MAXP2D_NAME_ID = 0
-MAXP2D_POOL_SIZE_ID = 1
-MAXP2D_STRIDE_ID = 2
-MAXP2D_PADDING_SIZE_ID = 3
-MAXP2D_NUM_INPUTS_ID = 4
-MAXP2D_INPUT_NAMES_ID = 5
-MAXP2D_NUM_OUTPUTS_ID = 6
-MAXP2D_OUTPUT_NAMES_ID = 7
-
-MAXP2D_ARGS_NAME_ID = 0
-MAXP2D_ARGS_POOL_SIZE_ID = 1
-MAXP2D_ARGS_STRIDE_ID = 2
-MAXP2D_ARGS_PADDING_SIZE_ID = 3
-MAXP2D_ARGS_NUM_INPUTS_ID = 4
-MAXP2D_ARGS_INPUT_NAMES_ID = 5
-MAXP2D_ARGS_NUM_OUTPUTS_ID = 6
-MAXP2D_ARGS_OUTPUT_NAMES_ID = 7
-
-MAXP2D_EVAL_ARGS_INPUT_ID = 0
-MAXP2D_RE_MULT_ARGS_INPUT_ID = 0
-MAXP2D_RE_SINGLE_ARGS_INPUT_ID = 0
-MAXP2D_STEP_SPLIT_ARGS_INPUT_IMGS_ID = 0
-MAXP2D_STEP_SPLIT_ARGS_ORI_IMG_ID = 1
-MAXP2D_STEP_SPLIT_ARGS_POS_ID = 2
-MAXP2D_STEP_SPLIT_ARGS_SPLIT_INDEX_ID = 3
-MAXP2D_RA_MULT_INPUT_ID = 0
-MAXP2D_RZ_MULT_INPUT_ID = 0
-
-MAXP2D_EVAL_FULL_ARGS_LEN = 2
-MAXP2D_EVAL_ARGS_LEN = 1
-
-MAXP2D_REACH_ARGS_INPUT_IMAGES_ID = 0
-MAXP2D_RA_ARGS_INPUT_IMG_ID = 0
-
-MAXP2D_REACH_ARGS_METHOD_ID = 1
-MAXP2D_REACH_ARGS_OPTION_ID = 2
-
-MAXP2D_CALC_ARGS_OFFSET = 1
+8 = 8
+4 = 4
+3 = 3
 
 MAXP2D_DEFAULT_LAYER_NAME = 'average_pooling_layer'
 MAXP2D_DEFAULT_POOL_SIZE = np.array([2,2])
@@ -96,56 +57,54 @@ class MaxPooling2DLayer:
     """
     
     def __init__(self, *args):
-        self.attributes = []       
-        
-        for i in range(MAXP2D_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
             
-        if len(args) <= MAXP2D_FULL_ARGS_LEN and len(args) > 0:
-            if len(args)== MAXP2D_FULL_ARGS_LEN or len(args) == MAXP2D_FULL_CALC_ARGS_LEN:
-                if len(args)== MAXP2D_FULL_ARGS_LEN:
-                    self.attributes[MAXP2D_NUM_INPUTS_ID] = args[MAXP2D_ARGS_NUM_INPUTS_ID]
-                    self.attributes[MAXP2D_NUM_OUTPUTS_ID] = args[MAXP2D_ARGS_NUM_OUTPUTS_ID]
-                    self.attributes[MAXP2D_INPUT_NAMES_ID] = args[MAXP2D_ARGS_INPUT_NAMES_ID]
-                    self.attributes[MAXP2D_OUTPUT_NAMES_ID] = args[MAXP2D_ARGS_OUTPUT_NAMES_ID]
+        if len(args) <= 8 and len(args) > 0:
+            if len(args)== 8 or len(args) == 4:
+                if len(args)== 8:
+                    self.num_inputs = args[4]
+                    self.num_outputs = args[6]
+                    self.input_names = args[5]
+                    self.output_names = args[7]
                 
-                assert isinstance(args[MAXP2D_ARGS_NAME_ID], str), 'error: %s' % MAXP2D_ERRMSG_NAME_NOT_STRING
-                self.attributes[MAXP2D_NAME_ID] = args[MAXP2D_ARGS_NAME_ID]
+                assert isinstance(args[0], str), 'error: %s' % MAXP2D_ERRMSG_NAME_NOT_STRING
+                self.name = args[0]
 
-            if len(args) == MAXP2D_CALC_ARGS_LEN:
-                args = self.offset_args(args, MAXP2D_CALC_ARGS_OFFSET)
-                self.attributes[MAXP2D_NAME_ID] = MAXP2D_DEFAULT_LAYER_NAME                
+            if len(args) == 3:
+                self.name = MAXP2D_DEFAULT_LAYER_NAME                
                 
-            if self.isempty(args[MAXP2D_ARGS_POOL_SIZE_ID]):
-                self.attributes[MAXP2D_POOL_SIZE_ID] = MAXP2D_DEFAULT_POOL_SIZE
-                self.attributes[MAXP2D_STRIDE_ID] =  MAXP2D_DEFAULT_STRIDE
-                self.attributes[MAXP2D_PADDING_SIZE_ID] = MAXP2D_DEFAULT_PADDING_SIZE
+            if self.isempty(args[1]):
+                self.pool_size = MAXP2D_DEFAULT_POOL_SIZE
+                self.stride =  MAXP2D_DEFAULT_STRIDE
+                self.padding_size = MAXP2D_DEFAULT_PADDING_SIZE
             else:
                 
-                assert isinstance(args[MAXP2D_ARGS_POOL_SIZE_ID], np.ndarray), 'error: %s' % MAXP2D_ERRMSG_PARAM_NOT_NP
-                assert args[MAXP2D_ARGS_POOL_SIZE_ID].shape[0] == 1 and \
-                       args[MAXP2D_ARGS_POOL_SIZE_ID].shape[1] == 2, \
+                # TODO: preprocess shape
+                assert isinstance(args[1], np.ndarray), 'error: %s' % MAXP2D_ERRMSG_PARAM_NOT_NP
+                assert args[1].shape[0] == 1 and \
+                       args[1].shape[1] == 2, \
                         'error: %s' % MAXP2D_ERRMSG_INVALID_POOL_SIZE
                     
-                assert isinstance(args[MAXP2D_ARGS_STRIDE_ID], np.ndarray), 'error: %s' % MAXP2D_ERRMSG_PARAM_NOT_NP
-                assert args[MAXP2D_ARGS_STRIDE_ID].shape[0] == 1 and \
-                       args[MAXP2D_ARGS_STRIDE_ID].shape[1] == 2, \
+                assert isinstance(args[2], np.ndarray), 'error: %s' % MAXP2D_ERRMSG_PARAM_NOT_NP
+                assert args[2].shape[0] == 1 and \
+                       args[2].shape[1] == 2, \
                         'error: %s' % MAXP2D_ERRMSG_INVALID_STRIDE
                             
-                assert isinstance(args[MAXP2D_ARGS_PADDING_SIZE_ID], np.ndarray), 'error: %s' % MAXP2D_ERRMSG_PARAM_NOT_NP
-                assert args[MAXP2D_ARGS_PADDING_SIZE_ID].shape[0] == 1 and \
-                       args[MAXP2D_ARGS_PADDING_SIZE_ID].shape[1] == 2, \
+                assert isinstance(args[3], np.ndarray), 'error: %s' % MAXP2D_ERRMSG_PARAM_NOT_NP
+                assert (args[3].shape[0] == 1 and \
+                       args[3].shape[1] == 2) or \
+                       (args[3].shape[0] == 1 and \
+                       args[3].shape[1] == 4), \
                         'error: %s' % MAXP2D_ERRMSG_INVALID_PADDING_SIZE
                             
-                self.attributes[MAXP2D_POOL_SIZE_ID] = [args[MAXP2D_ARGS_POOL_SIZE_ID].astype('int')[0][i] for i in range(args[MAXP2D_ARGS_POOL_SIZE_ID].shape[1])]
-                self.attributes[MAXP2D_STRIDE_ID] = [args[MAXP2D_ARGS_STRIDE_ID].astype('int')[0][i] for i in range(args[MAXP2D_ARGS_STRIDE_ID].shape[1])]
-                self.attributes[MAXP2D_PADDING_SIZE_ID] = [args[MAXP2D_PADDING_SIZE_ID].astype('int')[0][i] for i in range(args[MAXP2D_PADDING_SIZE_ID].shape[1])]
+                self.pool_size = [args[1].astype('int')[0][i] for i in range(args[1].shape[1])]
+                self.stride = [args[2].astype('int')[0][i] for i in range(args[2].shape[1])]
+                self.padding_size = [args[3].astype('int')[0][i] for i in range(args[3].shape[1])]
         elif len(args) == 0:
-                self.attributes[MAXP2D_NAME_ID] = MAXP2D_DEFAULT_LAYER_NAME                
+                self.name = MAXP2D_DEFAULT_LAYER_NAME                
 
-                self.attributes[MAXP2D_POOL_SIZE_ID] = MAXP2D_DEFAULT_POOL_SIZE
-                self.attributes[MAXP2D_STRIDE_ID] = MAXP2D_DEFAULT_STRIDE
-                self.attributes[MAXP2D_PADDING_SIZE_ID] = MAXP2D_DEFAULT_PADDING_SIZE
+                self.pool_size = MAXP2D_DEFAULT_POOL_SIZE
+                self.stride = MAXP2D_DEFAULT_STRIDE
+                self.padding_size = MAXP2D_DEFAULT_PADDING_SIZE
 
         else:       
             raise Exception(MAXP2D_ERRMSG_INVALID_NUMBER_OF_INPUTS)
@@ -164,19 +123,24 @@ class MaxPooling2DLayer:
         
         current_option = 'double'
         
-        if len(args) == MAXP2D_EVAL_FULL_ARGS_LEN:
-            assert args[MAXP2D_EVAL_PRECISION_OPT_ID] == 'single' or \
-                   args[MAXP2D_EVAL_PRECISION_OPT_ID] == 'double' or \
-                   args[MAXP2D_EVAL_PRECISION_OPT_ID] == 'empty', \
+        if len(args) == 2:
+            assert args[1] == 'single' or \
+                   args[1] == 'double' or \
+                   args[1] == 'empty', \
                    'error: %s' % MAXP2D_ERRMSG_INVALID_PRECISION_OPT
-        elif len(args) != MAXP2D_EVAL_ARGS_LEN:
+        elif len(args) != 1:
             raise(MAXP2D_ERRMSG_EVAL_INVALID_PARAM_NUM)
         
-        maxpool = nn.MaxPool2d(kernel_size=self.attributes[MAXP2D_POOL_SIZE_ID], \
-                             stride=self.attributes[MAXP2D_STRIDE_ID], \
-                             padding=self.attributes[MAXP2D_PADDING_SIZE_ID])
+        # TODO: create two padding variables -> one for evaluation, one for reachability analysis
+        current_padding = self.padding_size
+        if len(current_padding) == 4 and np.all(current_padding == current_padding[0]):
+            current_padding = [current_padding[0], current_padding[0]]
         
-        input = args[MAXP2D_EVAL_ARGS_INPUT_ID]
+        maxpool = nn.MaxPool2d(kernel_size=self.pool_size, \
+                             stride=self.stride, \
+                             padding=current_padding)
+        
+        input = args[0]
         if not isinstance(input, torch.FloatTensor):
             input = torch.FloatTensor(input)
             
@@ -208,9 +172,9 @@ class MaxPooling2DLayer:
                     start_points[i][j][1] = 0
                     
                 if i > 0:
-                    start_points[i][j][0] = start_points[i - 1][j][0] + self.attributes[MAXP2D_STRIDE_ID][0]
+                    start_points[i][j][0] = start_points[i - 1][j][0] + self.stride[0]
                 if j > 0:
-                    start_points[i][j][1] = start_points[i][j - 1][1] + self.attributes[MAXP2D_STRIDE_ID][1]
+                    start_points[i][j][1] = start_points[i][j - 1][1] + self.stride[1]
             
                     
         return start_points
@@ -231,8 +195,8 @@ class MaxPooling2DLayer:
             
         input_size = padded_image.shape
         
-        h = np.floor((input_size[0] - self.attributes[MAXP2D_STRIDE_ID][0]) / self.attributes[MAXP2D_STRIDE_ID][0] + 1)
-        w = np.floor((input_size[1] - self.attributes[MAXP2D_STRIDE_ID][1]) / self.attributes[MAXP2D_STRIDE_ID][1] + 1)
+        h = np.floor((input_size[0] - self.stride[0]) / self.stride[0] + 1)
+        w = np.floor((input_size[1] - self.stride[1]) / self.stride[1] + 1)
     
         return int(h), int(w)
     
@@ -247,10 +211,10 @@ class MaxPooling2DLayer:
     
         input_shape = input_image.shape
         
-        paired_padding = np.array(self.attributes[MAXP2D_PADDING_SIZE_ID])
+        paired_padding = np.array(self.padding_size)
         
         if (len(paired_padding.shape) == 2 or len(paired_padding.shape) == 1):
-            paired_padding = np.append(paired_padding, self.attributes[MAXP2D_PADDING_SIZE_ID])
+            paired_padding = np.append(paired_padding, self.padding_size)
         
         t = paired_padding[0]
         b = paired_padding[1]
@@ -288,7 +252,7 @@ class MaxPooling2DLayer:
             returns a zero-padded image
         """
     
-        if np.sum(self.attributes[MAXP2D_PADDING_SIZE_ID]) == 0:
+        if np.sum(self.padding_size) == 0:
             return input_image
         else:
             new_c = self.get_zero_padding_input(input_image.get_V()[:, :, :, 0])
@@ -329,17 +293,17 @@ class MaxPooling2DLayer:
             returns a split image                                                   
         """
     
-        assert isinstance(args[MAXP2D_STEP_SPLIT_ARGS_INPUT_IMGS_ID], ImageStar), 'error: %s' % MAXP2D_ERRORMSG_INVALID_IMGS_INPUT
-        input_image = args[MAXP2D_STEP_SPLIT_ARGS_INPUT_IMGS_ID]
+        assert isinstance(args[0], ImageStar), 'error: %s' % MAXP2D_ERRORMSG_INVALID_IMGS_INPUT
+        input_image = args[0]
                
-        assert isinstance(args[MAXP2D_STEP_SPLIT_ARGS_ORI_IMG_ID], ImageStar), 'error: %s' % MAXP2D_ERRORMSG_INVALID_IMGS_INPUT
-        ori_image = args[MAXP2D_STEP_SPLIT_ARGS_ORI_IMG_ID]
+        assert isinstance(args[1], ImageStar), 'error: %s' % MAXP2D_ERRORMSG_INVALID_IMGS_INPUT
+        ori_image = args[1]
     
-        split_index = args[MAXP2D_STEP_SPLIT_ARGS_SPLIT_INDEX_ID]
+        split_index = args[3]
         split_index_size = split_index.shape    
         assert split_index_size[1] == 3 or split_index_size[0] >= 1, 'error: %s' % MAXP2D_ERRMSG_INVALID_SPLIT_INDEX
     
-        pos = args[MAXP2D_STEP_SPLIT_ARGS_POS_ID]
+        pos = args[2]
     
         images = []
         
@@ -362,7 +326,7 @@ class MaxPooling2DLayer:
                 
                 image.set_input_sizes(input_image.get_input_sizes())
                 
-                image.update_max_idx(self.attributes[MAXP2D_ARGS_NAME_ID], center, pos)
+                image.update_max_idx(self.attributes[0], center, pos)
                 
                 images.append(image)
                 
@@ -386,17 +350,17 @@ class MaxPooling2DLayer:
             
         images = []
     
-        if isinstance(args[MAXP2D_STEP_SPLIT_ARGS_INPUT_IMGS_ID], ImageStar):
-            images = images + self.step_split_single_input(args[MAXP2D_STEP_SPLIT_ARGS_INPUT_IMGS_ID], \
-                                          args[MAXP2D_STEP_SPLIT_ARGS_ORI_IMG_ID], \
-                                          args[MAXP2D_STEP_SPLIT_ARGS_POS_ID], \
-                                          args[MAXP2D_STEP_SPLIT_ARGS_SPLIT_INDEX_ID])
+        if isinstance(args[0], ImageStar):
+            images = images + self.step_split_single_input(args[0], \
+                                          args[1], \
+                                          args[2], \
+                                          args[3])
         else:
-            for i in range (len(args[MAXP2D_STEP_SPLIT_ARGS_INPUT_IMGS_ID])):
-                images = images + self.step_split_single_input(args[MAXP2D_STEP_SPLIT_ARGS_INPUT_IMGS_ID][i], \
-                                              args[MAXP2D_STEP_SPLIT_ARGS_ORI_IMG_ID], \
-                                              args[MAXP2D_STEP_SPLIT_ARGS_POS_ID], \
-                                              args[MAXP2D_STEP_SPLIT_ARGS_SPLIT_INDEX_ID])
+            for i in range (len(args[0])):
+                images = images + self.step_split_single_input(args[0][i], \
+                                              args[1], \
+                                              args[2], \
+                                              args[3])
     
     
         return images
@@ -413,7 +377,7 @@ class MaxPooling2DLayer:
         
         rs = []
         
-        input_images = args[MAXP2D_RE_MULT_ARGS_INPUT_ID]
+        input_images = args[0]
         
         for i in range(len(input_images)):
             rs.append(self.reach_star_exact(input_images[i]))
@@ -432,7 +396,7 @@ class MaxPooling2DLayer:
     
         assert len(args) <= 2, 'error: %s' % MAXP2D_ERRMSG_RE_SINGLE_INVALID_ARGS_NUM
         
-        input_image = args[MAXP2D_RE_SINGLE_ARGS_INPUT_ID]
+        input_image = args[0]
         assert isinstance(input_image, ImageStar), 'error: %s' % MAXP2D_ERRORMSG_INVALID_IMGS_INPUT    
                
         start_points = self.get_start_points(input_image.get_V()[:, :, 0, 0])
@@ -455,7 +419,7 @@ class MaxPooling2DLayer:
             for i in range(h):
                 for j in range(w):
                     max_index[i][j][k] = padded_image.get_localMax_index(start_points[i][j], \
-                                                                        self.attributes[MAXP2D_ARGS_POOL_SIZE_ID], \
+                                                                        self.attributes[1], \
                                                                         k)
                     
                     if max_index[i][j][k].shape[0] == 1:
@@ -474,8 +438,8 @@ class MaxPooling2DLayer:
             #print(MAXP2D_MSG_SPLITS_OCCURRED)
             
         images = ImageStar(maxMap_basis_V, padded_image.get_C(), padded_image.get_d(), padded_image.get_pred_lb(),padded_image.get_pred_ub())
-        images.add_max_idx(self.attributes[MAXP2D_NAME_ID], max_index_result)
-        images.add_input_size(self.attributes[MAXP2D_NAME_ID], np.array([padded_image.get_height(), padded_image.get_width()]))
+        images.add_max_idx(self.name, max_index_result)
+        images.add_input_size(self.name, np.array([padded_image.get_height(), padded_image.get_width()]))
         
         if current_split_size > 0:
             for i in range(current_split_size):                    
@@ -500,7 +464,7 @@ class MaxPooling2DLayer:
             returns the over-approximation of the exact reachability set for the given imagestar
         """
     
-        input_image = args[MAXP2D_RA_ARGS_INPUT_IMG_ID]
+        input_image = args[0]
     
         assert isinstance(input_image, ImageStar), 'error: %s' % MAXP2D_ERRORMSG_INVALID_IMGS_INPUT
     
@@ -518,7 +482,7 @@ class MaxPooling2DLayer:
             for i in range(h):
                 for j in range(w):
                     max_index[i][j][k] = padded_image.get_localMax_index(start_points[i][j], \
-                                                                        self.attributes[MAXP2D_ARGS_POOL_SIZE_ID], \
+                                                                        self.attributes[1], \
                                                                         k)
                     max_id = max_index[i][j][k]
                     
@@ -543,7 +507,7 @@ class MaxPooling2DLayer:
                         new_pred_id += 1
                         new_V[i, j, k, padded_image.get_num_pred() + new_pred_id] = 1
     
-        total_pool_size = np.prod(self.attributes[MAXP2D_POOL_SIZE_ID])
+        total_pool_size = np.prod(self.pool_size)
         
         new_C = np.zeros((new_pred_id * (total_pool_size + 1), num_p))
         new_d = np.zeros((new_pred_id * (total_pool_size + 1), 1))
@@ -562,12 +526,12 @@ class MaxPooling2DLayer:
                         new_pred_index = new_pred_index + 1
                         start_point = start_points[i][j]
                         
-                        local_points = padded_image.get_local_points(start_point, self.attributes[MAXP2D_POOL_SIZE_ID]).astype('int')
+                        local_points = padded_image.get_local_points(start_point, self.pool_size).astype('int')
                         
                         C1 = np.zeros((1, num_p))
                         C1[0,padded_image.get_num_pred() + new_pred_index - 1] = 1
                         
-                        lb, ub = padded_image.get_local_bound(start_point, self.attributes[MAXP2D_POOL_SIZE_ID], k)
+                        lb, ub = padded_image.get_local_bound(start_point, self.pool_size, k)
                         
                         new_pred_lb[new_pred_index - 1] = lb
                         new_pred_ub[new_pred_index - 1] = ub
@@ -610,8 +574,8 @@ class MaxPooling2DLayer:
         new_pred_ub = np.vstack((padded_im_ub, new_pred_ub))
         
         image = ImageStar(new_V, new_C, new_d, new_pred_lb, new_pred_ub)
-        image.add_input_size(self.attributes[MAXP2D_NAME_ID], np.hstack((padded_image.get_height(), padded_image.get_width())))
-        image.add_max_idx(self.attributes[MAXP2D_NAME_ID], max_index)
+        image.add_input_size(self.name, np.hstack((padded_image.get_height(), padded_image.get_width())))
+        image.add_max_idx(self.name, max_index)
 
         return image
     
@@ -627,8 +591,8 @@ class MaxPooling2DLayer:
         
         rs_outputs = []
         
-        for i in range(len(args[MAXP2D_RA_MULT_INPUT_ID])):
-            rs_outputs.append(self.reach_approx_single_input(args[MAXP2D_RA_MULT_INPUT_ID][i]))
+        for i in range(len(args[0])):
+            rs_outputs.append(self.reach_approx_single_input(args[0][i]))
     
         return rs_outputs
     
@@ -646,9 +610,9 @@ class MaxPooling2DLayer:
         lb = input_image.get_lb_image()
         ub = input_image.get_ub_image()
         
-        maxpool = nn.MaxPool2d(kernel_size = self.attributes[MAXP2D_POOL_SIZE_ID],\
-                               stride = self.attributes[MAXP2D_STRIDE_ID],\
-                               padding = self.attributes[MAXP2D_PADDING_SIZE_ID])
+        maxpool = nn.MaxPool2d(kernel_size = self.pool_size,\
+                               stride = self.stride,\
+                               padding = self.padding_size)
         
         new_lb = maxpool(torch.FloatTensor(-lb)).cpu().detach().numpy()
         new_ub = maxpool(torch.FloatTensor(ub)).cpu().detach().numpy()
@@ -666,8 +630,8 @@ class MaxPooling2DLayer:
         
         rs_outputs = []
         
-        for i in range(len(args[MAXP2D_RZ_MULT_INPUT_ID])):
-            rs_outputs.append(self.reach_zono_single_input(args[MAXP2D_RZ_MULT_INPUT_ID][i]))
+        for i in range(len(args[0])):
+            rs_outputs.append(self.reach_zono_single_input(args[0][i]))
     
         return rs_outputs
 
@@ -686,15 +650,15 @@ class MaxPooling2DLayer:
             returns the output set(s)
         """
                 
-        method = args[MAXP2D_REACH_ARGS_METHOD_ID]
-        option = args[MAXP2D_REACH_ARGS_OPTION_ID]
+        method = args[1]
+        option = args[2]
         
         if method == 'approx-star':
-            IS = self.reach_star_approx_multiple_inputs(args[MAXP2D_REACH_ARGS_INPUT_IMAGES_ID], option)
+            IS = self.reach_star_approx_multiple_inputs(args[0], option)
         elif method == 'exact-star':
-            IS = self.reach_star_exact_multiple_inputs(args[MAXP2D_REACH_ARGS_INPUT_IMAGES_ID], option)
+            IS = self.reach_star_exact_multiple_inputs(args[0], option)
         elif method == 'approx-zono':
-            IS = self.reach_zono_multiple_inputs(args[MAXP2D_REACH_ARGS_INPUT_IMAGES_ID], option)
+            IS = self.reach_zono_multiple_inputs(args[0], option)
         
 ########################## UTILS ##########################
     def offset_args(self, args, offset):

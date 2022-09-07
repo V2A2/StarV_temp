@@ -1,4 +1,11 @@
+import numpy as np
+
 CNN_ATTRIBUTES_NUM = 5
+
+CNN_FULL_ARGS_LEN = 5
+CNN_CALC_ARGS_LEN = 4
+CNN_LAYERS_ARGS_LEN = 1
+CNN_EMPTY_ARGS_LEN = 0
 
 CNN_NAME = 0
 CNN_LAYERS = 1
@@ -6,14 +13,16 @@ CNN_INPUT_SIZE = 2
 CNN_OUTPUT_SIZE = 3
 CNN_OUTPUT_SET = 4
 
-CNN_AGS_NAME = 0
-CNN_AGS_LAYERS = 1
-CNN_AGS_INPUT_SIZE = 2
-CNN_AGS_OUTPUT_SIZE = 3
+CNN_ARGS_NAME = 0
+CNN_ARGS_LAYERS = 1
+CNN_ARGS_INPUT_SIZE = 2
+CNN_ARGS_OUTPUT_SIZE = 3
 
 CNN_EVAL_ARGS_INPUT = 0
 
 CNN_REACH_ARGS_INPUT = 0
+
+CNN_CALC_ARGS_OFFSET = 1
 
 CNN_CLASSIFY_ARGS_INPUT = 0
 CNN_CLASSIFY_ARGS_METHOD = 1
@@ -33,37 +42,47 @@ CNN_CLASSIFY_OUTPUT_SET_ARGS_OUTPUT_SET = 0
 
 CNN_ERRMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs, should be 0, 3, or 4'
 CNN_DEFAULT_REACH_METHOD = 'approx-star'
+CNN_DEFAULT_NAME = 'convolution_1'
+CNN_DEFAULT_INPUT_SIZE = 1
+CNN_DEFAULT_OUTPUT_SIZE = 1
 
 class CNN:
     
-    def __init__(self, *args):
-        """
-            Constructor
-        """
-        
-        self.attributes = []
-        
-        for i in range(CNN_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
+        def __init__(self, *args):
+            """
+                Constructor
+            """
             
-        if len(args) == CNN_FULL_ARGS_LEN:
-            self.attributes[CNN_NAME] = args[CNN_ARS_NAME]
-            self.attributes[CNN_LAYERS] = args[CNN_ARS_LAYERS]
-            self.attritubets[CNN_INPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS][0].get_input_size()
-            self.attritubets[CNN_OUTPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS].get_last().get_output_size()    
-        elif len(args) == CNN_CALC_ARGS_LEN:
-            args = self.offset_args(args, CNN_CALC_ARGS_OFFSET)
-            self.attributes[CNN_NAME] = CNN_DEFAULT_NAME
-            self.atributes[CNN_LAYERS] = args[CNN_ARGS_LAYERS]
-            self.attritubets[CNN_INPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS][0].get_input_size()
-            self.attritubets[CNN_OUTPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS].get_last().get_output_size()         
-        elif len(args) == CNN_EMPTY_ARGS_LEN:
-            self.attributes[CNN_NAME] = CNN_DEFAULT_NAME
-            self.atributes[CNN_LAYERS] = CNN_DEFAULT_LAYERS
-            self.attritubets[CNN_INPUT_SIZE] = CNN_DEFAULT_INPUT_SIZE
-            self.attritubets[CNN_OUTPUT_SIZE] = CNN_DEFAULT_OUTPUT_SIZE         
-        else:
-            raise Exception(CNN_ERRMSG_INVALID_NUMBER_OF_INPUTS)
+            self.attributes = []
+            
+            for i in range(CNN_ATTRIBUTES_NUM):
+                self.attributes.append(np.array([]))
+                
+            if len(args) == CNN_FULL_ARGS_LEN:
+                self.attributes[CNN_NAME] = args[CNN_ARS_NAME]
+                self.attributes[CNN_LAYERS] = args[CNN_ARS_LAYERS]
+                self.attributes[CNN_INPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS][0].get_input_size()
+                self.attributes[CNN_OUTPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS].get_last().get_output_size()    
+            elif len(args) == CNN_CALC_ARGS_LEN:
+                args = self.offset_args(args, CNN_CALC_ARGS_OFFSET)
+                self.attributes[CNN_NAME] = CNN_DEFAULT_NAME
+                self.attributes[CNN_LAYERS] = args[CNN_ARGS_LAYERS]
+                self.attributes[CNN_INPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS][0].get_input_size()
+                self.attributes[CNN_OUTPUT_SIZE] = self.attributes[CNN_ARGS_LAYERS].get_last().get_output_size()    
+            elif len(args) == CNN_LAYERS_ARGS_LEN:
+                args = self.offset_args(args, CNN_CALC_ARGS_OFFSET)
+                self.attributes[CNN_LAYERS] = args[CNN_ARGS_LAYERS]
+                
+                self.attributes[CNN_NAME] = CNN_DEFAULT_NAME
+                self.attributes[CNN_INPUT_SIZE] = CNN_DEFAULT_INPUT_SIZE
+                self.attributes[CNN_OUTPUT_SIZE] = CNN_DEFAULT_OUTPUT_SIZE         
+            elif len(args) == CNN_EMPTY_ARGS_LEN:
+                self.attributes[CNN_NAME] = CNN_DEFAULT_NAME
+                self.atributes[CNN_LAYERS] = CNN_DEFAULT_LAYERS
+                self.attributes[CNN_INPUT_SIZE] = CNN_DEFAULT_INPUT_SIZE
+                self.attributes[CNN_OUTPUT_SIZE] = CNN_DEFAULT_OUTPUT_SIZE         
+            else:
+                raise Exception(CNN_ERRMSG_INVALID_NUMBER_OF_INPUTS)
         
         def evaluate(self, *args):
             """
@@ -78,6 +97,8 @@ class CNN:
 
             for i in range(len(self.attributes[CNN_LAYERS])):
                 y = self.attributes[CNN_LAYERS][i].evaluate(y)
+                
+            return y
                 
         def reach(self, *args):
             """
@@ -183,159 +204,169 @@ class CNN:
                     
             return robust, counter_ex
         
-    def evaluate_robustness(self, *args):
-        """
-            Evaluates robustness of the network on a set of inputs
+        def evaluate_robustness(self, *args):
+            """
+                Evaluates robustness of the network on a set of inputs
+                
+                input : [*ImageStar] -> a set of inputs
+                correct_ids : np.array([*np.array([])) -> a set of correct labels for the given inputs
+                method : string
+                options : *not implemented*
+                
+                returns a robustness value (in percentages)
+            """
             
-            input : [*ImageStar] -> a set of inputs
-            correct_ids : np.array([*np.array([])) -> a set of correct labels for the given inputs
-            method : string
-            options : *not implemented*
+            inputs = args[CNN_EVALUATE_ROBUSTNESS_ARGS_INPUT]
+            correct_id = [CNN_EVALUATE_ROBUSTNES_ARGS_CORRECT_IDS]
+            method = (CNN_DEFAULT_REACH_METHOD) if len(args) == 1 else args[CNN_EVALUATE_ROBUSTNES_ARGS_ARGS_METHOD]
             
-            returns a robustness value (in percentages)
-        """
-        
-        inputs = args[CNN_EVALUATE_ROBUSTNESS_ARGS_INPUT]
-        correct_id = [CNN_EVALUATE_ROBUSTNES_ARGS_CORRECT_IDS]
-        method = (CNN_DEFAULT_REACH_METHOD) if len(args) == 1 else args[CNN_EVALUATE_ROBUSTNES_ARGS_ARGS_METHOD]
-        
-        count = np.zeros(len(inputs))
-
-        if method != 'exact-star':
-            output_sets = self.reach(inputs, method)
-            
-            for i in range(len(inputs)):
-                count[i] = CNN.is_robust(output_sets[i], correct_ids[i])
-        elif method == 'exact-star':
-            
-            for i in range(len(inputs)):
+            count = np.zeros(len(inputs))
+    
+            if method != 'exact-star':
                 output_sets = self.reach(inputs, method)
                 
-                current_num = 0
-                for j in range(len(output_sets)):
-                    current_num += CNN.is_robust(output_sets[j], correct_id[i])
+                for i in range(len(inputs)):
+                    count[i] = CNN.is_robust(output_sets[i], correct_ids[i])
+            elif method == 'exact-star':
+                
+                for i in range(len(inputs)):
+                    output_sets = self.reach(inputs, method)
                     
-        return np.sum(count) / len(inputs)
-    
-    def is_robust(self, *args):
-        """
-            Check robustness using the output set
+                    current_num = 0
+                    for j in range(len(output_sets)):
+                        current_num += CNN.is_robust(output_sets[j], correct_id[i])
+                        
+            return np.sum(count) / len(inputs)
+        
+        def is_robust(self, *args):
+            """
+                Check robustness using the output set
+                
+                output_set : ImageStar -> the output set that will be checked
+                correct_id : int -> correct id of the classified output
+                
+                returns whether the network is robust
+            """
+                        
+            counter = 0
             
-            output_set : ImageStar -> the output set that will be checked
-            correct_id : int -> correct id of the classified output
+            output_set = args[CNN_IS_ROBUST_ARGS_OUTPUT_SET]
+            correct_id = args[CNN_IS_ROBUST_ARGS_CORRECT_ID]
             
-            returns whether the network is robust
-        """
-                    
-        counter = 0
-        
-        output_set = args[CNN_IS_ROBUST_ARGS_OUTPUT_SET]
-        correct_id = args[CNN_IS_ROBUST_ARGS_CORRECT_ID]
-        
-        for i in range(self.attributes[CNN_OUTPUT_SET].get_num_channel()):
-            if correct_id != i:
-                if output_set.is_p1_larger_p2(np.array([1, 1, i]), np.array([1, 1, correct_id])):
-                    return 0
-                else:
-                    counter += 1
-        
-        if counter == output_set.get_num_channel() - 1:
-            return 1
-                    
-    def check_robust(self, *args):
-        """
-            Check robustness using the output set
+            for i in range(self.attributes[CNN_OUTPUT_SET].get_num_channel()):
+                if correct_id != i:
+                    if output_set.is_p1_larger_p2(np.array([1, 1, i]), np.array([1, 1, correct_id])):
+                        return 0
+                    else:
+                        counter += 1
             
-            output_set : ImageStar -> the output set that will be checked
-            correct_id : int -> correct id of the classified output
+            if counter == output_set.get_num_channel() - 1:
+                return 1
+                        
+        def check_robust(self, *args):
+            """
+                Check robustness using the output set
+                
+                output_set : ImageStar -> the output set that will be checked
+                correct_id : int -> correct id of the classified output
+                
+                returns if the network is : 1 -> robust,
+                                            0 -> is not robust,
+                                            2 -> unknown,
+                                            and a set of possible candidates
+            """
             
-            returns if the network is : 1 -> robust,
-                                        0 -> is not robust,
-                                        2 -> unknown,
-                                        and a set of possible candidates
-        """
-        
-        reachable_set = args[CNN_CHECK_ROBUST_ARGS_OUTPUT_SET].to_star()
-        
-        [lb, ub] = reachable_set.estimate_ranges()
-        [_, max_ub_id] = max(ub)
-        
-        candidates = []
-        is_robust = -1
-        
-        if max_ub_id != correct_id:
-            is_robust = 2
-            candidates = max_ub_id
-        else:
-            max_val = lb[correct_id]
-            max_cd = np.argwhere(ub > max_val)
-            max_cd[max_cd == correct_id] = []
+            reachable_set = args[CNN_CHECK_ROBUST_ARGS_OUTPUT_SET].to_star()
             
-            if self.isempty(max_cd):
-                is_robust = 1
+            [lb, ub] = reachable_set.estimate_ranges()
+            [_, max_ub_id] = max(ub)
+            
+            candidates = []
+            is_robust = -1
+            
+            if max_ub_id != correct_id:
+                is_robust = 2
+                candidates = max_ub_id
             else:
-                n = len(max_cd)
-                C1 = reachable_set.get_V()[max_cd, 1: reachable_set.get_nVar() + 1] - np.multiply(np.ones((n, 1)), reachable_set.get_V()[correct_id, 1:reachable_set.get_nVar() + 1])
-                d1 = -reachable_set.get_V()[max_cd, 0] + np.multiply(np.ones((n, 1)), reachable_set.get_V()[correct_id, 0])
+                max_val = lb[correct_id]
+                max_cd = np.argwhere(ub > max_val)
+                max_cd[max_cd == correct_id] = []
                 
-                S = Star(reachable_set.get_V(), np.vstack((reachable_set.get_C(), C1)), np.vstack((reachable_set.get_d(), d1)), reachable_set.get_pred_lb(), reachable_set.get_pred_ub())
-                
-                if S.isEmptySet():
-                    is_robust = 2
-                    candidates = max_cd
+                if self.isempty(max_cd):
+                    is_robust = 1
                 else:
-                    count = 0
+                    n = len(max_cd)
+                    C1 = reachable_set.get_V()[max_cd, 1: reachable_set.get_nVar() + 1] - np.multiply(np.ones((n, 1)), reachable_set.get_V()[correct_id, 1:reachable_set.get_nVar() + 1])
+                    d1 = -reachable_set.get_V()[max_cd, 0] + np.multiply(np.ones((n, 1)), reachable_set.get_V()[correct_id, 0])
                     
-                    for i in range(n):
-                        if reachable_set.is_p1_larger_p2(max_cd[i], correct_id):
-                            is_robust = 2
-                            candidates = max_cd[i]
-                            break
-                        else:
-                            count += 1
-                    if count == n:
-                        is_robust = 1
+                    S = Star(reachable_set.get_V(), np.vstack((reachable_set.get_C(), C1)), np.vstack((reachable_set.get_d(), d1)), reachable_set.get_pred_lb(), reachable_set.get_pred_ub())
+                    
+                    if S.isEmptySet():
+                        is_robust = 2
+                        candidates = max_cd
+                    else:
+                        count = 0
                         
-        return is_robust, candidates
+                        for i in range(n):
+                            if reachable_set.is_p1_larger_p2(max_cd[i], correct_id):
+                                is_robust = 2
+                                candidates = max_cd[i]
+                                break
+                            else:
+                                count += 1
+                        if count == n:
+                            is_robust = 1
+                            
+            return is_robust, candidates
+                
+        def classify_output_set(self, *args):
+            """
+                Classifies the output set
+                
+                output_set : ImageStar or ImageZono -> the output reachable set
+                
+                returns the classified id of the given output, if the given output set 
+                        cannot be classified then the id is chosen so that it would
+                        correspond to the output that has the maximum value
+            """
             
-    def classify_output_set(self, *args):
-        """
-            Classifies the output set
+            output_set = args[CNN_CLASSIFY_OUTPUT_SET_ARGS_OUTPUT_SET]
+            classified_id = None
             
-            output_set : ImageStar or ImageZono -> the output reachable set
+            [lb, ub] = output_set.estimate_ranges()
+            [max_lb_id, max_lb] = np.max(lb)
+            n = lb.shape[0]
             
-            returns the classified id of the given output, if the given output set 
-                    cannot be classified then the id is chosen so that it would
-                    correspond to the output that has the maximum value
-        """
-        
-        output_set = args[CNN_CLASSIFY_OUTPUT_SET_ARGS_OUTPUT_SET]
-        classified_id = None
-        
-        [lb, ub] = output_set.estimate_ranges()
-        [max_lb_id, max_lb] = np.max(lb)
-        n = lb.shape[0]
-        
-        ub1 = ub
-        ub1[max_lb_id] = []
-        ub1 = ub1 > max_lb
-        
-        if sum(ub1) == 0:
-            classified_id = max_lb_id
-        else:
-            classified_id = max_lb_id
-            [_, act_lb] = output_set.get_range(0, 0, max_lb_id)
+            ub1 = ub
+            ub1[max_lb_id] = []
+            ub1 = ub1 > max_lb
             
-            for i in range(n):
-                if ub[i] > max_lb and i != max_lb_id:
-                    [ub_id, _] = output_set.get_range(0, 0, i)
-                    if ub_id > act_lb:
-                        classified_id = np.append(classified_id, i)
-                        
-        return classified_id
+            if sum(ub1) == 0:
+                classified_id = max_lb_id
+            else:
+                classified_id = max_lb_id
+                [_, act_lb] = output_set.get_range(0, 0, max_lb_id)
+                
+                for i in range(n):
+                    if ub[i] > max_lb and i != max_lb_id:
+                        [ub_id, _] = output_set.get_range(0, 0, i)
+                        if ub_id > act_lb:
+                            classified_id = np.append(classified_id, i)
+                            
+            return classified_id
+                
+                
+        def offset_args(self, args, offset):
+            result = []
+            
+            for i in range(len(args) + offset):
+                result.append(np.array([]))
+                
+                if i >= offset:
+                    result[i] = args[i - offset]
+                    
+            return result
+    
             
             
-        
-        
-        
             

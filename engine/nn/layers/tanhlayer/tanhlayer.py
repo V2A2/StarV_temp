@@ -7,11 +7,11 @@ TANHL_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 TANHL_ERRORMSG_INVALID_NUMBER_OF_INPUTS = 'Invalid number of inputs (should be 0, 1, 5)'
 TANHL_ERRORMSG_INVALID_INPUT = 'The input should be either an ImageStar or ImageZono'
 
-TANHL_ATTRIBUTES_NUM = 5
+5 = 5
 
-TANHL_FULL_ARGS_LEN = 5
-TANHL_NAME_ARGS_LEN = 1
-TANHL_EMPTY_ARGS_LEN = 0
+5 = 5
+1 = 1
+0 = 0
 
 TANHL_NAME_ID = 0
 TANHL_NUM_INPUTS_ID = 1
@@ -19,16 +19,16 @@ TANHL_INPUT_NAMES_ID = 2
 TANHL_NUM_OUTPUTS_ID = 3
 TANHL_OUTPUT_NAMES_ID = 4
 
-TANHL_NAME_ARGS_ID = 0
-TANHL_NUM_INPUTS_ARGS_ID = 1
-TANHL_INPUT_NAMES_ARGS_ID = 2
-TANHL_NUM_OUTPUTS_ARGS_ID = 3
-TANHL_OUTPUT_NAMES_ARGS_ID = 4
+0 = 0
+1 = 1
+2 = 2
+3 = 3
+4 = 4
 
-TANHL_REACH_ARGS_INPUT_IMAGES_ID = 0
-TANHL_REACH_ARGS_OPTION_ID = 1
-TANHL_REACH_ARGS_METHOD_ID = 2
-TANHL_REACH_ARGS_RELAX_FACTOR_ID = 3
+0 = 0
+1 = 1
+2 = 2
+3 = 3
 
 TANHL_DEFAULT_NAME = 'tanh_layer'
 TANHL_DEFAULT_RELAXFACTOR = 0
@@ -53,23 +53,18 @@ class TanhLayer:
             Constructor
         """
         
-        self.attributes = []
-        
-        for i in range(TANHL_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
-        
-        if len(args) == TANHL_FULL_ARGS_LEN:
-            self.attributes[TANHL_NAME_ID] = args[TANHL_ARGS_NAME_ID]
-            self.attributes[TANHL_NUM_INPUTS_ID] = args[TANHL_ARGS_NUM_INPUTS_ID]
-            self.attributes[TANHL_INPUT_NAMES_ID] = args[TANHL_ARGS_INPUT_NAMES_ID]
-            self.attributes[TANHL_NUM_OUTPUTS_ID] = args[TANHL_ARGS_NUM_OUTPUTS_ID]
-            self.attributes[TANHL_OUTPUT_NAMES_ID] = args[TANHL_ARGS_OUTPUT_NAMES_ID]
-        elif len(args) == TANHL_NAME_ARGS_LEN:
-            assert isinstance(args[TANHL_ARGS_NAME_ID], str), 'error: %s' % TANHL_ERRMSG_NAME_NOT_STRING
+        if len(args) == 5:
+            self.name = args[0]
+            self.num_inputs = args[1]
+            self.input_names = args[2]
+            self.num_outputs = args[3]
+            self.output_names = args[4]
+        elif len(args) == 1:
+            assert isinstance(args[0], str), 'error: %s' % TANHL_ERRMSG_NAME_NOT_STRING
 
-            self.attributes[TANHL_NAME_ID] = args[TANHL_ARGS_NAME_ID]
-        elif len(args) == TANHL_EMPTY_ARGS_LEN:
-            self.attributes[TANHL_NAME_ID] = TANHL_DEFAULT_NAME
+            self.name = args[0]
+        elif len(args) == 0:
+            self.name = TANHL_DEFAULT_NAME
         else:
             raise Exception(TANHL_ERRORMSG_INVALID_NUMBER_OF_INPUTS)
         
@@ -81,7 +76,7 @@ class TanhLayer:
             returns the result of apllying ReLU activation to the given input
         """
          
-        return TanSig.evaluate(torch.FloatTensor(input), self.attributes[SIGNL_MODE_ID])    
+        return TanSig.evaluate(torch.FloatTensor(input))    
         #return np.reshape(TanSig.evaluate(torch.reshape(input,(np.prod(input.shape), 1))), input.shape)
     
     def reach_star_single_input(_, input, method, relax_factor):
@@ -180,10 +175,10 @@ class TanhLayer:
             returns the output set(s)
         """
         
-        if args[TANHL_REACH_ARGS_METHOD_ID] == 'approx-star' or args[TANHL_REACH_ARGS_METHOD_ID] == 'exact-star':
-            IS = self.reach_star_multiple_inputs(args[TANHL_REACH_ARGS_INPUT_IMAGES_ID], args[TANHL_REACH_ARGS_METHOD_ID], args[TANHL_REACH_ARGS_OPTION_ID], args[TANHL_REACH_ARGS_RELAX_FACTOR_ID])
-        elif args[TANHL_REACH_ARGS_METHOD_ID] == 'approx-zono':
-            IS = self.reach_zono_multiple_inputs(args[TANHL_REACH_ARGS_INPUT_IMAGES_ID], args[TANHL_REACH_ARGS_OPTION_ID])
+        if args[2] == 'approx-star' or args[2] == 'exact-star':
+            IS = self.reach_star_multiple_inputs(args[0], args[2], args[1], args[3])
+        elif args[2] == 'approx-zono':
+            IS = self.reach_zono_multiple_inputs(args[0], args[1])
         else:
             raise Exception(TANHL_ERRMSG_UNK_REACH_METHOD)
             

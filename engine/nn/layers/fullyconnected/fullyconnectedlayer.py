@@ -1,5 +1,7 @@
 import numpy as np
 import sys, os
+import torch
+import torch.nn as nn 
 
 sys.path.insert(0, "engine/set/imagestar")
 from imagestar import *
@@ -22,29 +24,12 @@ FC_ERRMSG_INVALID_NUMBER_OF_INPUTS = "Invalid number of inputs (should be 0, 2 o
 FC_ERRMSG_INPUT_LAYER_SIZE_INCONSISTENT = "Inconsistency between the input dimension and InputSize of the network"
 FC_ERRMSG_UNK_REACH_METHOD = "Unknown reachability method"
 
-FCLAYER_ATTRIBUTES_NUM = 6
-
-FC_FULL_ARGS_LEN = 3
-FC_CALC_ARGS_LEN = 2
-FC_EMPTY_ARGS_LEN = 0
-
-FC_CALC_ARGS_OFFSET = 1
-
 FC_DEFAULT_NAME = "fully_connected_layer"
 FC_DEFAULT_EMPTY_NAME = ""
 FC_DEFAULT_EMPTY_WEIGHTS = np.array([])
 FC_DEFAULT_EMPTY_BIAS = np.array([])
 FC_DEFAULT_EMPTY_INPUT_SIZE = 0
 FC_DEFAULT_EMPTY_OUTPUT_SIZE = 0
-
-FC_NAME_ID = 0
-FC_W_ID = 1
-FC_B_ID = 2
-FC_INPUT_SIZE_ID = 3
-FC_OUTPUT_SIZE_ID = 4
-FLATTEN_ORDER_ID = 5
-
-FC_REACH_ARGS_INPUT_IMAGES_ID = 0
 
 COLUMN_FLATTEN = 'F'
 
@@ -65,40 +50,35 @@ class FullyConnectedLayer:
 
     # Author: Michael Ivashchenko
     
-    def __init__(self, *args):        
-        self.attributes = []       
+    def __init__(self, *args):              
         
-        for i in range(FCLAYER_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
+        if len(args) == 0:            
+            self.name = FC_DEFAULT_EMPTY_NAME
             
-        
-        if len(args) == FC_EMPTY_ARGS_LEN:            
-            self.attributes[FC_NAME_ID] = FC_DEFAULT_EMPTY_NAME
+            self.weights = FC_DEFAULT_EMPTY_WEIGHTS 
+            self.bias = FC_DEFAULT_EMPTY_BIAS
             
-            self.attributes[FC_W_ID] = FC_DEFAULT_EMPTY_WEIGHTS 
-            self.attributes[FC_B_ID] = FC_DEFAULT_EMPTY_BIAS
-            
-            self.attributes[FC_INPUT_SIZE_ID] = FC_DEFAULT_EMPTY_INPUT_SIZE
-            self.attributes[FC_OUTPUT_SIZE_ID] = FC_DEFAULT_EMPTY_OUTPUT_SIZE
-        elif len(args) == FC_FULL_ARGS_LEN or len(args) == FC_CALC_ARGS_LEN:
-            if len(args) == FC_CALC_ARGS_LEN:
+            self.input_size = FC_DEFAULT_EMPTY_INPUT_SIZE
+            self.output_size = FC_DEFAULT_EMPTY_OUTPUT_SIZE
+        elif len(args) == 3 or len(args) == 2:
+            if len(args) == 2:
                 args = self.offset_args(args, FC_CALC_ARGS_OFFSET)
-                self.attributes[FC_NAME_ID] = FC_DEFAULT_NAME
+                self.name = FC_DEFAULT_NAME
             else:
-                assert isinstance(args[FC_NAME_ID], str), 'error: %s' % FC_ERRMSG_NAME_NOT_STRING
-                self.attributes[FC_NAME_ID] = args[FC_NAME_ID] 
+                assert isinstance(args[0], str), 'error: %s' % FC_ERRMSG_NAME_NOT_STRING
+                self.name = args[0] 
             
-            assert isinstance(args[FC_W_ID], np.ndarray) and isinstance(args[FC_B_ID], np.ndarray), 'error: %s' % FC_ERRMSG_WEGHT_OR_BIAS_NOT_NP
-            assert args[FC_W_ID].shape[0] == args[FC_B_ID].shape[0], 'error: %s' % FC_ERRMSG_WEGHT_BIAS_INCONSISTENT
-            assert (len(args[FC_B_ID].shape) == 2 and args[FC_B_ID].shape[1] == 1) or len(args[FC_B_ID].shape) == 1, 'error: %s' % FC_ERRMSG_BIAS_SHAPE_INCONSISTENT
+            assert isinstance(args[1], np.ndarray) and isinstance(args[2], np.ndarray), 'error: %s' % FC_ERRMSG_WEGHT_OR_BIAS_NOT_NP
+            assert args[1].shape[0] == args[2].shape[0], 'error: %s' % FC_ERRMSG_WEGHT_BIAS_INCONSISTENT
+            assert (len(args[2].shape) == 2 and args[2].shape[1] == 1) or len(args[2].shape) == 1, 'error: %s' % FC_ERRMSG_BIAS_SHAPE_INCONSISTENT
             
-            self.attributes[FC_W_ID] = args[FC_W_ID].astype('float64') 
-            self.attributes[FC_B_ID] = args[FC_B_ID].astype('float64')
+            self.weights = args[1].astype('float64') 
+            self.bias = args[2].astype('float64')
             
-            self.attributes[FC_INPUT_SIZE_ID] = args[FC_W_ID].shape[1]
-            self.attributes[FC_OUTPUT_SIZE_ID] = args[FC_W_ID].shape[0]
+            self.input_size = args[1].shape[1]
+            self.output_size = args[1].shape[0]
             
-            self.attributes[FLATTEN_ORDER_ID] = COLUMN_FLATTEN
+            self.mode = COLUMN_FLATTEN
         else:
             raise Exception(FC_ERRMSG_INVALID_NUMBER_OF_INPUTS)
 
@@ -111,15 +91,17 @@ class FullyConnectedLayer:
             returns the result of the input multiplied by the weight matrix and added to the bias
         """        
     
-        assert np.prod(input.shape) == self.attributes[FC_INPUT_SIZE_ID], 'error: %s' % FC_ERRMSG_INPUT_LAYER_SIZE_INCONSISTENT
+        assert np.prod(input.shape) == self.input_size, 'error: %s' % FC_ERRMSG_INPUT_LAYER_SIZE_INCONSISTENT
         
         # TODO: create a separate 'is_column_vec' utility function + use it in line 79
-        if (len(input.shape) == 2 and input.shape[1] != 1) and len(input.shape) != 1:
-            I = input.flatten(order=self.attributes[FLATTEN_ORDER_ID])
+        
+        if len(input.shape) > 1 and input.shape[1] != 1:
+            I = torch.permute(torch.FloatTensor(input), (1,2,0)).cpu().detach().numpy()
+            I = I.flatten(order=self.mode)
         else:
             I = input
             
-        y = np.matmul(self.attributes[FC_W_ID], I) + self.attributes[FC_B_ID]
+        y = np.matmul(self.weights, I) + self.bias
         
         # TODO: consider y = reshape(y, [1, 1, size(obj.Bias, 1)]); when implementing reachability algorithms
         
@@ -139,21 +121,21 @@ class FullyConnectedLayer:
         
         input_size = input_image.get_height() * input_image.get_width() * input_image.get_num_channel() 
     
-        assert input_size == self.attributes[FC_INPUT_SIZE_ID], 'error: %s' % FC_ERRMSG_INPUT_LAYER_SIZE_INCONSISTENT
+        assert input_size == self.input_size, 'error: %s' % FC_ERRMSG_INPUT_LAYER_SIZE_INCONSISTENT
         
         input_pred_num = input_image.get_num_pred()
         
-        new_V = np.zeros((1, 1, self.attributes[FC_OUTPUT_SIZE_ID], input_pred_num + 1))
+        new_V = np.zeros((1, 1, self.output_size, input_pred_num + 1))
         
         for i in range(input_size + 1):
             I = input_image.get_V()[:,:,:,i]
             
-            I = I.flatten(order=self.attributes[FLATTEN_ORDER_ID])
+            I = I.flatten(order=self.mode)
         
             if i == 0:
-                new_V[0,0,:,i] = np.matmul(self.attributes[FC_W_ID], I) + self.attributes[FC_B_ID]
+                new_V[0,0,:,i] = np.matmul(self.weights, I) + self.bias
             else:
-                new_V[0,0,:,i] = np.matmul(self.attributes[FC_W_ID], I)
+                new_V[0,0,:,i] = np.matmul(self.weights, I)
                 
         if isinstance(input_image, ImageStar):
             return ImageStar(new_V, input_image.get_C(), input_image.get_d(), input_image.get_pred_lb(), input_image.get_pred_ub())
@@ -192,7 +174,7 @@ class FullyConnectedLayer:
         
         #assert args[FC_ARGS_METHODID] < 5, 'error: %s' % FC_ERRMSG_UNK_REACH_METHOD
         
-        IS = self.reach_multiple_inputs(args[FC_REACH_ARGS_INPUT_IMAGES_ID], [])
+        IS = self.reach_multiple_inputs(args[0], [])
     
 ########################## UTILS ##########################
     def offset_args(self, args, offset):

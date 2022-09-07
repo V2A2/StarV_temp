@@ -23,12 +23,12 @@ CONV2D_ERRMSG_EVAL_INVALID_PARAM_NUM = 'Invalid number of input parameters'
 CONV2D_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 CONV2D_ERRORMSG_INVALID_INPUT = 'The input should be ImageStar or ImageZono'
 
-CONV2D_ATTRIBUTES_NUM = 13
-CONV2D_FULL_ARGS_LEN = 13
-CONV2D_FULL_CALC_ARGS_LEN = 6
-CONV2D_CALC_ARGS_LEN = 5
-CONV2D_FULL_WEIGHTS_BIAS_ARGS_LEN = 3
-CONV2D_WEIGHTS_BIAS_ARGS_LEN = 2
+13 = 13
+13 = 13
+6 = 6
+5 = 5
+3 = 3
+2 = 2
 
 CONV2D_NAME_ID = 0
 CONV2D_WEIGHTS_ID = 1
@@ -44,19 +44,19 @@ CONV2D_NUM_FILTERS_ID = 10
 CONV2D_FILTERS_SIZE_ID = 11
 CONV2D_NUM_CHANNELS_ID = 12
 
-CONV2D_ARGS_NAME_ID = 0
-CONV2D_ARGS_WEIGHTS_ID = 1
-CONV2D_ARGS_BIAS_ID = 2
-CONV2D_ARGS_PADDING_ID = 3
-CONV2D_ARGS_STRIDE_ID = 4
-CONV2D_ARGS_DILATION_ID = 5
-CONV2D_ARGS_NUMINPUTS_ID = 6
-CONV2D_ARGS_INPUTNAMES_ID = 7
-CONV2D_ARGS_NUMOUTPUTS_ID = 8
-CONV2D_ARGS_OUTPUTNAMES_ID = 9
-CONV2D_ARGS_NUM_FILTERS_ID = 10
-CONV2D_ARGS_FILTERS_SIZE_ID = 11
-CONV2D_ARGS_NUM_CHANNELS_ID = 12
+0 = 0
+1 = 1
+2 = 2
+3 = 3
+4 = 4
+5 = 5
+6 = 6
+7 = 7
+8 = 8
+9 = 9
+10 = 10
+11 = 11
+12 = 12
 
 CONV2D_EVAL_FULL_ARGS_LEN = 2
 CONV2D_EVAL_ARGS_LEN = 1
@@ -88,73 +88,73 @@ class Conv2DLayer:
     def __init__(self, *args):
         self.attributes = []       
         
-        for i in range(CONV2D_ATTRIBUTES_NUM):
+        for i in range(13):
             self.attributes.append(np.array([]))
             
-        if len(args) <= CONV2D_FULL_ARGS_LEN:
-            if len(args) == CONV2D_FULL_ARGS_LEN:
-                self.attributes[CONV2D_NUMINPUTS_ID] = args[CONV2D_ARGS_NUMINPUTS_ID].astype('int')
-                self.attributes[CONV2D_NUMOUTPUTS_ID] = args[CONV2D_ARGS_NUMOUTPUTS_ID].astype('int')
-                self.attributes[CONV2D_INPUTNAMES_ID] = args[CONV2D_ARGS_INPUTNAMES_ID]
-                self.attributes[CONV2D_OUTPUTNAMES_ID] = args[CONV2D_ARGS_OUTPUTNAMES_ID]
-            elif len(args) == CONV2D_FULL_CALC_ARGS_LEN or len(args) == CONV2D_FULL_WEIGHTS_BIAS_ARGS_LEN:
-                assert isinstance(args[CONV2D_ARGS_NAME_ID], str), 'error: %s' % CONV2D_ERRMSG_NAME_NOT_STRING
-                self.attributes[CONV2D_NAME_ID] = args[CONV2D_ARGS_NAME_ID]
+        if len(args) <= 13:
+            if len(args) == 13:
+                self.num_inputs = args[6].astype('int')
+                self.num_outputs = args[8].astype('int')
+                self.input_names = args[7]
+                self.output_names = args[9]
+            elif len(args) == 6 or len(args) == 3:
+                assert isinstance(args[0], str), 'error: %s' % CONV2D_ERRMSG_NAME_NOT_STRING
+                self.name = args[0]
 
-            if len(args) == CONV2D_CALC_ARGS_LEN or len(args) == CONV2D_WEIGHTS_BIAS_ARGS_LEN:
-                args = self.offset_args(args, CONV2D_CALC_ARGS_OFFSET)
-                self.attributes[CONV2D_NAME_ID] = CONV2D_DEFAULT_LAYER_NAME
+            if len(args) == 5 or len(args) == 2:
+                self.name = CONV2D_DEFAULT_LAYER_NAME
                 
-            if len(args) > CONV2D_FULL_WEIGHTS_BIAS_ARGS_LEN:
-                assert isinstance(args[CONV2D_ARGS_PADDING_ID], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
-                assert len(args[CONV2D_ARGS_PADDING_ID].shape) == 1 or \
-                        len(args[CONV2D_ARGS_PADDING_ID].shape) == 2 or \
-                        len(args[CONV2D_ARGS_PADDING_ID].shape) == 4, \
+            if len(args) > 3:
+                assert isinstance(args[3], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
+                assert len(args[3].shape) == 1 or \
+                        len(args[3].shape) == 2 or \
+                        len(args[3].shape) == 4, \
                         'error: %s' % CONV2D_ERRMSG_INVALID_PADDING
                 
-                assert isinstance(args[CONV2D_ARGS_STRIDE_ID], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
-                assert len(args[CONV2D_ARGS_STRIDE_ID].shape) == 1 or \
-                        len(args[CONV2D_ARGS_STRIDE_ID].shape) == 2 or \
+                assert isinstance(args[4], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
+                assert len(args[4].shape) == 1 or \
+                        len(args[4].shape) == 2 or \
                         'error: %s' % CONV2D_ERRMSG_INVALID_STRIDE
                         
-                assert isinstance(args[CONV2D_ARGS_DILATION_ID], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
-                assert len(args[CONV2D_ARGS_DILATION_ID].shape) == 1 or \
+                assert isinstance(args[5], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
+                assert len(args[5].shape) == 1 or \
                         len(args[CONV2D_ARGS_DILATIONE_ID].shape) == 2 or \
                         'error: %s' % CONV2D_ERRMSG_INVALID_DILATION
                         
-                self.attributes[CONV2D_PADDING_ID] = args[CONV2D_ARGS_PADDING_ID].astype('int')
-                self.attributes[CONV2D_STRIDE_ID] = args[CONV2D_ARGS_STRIDE_ID].astype('int')
-                self.attributes[CONV2D_DILATION_ID] = args[CONV2D_ARGS_DILATION_ID].astype('int')
+                self.padding = args[3].astype('int')
+                self.stride = args[4].astype('int')
+                self.dilation = args[5].astype('int')
                 
-            elif len(args) == CONV2D_WEIGHTS_BIAS_ARGS_LEN:
-                self.attributes[CONV2D_PADDING_ID] = CONV2D_DEFAULT_PADDING
-                self.attributes[CONV2D_STRIDE_ID] =  CONV2D_DEFAULT_STRIDE
-                self.attributes[CONV2D_DILATION_ID] = CONV2D_DEFAULT_DILATION
+            elif len(args) == 2:
+                self.padding = CONV2D_DEFAULT_PADDING
+                self.stride =  CONV2D_DEFAULT_STRIDE
+                self.dilation = CONV2D_DEFAULT_DILATION
                 
                 
-            assert isinstance(args[CONV2D_ARGS_WEIGHTS_ID], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
-            assert len(args[CONV2D_ARGS_WEIGHTS_ID].shape) > 1, 'error: %s' % CONV2D_ERRMSG_INVALID_WEIGHTS_SHAPE
+            assert isinstance(args[1], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
+            assert len(args[1].shape) > 1, 'error: %s' % CONV2D_ERRMSG_INVALID_WEIGHTS_SHAPE
                 
-            assert isinstance(args[CONV2D_ARGS_BIAS_ID], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
-            assert len(args[CONV2D_ARGS_BIAS_ID].shape) == 3, 'error: %s' % CONV2D_ERRMSG_INVALID_BIAS_SHAPE
+            assert isinstance(args[2], np.ndarray), 'error: %s' % CONV2D_ERRMSG_PARAM_NOT_NP
+            # TODO: preprocess -> if (a,) then convert into (1,1,a)
+            assert len(args[2].shape) == 3, 'error: %s' % CONV2D_ERRMSG_INVALID_BIAS_SHAPE
             
-            self.attributes[CONV2D_WEIGHTS_ID] = args[CONV2D_ARGS_WEIGHTS_ID]
-            self.attributes[CONV2D_BIAS_ID] = args[CONV2D_ARGS_BIAS_ID]
+            self.weights = args[1]
+            self.bias = args[2]
             
             
-            if len(args[CONV2D_ARGS_WEIGHTS_ID].shape) == 4:
-                assert args[CONV2D_ARGS_WEIGHTS_ID].shape[3] == args[CONV2D_ARGS_BIAS_ID].shape[2], 'error: %s' % CONV2D_ERRMSG_WEIGHTS_BIAS_INCONSISTENT
+            if len(args[1].shape) == 4:
+                assert args[1].shape[3] == args[2].shape[2], 'error: %s' % CONV2D_ERRMSG_WEIGHTS_BIAS_INCONSISTENT
                 
-                self.attributes[CONV2D_NUM_FILTERS_ID] = self.attributes[CONV2D_WEIGHTS_ID].shape[3]
-                self.attributes[CONV2D_NUM_CHANNELS_ID] = self.attributes[CONV2D_WEIGHTS_ID].shape[2]
-            elif len(args[CONV2D_ARGS_WEIGHTS_ID].shape) == 2:
-                self.attributes[CONV2D_NUM_FILTERS_ID] = 1
-                self.attributes[CONV2D_NUM_CHANNELS_ID] = 1 
-            elif len(args[CONV2D_ARGS_WEIGHTS_ID].shape) == 3:
-                self.attributes[CONV2D_NUM_FILTERS_ID] = 1
-                self.attributes[CONV2D_NUM_CHANNELS_ID] = self.attributes[CONV2D_WEIGHTS_ID].shape[2]
+                self.num_filters = self.weights.shape[3]
+                self.num_channels = self.weights.shape[2]
+            elif len(args[1].shape) == 2:
+                self.num_filters = 1
+                self.num_channels = 1 
+            elif len(args[1].shape) == 3:
+                self.num_filters = 1
+                self.num_channels = self.weights.shape[2]
             
-            self.attributes[CONV2D_FILTERS_SIZE_ID] = np.array([self.attributes[CONV2D_WEIGHTS_ID].shape[0], self.attributes[CONV2D_WEIGHTS_ID].shape[1]])
+            self.filter_size = np.array([self.weights.shape[0], self.weights.shape[1]])
          
         else:       
             raise Exception(CONV2D_ERRMSG_INVALID_NUMBER_OF_INPUTS)
@@ -181,15 +181,20 @@ class Conv2DLayer:
         elif len(args) != CONV2D_EVAL_ARGS_LEN:
             raise(CONV2D_ERRMSG_EVAL_INVALID_PARAM_NUM)
         
-        conv = nn.Conv2d(in_channels=args[CONV2D_EVAL_ARGS_INPUT_ID].shape[2], \
-                             out_channels=self.attributes[CONV2D_NUM_CHANNELS_ID], \
-                             kernel_size=self.attributes[CONV2D_FILTERS_SIZE_ID], \
-                             stride=self.attributes[CONV2D_STRIDE_ID],\
-                             padding=self.attributes[CONV2D_PADDING_ID], \
-                             dilation=self.attributes[CONV2D_DILATION_ID])
+        # TODO: create two padding variables -> one for evaluation, one for reachability analysis
+        current_padding = self.padding
+        if len(current_padding) == 4 and np.all(current_padding == current_padding[0]):
+            current_padding = np.array([current_padding[0], current_padding[0]])
         
-        conv.weight = torch.nn.Parameter(torch.permute(torch.FloatTensor(self.attributes[CONV2D_WEIGHTS_ID]), (3,2,0,1)))
-        conv.bias = torch.nn.Parameter(torch.FloatTensor(np.reshape(self.attributes[CONV2D_BIAS_ID], (self.attributes[CONV2D_BIAS_ID].shape[2],))))
+        conv = nn.Conv2d(in_channels=args[CONV2D_EVAL_ARGS_INPUT_ID].shape[0], \
+                             out_channels=self.num_channels, \
+                             kernel_size=self.filter_size, \
+                             stride=self.stride,\
+                             padding=current_padding, \
+                             dilation=self.dilation)
+        
+        conv.weight = torch.nn.Parameter(torch.permute(torch.FloatTensor(self.weights), (3,2,0,1)))
+        conv.bias = torch.nn.Parameter(torch.FloatTensor(np.reshape(self.bias, (self.bias.shape[2],))))
             
         return conv(torch.FloatTensor(args[CONV2D_EVAL_ARGS_INPUT_ID])).cpu().detach().numpy()
        
@@ -204,18 +209,18 @@ class Conv2DLayer:
         
         assert isinstance(input_image, ImageStar) or isinstance(input_image, ImageZono), \
                'error: %s' % CONV2D_ERRORMSG_INVALID_INPUT
-        assert input_image.get_num_channel() == self.attributes[CONV2D_NUM_CHANNELS_ID], \
+        assert input_image.get_num_channel() == self.num_channels, \
                'error: %s' % CONV2D_ERRORMSG_INCONSISTENT_CHANNELS_NUM
                
         conv = nn.Conv2d(in_channels=input_image.get_num_channel(), \
-                             out_channels=self.attributes[CONV2D_NUM_CHANNELS_ID], \
-                             kernel_size=self.attributes[CONV2D_FILTERS_SIZE_ID], \
-                             stride=self.attributes[CONV2D_STRIDE_ID],\
-                             padding=self.attributes[CONV2D_PADDING_ID], \
-                             dilation=self.attributes[CONV2D_DILATION_ID])\
+                             out_channels=self.num_channels, \
+                             kernel_size=self.filter_size, \
+                             stride=self.stride,\
+                             padding=self.padding, \
+                             dilation=self.dilation)\
                                      
-        conv.weight = torch.nn.Parameter(torch.permute(torch.FloatTensor(self.attributes[CONV2D_WEIGHTS_ID]), (3,2,0,1)))
-        conv.bias = torch.nn.Parameter(torch.FloatTensor(np.zeros((self.attributes[CONV2D_NUM_FILTERS_ID],))))
+        conv.weight = torch.nn.Parameter(torch.permute(torch.FloatTensor(self.weights), (3,2,0,1)))
+        conv.bias = torch.nn.Parameter(torch.FloatTensor(np.zeros((self.num_filters,))))
             
         current_V = input_image.get_V()
             
@@ -269,7 +274,7 @@ class Conv2DLayer:
             returns the output set(s)
         """
         
-        IS = self.reach_multiple_inputs(args[CONV2D_REACH_ARGS_INPUT_IMAGES_ID])    
+        IS = self.reach_multiple_inputs(args[0])    
         
 ########################## UTILS ##########################
     def offset_args(self, args, offset):

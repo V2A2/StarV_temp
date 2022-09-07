@@ -1,30 +1,53 @@
+import numpy as np
+
+3 = 3
+
+0 = 0
+3 = 3
+
+IIL_NAME_ID = 0
+IIL_INPUT_SIZE_ID = 1
+IIL_MEAN_ID = 2
+
+0 = 0
+1 = 1
+2 = 2
+
+IIL_DEFAULT_NAME = 'image_input_1'
+IIL_DEFAULT_INPUT_SIZE = 1
+IIF_DEFAULT_MEAN = 0
+
+
+
 class ImageInputLayer:
     """
         The Image input layer class in CNN
         Contains constructor and reachability analysis methods
     """
     
-    def ImageInputLayer(self, *args):
+    def __init__(self, *args):
         """
             Constructor
         """
         
-        if len(args) == IIL_EMPTY_ARGS_LEN:
-            self.attributes[IIL_NAME_ID] = IIL_DEFAULT_NAME
-            self.attributes[IIL_INPUT_SIZE_ID] = IIL_DEFAULT_INPUT_SIZE
-            self.attributes[IIL_MEAN_ID] = IIF_DEFAULT_MEAN # zero
-        elif len(args) != IIL_ARGS_LEN:
-            raise Exception(IIL_ERRMSG_INVALID_ARG_LEN)
-        
         self.attributes = []
         
-        for i in range(RELUL_ATTRIBUTES_NUM):
+        for i in range(3):
             self.attributes.append(np.array([]))
+
+        if len(args) == 0:
+            self.name = IIL_DEFAULT_NAME
+            self.input_size = IIL_DEFAULT_INPUT_SIZE
+            self.mean = IIF_DEFAULT_MEAN # zero
             
+            return
+        elif len(args) != 3:
+            raise Exception(IIL_ERRMSG_INVALID_ARG_LEN)
+        
         # TODO: add assertions
-        self.attributes[IIL_NAME_ID] = args[IIL_ARGS_NAME_ID]
-        self.attributes[IIL_INPUT_SIZE_ID] = args[IIL_ARGS_INPUT_SIZE_ID]
-        self.attributes[IIL_MEAN_ID] = args[IIL_ARGS_MEAN_ID].astype('float64')
+        self.name = args[0]
+        self.input_size = args[1]
+        self.mean = args[2].astype('float64')
         
     def evaluate(self, input):
         """
@@ -34,7 +57,7 @@ class ImageInputLayer:
             returns a standardized image
         """
         
-        return input.astype('float64') - self.attributes[IIL_MEAN_ID]
+        return input.astype('float64') - self.mean
     
     def reach_single_input(self, input):
         """
@@ -43,7 +66,7 @@ class ImageInputLayer:
             returns a standardized ImageStar
         """
         
-        return input_image.affine_map(np.array([]), -self.attributes[IIL_MEAN_ID])
+        return input_image.affine_map(np.array([]), -self.mean)
     
     def reach_multiple_inputs(self, input, method, option = []):
         """
@@ -80,7 +103,7 @@ class ImageInputLayer:
         
         if method == 'approx-star' or method == 'exact-star' or method == 'abs-dom' \
            or contains(method, 'relax-star') or method == 'approx-zono':
-            IS = self.reach_star_multiple_inputs(args[SIGNL_REACH_ARGS_INPUT_IMAGES_ID], args[SIGNL_REACH_ARGS_METHOD_ID], args[SIGNL_REACH_ARGS_OPTION_ID], args[SIGNL_REACH_ARGS_MODE_ID])
+            IS = self.reach_star_multiple_inputs(args[0], args[1], args[2], args[3])
         else:
             raise Exception(IIL_ERRMSG_UNK_REACH_METHOD)
             

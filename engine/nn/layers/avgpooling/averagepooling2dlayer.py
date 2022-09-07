@@ -21,39 +21,6 @@ AVGP2D_ERRMSG_EVAL_INVALID_PARAM_NUM = 'Invalid number of input parameters'
 AVGP2D_ERRMSG_NAME_NOT_STRING = 'Layer name is not a string'
 AVGP2DERRORMSG_INVALID_INPUT = 'The given input image is not an ImageStar or ImageZono'
 
-AVGP2D_ATTRIBUTES_NUM = 8
-
-AVGP2D_FULL_ARGS_LEN = 8
-AVGP2D_FULL_CALC_ARGS_LEN = 4
-AVGP2D_CALC_ARGS_LEN = 3
-
-AVGP2D_NAME_ID = 0
-AVGP2D_POOL_SIZE_ID = 1
-AVGP2D_STRIDE_ID = 2
-AVGP2D_PADDING_SIZE_ID = 3
-AVGP2D_NUM_INPUTS_ID = 4
-AVGP2D_INPUT_NAMES_ID = 5
-AVGP2D_NUM_OUTPUTS_ID = 6
-AVGP2D_OUTPUT_NAMES_ID = 7
-
-AVGP2D_ARGS_NAME_ID = 0
-AVGP2D_ARGS_POOL_SIZE_ID = 1
-AVGP2D_ARGS_STRIDE_ID = 2
-AVGP2D_ARGS_PADDING_SIZE_ID = 3
-AVGP2D_ARGS_NUM_INPUTS_ID = 4
-AVGP2D_ARGS_INPUT_NAMES_ID = 5
-AVGP2D_ARGS_NUM_OUTPUTS_ID = 6
-AVGP2D_ARGS_OUTPUT_NAMES_ID = 7
-
-AVGP2D_CALC_ARGS_OFFSET = 1
-
-AVGP2D_EVAL_ARGS_INPUT_ID = 0
-
-AVGP2D_EVAL_FULL_ARGS_LEN = 2
-AVGP2D_EVAL_ARGS_LEN = 1
-
-AVGP2D_REACH_ARGS_INPUT_IMAGES_ID = 0
-
 AVGP2D_DEFAULT_LAYER_NAME = 'average_pooling_layer'
 AVGP2D_DEFAULT_POOL_SIZE = (2, 2)
 AVGP2D_DEFAULT_STRIDE = (1, 1)
@@ -76,56 +43,61 @@ class AveragePooling2DLayer:
     """
     
     def __init__(self, *args):
-        self.attributes = []       
-        
-        for i in range(AVGP2D_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
+        """
+            Constructor
+        """
             
-        if len(args) <= AVGP2D_FULL_ARGS_LEN and len(args) > 0:
-            if len(args)== AVGP2D_FULL_ARGS_LEN or len(args) == AVGP2D_FULL_CALC_ARGS_LEN:
-                if len(args)== AVGP2D_FULL_ARGS_LEN:
-                    self.attributes[AVGP2D_NUM_INPUTS_ID] = args[AVGP2D_ARGS_NUM_INPUTS_ID]
-                    self.attributes[AVGP2D_NUM_OUTPUTS_ID] = args[AVGP2D_ARGS_NUM_OUTPUTS_ID]
-                    self.attributes[AVGP2D_INPUT_NAMES_ID] = args[AVGP2D_ARGS_INPUT_NAMES_ID]
-                    self.attributes[AVGP2D_OUTPUT_NAMES_ID] = args[AVGP2D_ARGS_OUTPUT_NAMES_ID]
+        if len(args) <= 8 and len(args) > 0:
+            if len(args)== 8 or len(args) == 4:
+                if len(args)== 8:
+                    self.num_inputs = args[4]
+                    self.num_outputs = args[6]
+                    self.input_names = args[5]
+                    self.output_names = args[7]
                 
-                assert isinstance(args[AVGP2D_ARGS_NAME_ID], str), 'error: %s' % AVGP2D_ERRMSG_NAME_NOT_STRING
-                self.attributes[AVGP2D_NAME_ID] = args[AVGP2D_ARGS_NAME_ID]
+                name = args[0]
+                
+                assert isinstance(args[name], str), 'error: %s' % AVGP2D_ERRMSG_NAME_NOT_STRING
+                self.name = name
 
-            if len(args) == AVGP2D_CALC_ARGS_LEN:
-                args = self.offset_args(args, AVGP2D_CALC_ARGS_OFFSET)
-                self.attributes[AVGP2D_NAME_ID] = AVGP2D_DEFAULT_LAYER_NAME                
+            if len(args) == 3:
+                self.name = AVGP2D_DEFAULT_LAYER_NAME                
                 
-            if self.isempty(args[AVGP2D_ARGS_POOL_SIZE_ID]):
-                self.attributes[AVGP2D_POOL_SIZE_ID] = AVGP2D_DEFAULT_POOL_SIZE
-                self.attributes[AVGP2D_STRIDE_ID] =  AVGP2D_DEFAULT_STRIDE
-                self.attributes[AVGP2D_PADDING_SIZE_ID] = AVGP2D_DEFAULT_PADDING_SIZE
+            if self.isempty(pool_size):
+                self.pool_size = AVGP2D_DEFAULT_POOL_SIZE
+                self.stride =  AVGP2D_DEFAULT_STRIDE
+                self.padding_size = AVGP2D_DEFAULT_PADDING_SIZE
             else:
+                pool_size = args[1]
                 
-                assert isinstance(args[AVGP2D_ARGS_POOL_SIZE_ID], np.ndarray), 'error: %s' % AVGP2D_ERRMSG_PARAM_NOT_NP
-                assert args[AVGP2D_ARGS_POOL_SIZE_ID].shape[0] == 1 and \
-                       args[AVGP2D_ARGS_POOL_SIZE_ID].shape[1] == 2, \
+                assert isinstance(pool_size, np.ndarray), 'error: %s' % AVGP2D_ERRMSG_PARAM_NOT_NP
+                assert pool_size.shape[0] == 1 and \
+                       pool_size.shape[1] == 2, \
                         'error: %s' % AVGP2D_ERRMSG_INVALID_POOL_SIZE
                     
-                assert isinstance(args[AVGP2D_ARGS_STRIDE_ID], np.ndarray), 'error: %s' % AVGP2D_ERRMSG_PARAM_NOT_NP
-                assert args[AVGP2D_ARGS_STRIDE_ID].shape[0] == 1 and \
-                       args[AVGP2D_ARGS_STRIDE_ID].shape[1] == 2, \
+                stride = args[2]
+                    
+                assert isinstance(stride, np.ndarray), 'error: %s' % AVGP2D_ERRMSG_PARAM_NOT_NP
+                assert stride.shape[0] == 1 and \
+                       stride.shape[1] == 2, \
                         'error: %s' % AVGP2D_ERRMSG_INVALID_STRIDE
                             
-                assert isinstance(args[AVGP2D_ARGS_PADDING_SIZE_ID], np.ndarray), 'error: %s' % AVGP2D_ERRMSG_PARAM_NOT_NP
-                assert args[AVGP2D_ARGS_PADDING_SIZE_ID].shape[0] == 1 and \
-                       args[AVGP2D_ARGS_PADDING_SIZE_ID].shape[1] == 2, \
+                padding_size = args[3]
+                
+                assert isinstance(padding_size, np.ndarray), 'error: %s' % AVGP2D_ERRMSG_PARAM_NOT_NP
+                assert padding_size.shape[0] == 1 and \
+                       padding_size.shape[1] == 2, \
                         'error: %s' % AVGP2D_ERRMSG_INVALID_PADDING_SIZE
                             
-                self.attributes[AVGP2D_POOL_SIZE_ID] = [args[AVGP2D_ARGS_POOL_SIZE_ID].astype('int')[0][i] for i in range(args[AVGP2D_ARGS_POOL_SIZE_ID].shape[1])]
-                self.attributes[AVGP2D_STRIDE_ID] = [args[AVGP2D_ARGS_STRIDE_ID].astype('int')[0][i] for i in range(args[AVGP2D_ARGS_STRIDE_ID].shape[1])]
-                self.attributes[AVGP2D_PADDING_SIZE_ID] = [args[AVGP2D_PADDING_SIZE_ID].astype('int')[0][i] for i in range(args[AVGP2D_PADDING_SIZE_ID].shape[1])]
+                self.pool_size = [pool_size.astype('int')[0][i] for i in range(pool_size.shape[1])]
+                self.stride = [stride.astype('int')[0][i] for i in range(stride.shape[1])]
+                self.padding_size = [argpadding_size.astype('int')[0][i] for i in range(padding_size.shape[1])]
         elif len(args) == 0:
-                self.attributes[AVGP2D_NAME_ID] = AVGP2D_DEFAULT_LAYER_NAME                
+                self.name = AVGP2D_DEFAULT_LAYER_NAME                
 
-                self.attributes[AVGP2D_POOL_SIZE_ID] = AVGP2D_DEFAULT_POOL_SIZE
-                self.attributes[AVGP2D_STRIDE_ID] = AVGP2D_DEFAULT_STRIDE
-                self.attributes[AVGP2D_PADDING_SIZE_ID] = AVGP2D_DEFAULT_PADDING_SIZE
+                self.pool_size = AVGP2D_DEFAULT_POOL_SIZE
+                self.stride = AVGP2D_DEFAULT_STRIDE
+                self.padding_size = AVGP2D_DEFAULT_PADDING_SIZE
 
         else:       
             raise Exception(AVGP2D_ERRMSG_INVALID_NUMBER_OF_INPUTS)
@@ -144,17 +116,20 @@ class AveragePooling2DLayer:
         
         current_option = 'double'
         
-        if len(args) == AVGP2D_EVAL_FULL_ARGS_LEN:
-            assert args[AVGP2D_EVAL_PRECISION_OPT_ID] == 'single' or \
-                   args[AVGP2D_EVAL_PRECISION_OPT_ID] == 'double' or \
-                   args[AVGP2D_EVAL_PRECISION_OPT_ID] == 'empty', \
+        
+        if len(args) == 2:
+            precision = args[1]
+            
+            assert precision == 'single' or \
+                   precision == 'double' or \
+                   precision == 'empty', \
                    'error: %s' % AVGP2D_ERRMSG_INVALID_PRECISION_OPT
         elif len(args) != AVGP2D_EVAL_ARGS_LEN:
             raise(AVGP2D_ERRMSG_EVAL_INVALID_PARAM_NUM)
         
-        avgpool = nn.AvgPool2d(kernel_size=self.attributes[AVGP2D_POOL_SIZE_ID], \
-                             stride=self.attributes[AVGP2D_STRIDE_ID], \
-                             padding=self.attributes[AVGP2D_PADDING_SIZE_ID])
+        avgpool = nn.AvgPool2d(kernel_size=self.pool_size, \
+                             stride=self.stride, \
+                             padding=self.padding_size)
         
         
         input = args[AVGP2D_EVAL_ARGS_INPUT_ID]
@@ -225,7 +200,7 @@ class AveragePooling2DLayer:
         
         # assert args[AVGP2D_ARGS_METHODID] < 5, 'error: %s' % AVGP2DERRMSG_UNK_REACH_METHOD
         
-        IS = self.reach_multiple_inputs(args[AVGP2D_REACH_ARGS_INPUT_IMAGES_ID])    
+        IS = self.reach_multiple_inputs(args[0])    
         
 ########################## UTILS ##########################
     def offset_args(self, args, offset):

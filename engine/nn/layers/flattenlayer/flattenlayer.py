@@ -14,12 +14,12 @@ FLATL_ERRORMSG_INVALID_INPUT_IMG = 'Invalid input image'
 FLATL_ERRORMSG_UNK_FLATL_TYPE = 'Unknown type of flatten layer'
 FLATL_ERRORMSG_INVALID_INPUT = 'The input should be ImageStar or ImageZono'
 
-FLATL_ATTRIBUTES_NUM = 7
+7 = 7
 
-FLATL_FULL_ARGS_LEN = 7
-FLATL_FULL_CALC_ARGS_LEN = 3
-FLATL_CALC_ARGS_LEN = 2
-FLATL_EMPTY_ARGS_LEN = 0
+7 = 7
+3 = 3
+2 = 2
+0 = 0
 
 FLATL_NAME_ID = 0
 FLATL_MODE_ID = 1
@@ -29,15 +29,15 @@ FLATL_INPUT_NAMES_ID = 4
 FLATL_NUM_OUTPUTS_ID = 5
 FLATL_OUTPUT_NAMES_ID = 6
 
-FLATL_ARGS_NAME_ID = 0
-FLATL_ARGS_MODE_ID = 1
-FLATL_ARGS_TYPE_ID = 2
-FLATL_ARGS_NUM_INPUTS_ID = 3
-FLATL_ARGS_INPUT_NAMES_ID = 4
-FLATL_ARGS_NUM_OUTPUTS_ID = 5
-FLATL_ARGS_OUTPUT_NAMES_ID = 6
+0 = 0
+1 = 1
+2 = 2
+3 = 3
+4 = 4
+5 = 5
+6 = 6
 
-FLATL_REACH_ARGS_INPUT_IMAGES_ID = 0
+0 = 0
 
 FLATL_CALC_ARGS_OFFSET = 1
 
@@ -68,42 +68,34 @@ class FlattenLayer:
             output_names : string* -> output_names
         """
         
-        self.attributes = []
-        
-        for i in range(FLATL_ATTRIBUTES_NUM):
-            self.attributes.append(np.array([]))
-        
-        if len(args) <= FLATL_FULL_ARGS_LEN:
-            if len(args) == FLATL_FULL_ARGS_LEN:
-                assert args[FLATL_ARGS_NUM_INPUTS_ID] > 0, 'error: %s' % FLATL_ERRMSG_INVALID_INPUTS_NUM_ID
-                self.attributes[FLATL_NUM_INPUTS_ID] = args[FLATL_ARGS_NUM_INPUTS_ID]
+        if len(args) <= 7:
+            if len(args) == 7:
+                assert args[3] > 0, 'error: %s' % FLATL_ERRMSG_INVALID_INPUTS_NUM_ID
+                self.num_inputs = args[3]
                 
-                assert args[FLATL_ARGS_NUM_OUTPUTS_ID] > 0, 'error: %s' % FLATL_ERRMSG_INVALID_OUTPUTS_NUM_ID
-                self.attributes[FLATL_NUM_OUTPUTS_ID] = args[FLATL_ARGS_NUM_OUTPUTS_ID]
+                assert args[5] > 0, 'error: %s' % FLATL_ERRMSG_INVALID_OUTPUTS_NUM_ID
+                self.num_outputs = args[5]
                 
-                self.attributes[FLATL_INPUT_NAMES_ID] = args[FLATL_ARGS_INPUT_NAMES_ID]
-                self.attributes[FLATL_OUTPUT_NAMES_ID] = args[FLATL_ARGS_OUTPUT_NAMES_ID]
+                self.input_names = args[4]
+                self.output_names = args[6]
             else:
-                self.attributes[FLATL_NUM_INPUTS_ID] = FLATL_DEFAULT_NUM_INPUTS
-                self.attributes[FLATL_NUM_OUTPUTS_ID] = FLATL_DEFAULT_NUM_OUTPUTS
-                self.attributes[FLATL_INPUT_NAMES_ID] = FLATL_DEFAULT_INPUT_NAMES
-                self.attributes[FLATL_OUTPUT_NAMES_ID] = FLATL_DEFAULT_OUTPUT_NAMES
+                self.num_inputs = FLATL_DEFAULT_NUM_INPUTS
+                self.num_outputs = FLATL_DEFAULT_NUM_OUTPUTS
+                self.input_names = FLATL_DEFAULT_INPUT_NAMES
+                self.output_names = FLATL_DEFAULT_OUTPUT_NAMES
 
-            if len(args) > FLATL_CALC_ARGS_LEN :
-                assert isinstance(args[FLATL_ARGS_NAME_ID], str), 'error: %s' % FLATL_ERRMSG_NAME_NOT_STRING
-                self.attributes[FLATL_NAME_ID] = args[FLATL_ARGS_NAME_ID]
+            if len(args) > 2 :
+                assert isinstance(args[0], str), 'error: %s' % FLATL_ERRMSG_NAME_NOT_STRING
+                self.name = args[0]
             else:
-                self.attributes[FLATL_NAME_ID] = FLATL_DEFAULT_NAME
-                
-            if len(args) == FLATL_CALC_ARGS_LEN:
-                args = self.offset_args(args, FLATL_CALC_ARGS_OFFSET)
-                
-            if len(args) > FLATL_EMPTY_ARGS_LEN:
-                self.attributes[FLATL_MODE_ID] = args[FLATL_ARGS_MODE_ID]
-                self.attributes[FLATL_TYPE_ID] = args[FLATL_ARGS_TYPE_ID]
+                self.name = FLATL_DEFAULT_NAME
+                                
+            if len(args) > 0:
+                self.mode = args[1]
+                self.type = args[2]
             else:
-                self.attributes[FLATL_MODE_ID] = FLATL_DEFAULT_MODE
-                self.attributes[FLATL_TYPE_ID] = FLATL_DEFAULT_TYPE
+                self.mode = FLATL_DEFAULT_MODE
+                self.type = FLATL_DEFAULT_TYPE
 
     def evaluate(self, input):
         """
@@ -118,12 +110,12 @@ class FlattenLayer:
         input = torch.FloatTensor(input)
         flatten_image = []
         
-        if self.attributes[FLATL_TYPE_ID] == FLATL_CSTYLE_TYPE:
+        if self.type == FLATL_CSTYLE_TYPE:
             if len(input_size) == 2:
                 flatten_im = torch.permute(input, (1,0))
                 flatten_im = torch.reshape(flatten_im, (1, np.prod(input_size)))
             elif len(input_size) == 3:
-                if self.attributes[FLATL_MODE_ID] == COLUMN_FLATTEN:
+                if self.mode == COLUMN_FLATTEN:
                     flatten_im = torch.permute(input, (2,1,0))
                 else:
                     flatten_im = torch.permute(input, (2,0,1))
@@ -131,7 +123,7 @@ class FlattenLayer:
                 flatten_im = torch.reshape(flatten_im, (1, 1, np.prod(input_size)))
             else:
                 raise Exception(FLATL_ERRORMSG_INVALID_INPUT_IMG)
-        elif self.attributes[FLATL_TYPE_ID] == FLATL_NNET_TYPE:
+        elif self.type == FLATL_NNET_TYPE:
             if len(input_size) == 2:
                 flatten_im = torch.reshape(input, (1, np.prod(input_size)))
             elif len(input_size) == 3:
@@ -199,7 +191,7 @@ class FlattenLayer:
             returns the output set(s)
         """
                 
-        IS = self.reach_multiple_inputs(args[FLATL_REACH_ARGS_INPUT_IMAGES_ID])    
+        IS = self.reach_multiple_inputs(args[0])    
 
 ########################## UTILS ##########################
     def offset_args(self, args, offset):

@@ -4,14 +4,21 @@ import gurobipy as gp
 from gurobipy import GRB 
 import sys, os
 import copy
+import scipy as sp
+from scipy.optimize import linprog
+import glpk
 
 import sys
 import operator
 
-sys.path.insert(0, "../star")
+# TODO: remove this when releasing. Change to $PYTHONPATH installation
+#sys.path.insert(0, "../star")
+sys.path.insert(0, "engine/set/star")
 from star import *
 
-sys.path.insert(0, "../zono")
+# TODO: remove this when releasing. Change to $PYTHONPATH installation
+#sys.path.insert(0, "../zono")
+sys.path.insert(0, "engine/set/zono")
 from zono import *
 
 ############################ ERROR MESSAGES ############################
@@ -33,7 +40,7 @@ ERRMSG_INCONSISTENT_LB_UB_DIM = "Inconsistency between lower bound image and upp
 
 ERRMSG_INVALID_INIT = "Invalid number of input arguments, (should be from 0, 3, 5 , or 7)"
 
-ERRMSG_IMGSTAR_EMPTY = "The ImageStar is empty"
+ERRMSG_IMGSTAR_EMPTY = "ImageStar is empty"
 
 ERRMSG_INVALID_PREDICATE_VEC = "Invalid predicate vector"
 
@@ -46,12 +53,12 @@ ERRMSG_INCONSISTENT_IMGDIM_IMGSTAR = "Inconsistent dimenion between input image 
 ERRMSG_INVALID_INPUT_IMG = "Invalid input image"
 
 ERRMSG_INVALID_INPUT_POINT = "Invalid input point"
-ERRMSG_INVALID_FIRST_INPUT_POINT = "The first input point is invalid"
-ERRMSG_INVALID_SECOND_INPUT_POINT = "The second input point is invalid"
+ERRMSG_INVALID_FIRST_INPUT_POINT = "First input point is invalid"
+ERRMSG_INVALID_SECOND_INPUT_POINT = "Second input point is invalid"
 
-ERRMSG_INVALID_VERT_ID = "Invalid veritical index"
-ERRMSG_INVALID_HORIZ_ID = "Invalid horizonal index"
-ERRMSG_INVALID_CHANNEL_ID = "Invalid channel index"
+ERRMSG_INVALID_VERT_ID = "Invalid index value"
+ERRMSG_INVALID_HORIZ_ID = "Invalid index value"
+ERRMSG_INVALID_CHANNEL_ID = "Invalid index value"
 
 ERRMSG_SHAPES_INCONSISTENCY = "New shape is inconsistent with the current shape"
 
@@ -62,12 +69,17 @@ ERRMSG_UNK_MP_LAYER_NAME = "Unknown name of the maxpooling layer"
 ESTIMATE_RANGE_STAGE_STARTED = "Ranges estimation started..."
 ESTIMATE_RANGE_STAGE_OVER = "Ranges estimation finished..."
 
-ERRMSG_INCONSISTENT_SOLVER_INPUT = "The given solver is not supported. Use \'glpk\' for GNU Linear Programming Kit or \'linprog\' for Gurobi"
+ERRMSG_INCONSISTENT_SOLVER_INPUT = "Given solver is not supported. Use \'glpk\' for GNU Linear Programming Kit or \'gurobi\' for Gurobi"
+
+ERRMSG_INPUT_NOT_NUMPY_ARRAY = "Input should be a numpy array"
+
+ERRMSG_INVALID_NEW_SHAPE = "Number of input dimensions should be 3"
 
 DEFAULT_DISP_OPTION = []
 
 class ImageStar:
-    """Class for representing set of images using Star set
+    """
+     Class for representing set of images using Star set
      An image can be attacked by bounded noise. An attacked image can
      be represented using an ImageStar Set
      author: Mykhailo Ivashchenko
@@ -122,7 +134,7 @@ class ImageStar:
                         b = [1 a[1] a[2] ... a[n]]^T                                   
                         where C*a <= d, constraints on a[i]}
      where, V[0], V[i] are 2D matrices with the same dimension, i.e., 
-     V[i] \in R^{m x n}
+     V[i] in R^{m x n}
      V[0] : is called the center matrix and V[i] is called the basic matrix 
      [a[1]...a[n] are called predicate variables
      C: is the predicate constraint matrix
@@ -175,27 +187,29 @@ class ImageStar:
             v = args[0]
             C = args[1]
             d = args[2]
-            pred_lb = args[3]
-            pred_ub = args[4]
+            predicate_lb = args[3]
+            predicate_ub = args[4]
+                
+            v, C, d, predicate_lb, predicate_ub = self._fix_input_essential_attributes(v, C, d, predicate_lb, predicate_ub)
             
-            if np.size(v) and np.size(C) and np.size(d) and np.size(pred_lb) and np.size(pred_ub):
-                assert (C.shape[0] == 1 and np.size(d) == 1) or (C.shape[0] == d.shape[0]), \
+            if np.size(v) and np.size(C) and np.size(d) and np.size(predicate_lb) and np.size(predicate_ub):
+                assert C.shape[0] == d.shape[0], \
                        'error: %s' % ERRMSG_INCONSISTENT_CONSTR_DIM
                 
-                assert (np.size(d) == 1) or (len(np.shape(d)) == 1) or (len(np.shape(d)) == 2 and np.shape(d)[1] == 1), 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
+                assert np.shape(d)[1] == 1, 'error: %s' % ERRMSG_INVALID_CONSTR_VEC
                 
                 self.numpred = C.shape[1]
                 
-                assert C.shape[1] == pred_lb.shape[0] == pred_ub.shape[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
+                assert C.shape[1] == predicate_lb.shape[0] == predicate_ub.shape[0], 'error: %s' % ERRMSG_INCONSISTENT_PRED_BOUND_DIM
                 
                 self.C = C.astype('float64')
                 self.d = d.astype('float64')
                 
                 
-                assert len(pred_lb.shape) == len(pred_ub.shape) == 1 or pred_ub.shape[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
+                assert len(predicate_lb.shape) == len(predicate_ub.shape) == 1 or predicate_ub.shape[1], 'error: %s' % ERRMSG_INCONSISTENT_BOUND_DIM
                 
-                self.pred_lb = pred_lb.astype('float64')
-                self.pred_ub = pred_ub.astype('float64')
+                self.predicate_lb = predicate_lb.astype('float64')
+                self.predicate_ub = predicate_ub.astype('float64')
                 
                 n = v.shape
                 
@@ -211,18 +225,16 @@ class ImageStar:
                         assert n[3] == self.numpred + 1, 'error: %s' % ERRMSG_INCONSISTENT_BASIS_MATRIX_PRED_NUM
                         
                         self.num_channels = n[2]
-                    else:
-                        # TODO: ASK WHY THIS HAPPENS AFTER THE ASSIGNMENT IN LINE 205
-                        #self.numpred = 0
-                        
+                    else:                        
                         if len(n) == 3:
                             self.num_channels = n[2]
                         elif len(n) == 2:
                             self.num_channels = 1
-                
+            
                 if len(args) == 7:
-                    im_lb = args[6]
-                    im_ub = args[7]
+                    im_lb, im_ub = self._fix_image_bounds_attributes(im_lb, im_ub)
+                    im_lb = args[5]
+                    im_ub = args[6]
                     
                     if im_lb.shape[0] != 0 and (im_lb.shape[0] != self.height or im_lb.shape[1] != self.width):
                         raise Exception('error: %s' % ERRMSG_INCONSISTENT_LB_DIM)
@@ -238,6 +250,7 @@ class ImageStar:
             im = args[0]
             lb = args[1]
             ub = args[2]
+            im, lb, ub = self._fix_image_attributes(im, lb, ub)
             
             if np.size(im) and np.size(lb) and np.size(ub) and self.V.shape[0] == 0:
                 n = im.shape
@@ -280,13 +293,16 @@ class ImageStar:
                 self.d = I.d
                 
                 # TODO: ask why does Star have predicate_lb and ImageStar pred_lb?
-                self.pred_lb  = I.predicate_lb
-                self.pred_ub = I.predicate_ub
+                self.predicate_lb  = I.predicate_lb
+                self.predicate_ub = I.predicate_ub
                 
                 self.numpred = I.nVar
+                
+                self._fix_essential_attributes()
         elif len(args) == 2:                
             im_lb = args[0]
             im_ub = args[1]
+            im_lb, im_ub = self._fix_image_bounds_attributes(im_lb, im_ub)
             
             if np.size(im_lb) and np.size(im_ub) and self.V.shape[0] == 0:
                 lb_shape = im_lb.shape
@@ -306,8 +322,10 @@ class ImageStar:
                     
                 self.im_lb = im_lb.astype('float64')
                 self.im_ub = im_ub.astype('float64')
+                
+                self._fix_essential_attributes()
         elif self.isempty_init(args):
-            self.init_empty_imagestar()
+            self.init_attributes()
         else:
             raise Exception('error: %s' % ERRMSG_INVALID_INIT)
         
@@ -325,7 +343,7 @@ class ImageStar:
             return self.im
         else:
             new_V = np.hstack((np.zeros((self.numpred, 1)), np.eye(self.numpred)))
-            S = Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
+            S = Star(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
             pred_samples = S.sample(N)
             
             images = []
@@ -368,20 +386,24 @@ class ImageStar:
             return -> a new ImageStar
         """
  
-        assert (self.isempty(scale) or self.is_scalar(scale) or len(scale.shape) == self.num_channels), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
+        assert isinstance(scale, np.ndarray), 'error: %s' % ERRMSG_INPUT_NOT_NUMPY_ARRAY
+        assert isinstance(offset, np.ndarray), 'error: %s' % ERRMSG_INPUT_NOT_NUMPY_ARRAY
         
-        new_V = 0
+        if len(scale.shape) < 3:
+            scale = np.reshape(scale, np.append(np.array([1] * (3 - len(scale.shape))), scale.shape))
+ 
+        assert (self.isempty(scale) or scale.shape[2] == self.num_channels), 'error: %s' % ERRMSG_INCONSISTENT_SCALE_CHANNELS_NUM
+                 
+        new_V = np.copy(self.V)
         
         if not self.isempty(scale):
-            new_V = np.multiply(scale, self.V)
-        else:
-            new_V = self.V
+            new_V[:, :, :, 0] = np.multiply(scale, new_V[:, :, :, 0])
         
         # Affine Mapping changes the center
         if not self.isempty(offset):
             new_V[:, :, :, 0] = new_V[:, :, :, 0] + offset
             
-        return ImageStar(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
+        return ImageStar(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
     
     def to_star(self):
         from star import Star
@@ -408,16 +430,18 @@ class ImageStar:
             for i in range(self.num_channels):
                 for j in range(self.numpred + 1):        
                     new_V[:, j] = self.V[:, :, i, j].flatten(order=self.flatten_mode)
-                
+            
+            #TODO: fix Star then remove this
+            d = self.d
+            d = np.reshape(d, (d.shape[0],))
+            
             if not self.isempty(self.im_lb) and not self.isempty(self.im_ub):
                 state_lb = self.im_lb.flatten(order=self.flatten_mode)
                 state_ub = self.im_ub.flatten(order=self.flatten_mode)
                 
-                # TODO: error: failed to create Star set
-                S = Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub, state_lb, state_ub)
+                S = Star(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub, state_lb, state_ub)
             else:
-                # TODO: error: failed to create Star set
-                S = Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
+                S = Star(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
                 
             return S
  
@@ -439,7 +463,9 @@ class ImageStar:
             return -> = 1 if the ImageStar contain the image
                       = 0 if the ImageStar does not contain the image
         """
- 
+
+        assert isinstance(image, np.ndarray), 'error: %s' % ERRMSG_INPUT_NOT_NUMPY_ARRAY
+
         img_size = image.shape
         
         if len(img_size) == 2: # one channel image
@@ -477,8 +503,35 @@ class ImageStar:
             new_V[0, i] = self.V[point1[0], point1[1], point1[2], i]
             new_V[1, i] = self.V[point2[0], point2[1], point2[2], i]
             
-        return Star(new_V, self.C, self.d, self.pred_lb, self.pred_ub)
-        
+        return Star(new_V, self.C, self.d, self.predicate_lb, self.predicate_ub)
+   
+    def _solve_glpk(self, A, b, lb, ub, f, vert_id, horiz_id, channel_id, optim_flag):
+        lp = glpk.LPX()  # create the empty problem instance
+        lp.obj.maximize = optim_flag
+        lp.rows.add(A.shape[0])  # append rows to this instance
+        for r in lp.rows:
+            r.name = chr(ord('p') + r.index)  # name rows if we want
+            lp.rows[r.index].bounds = None, b[r.index]
+
+        lp.cols.add(self.numpred)
+        for c in lp.cols:
+            c.name = 'x%d' % c.index
+            c.bounds = lb[c.index], ub[c.index]
+
+        lp.obj[:] = f.tolist()
+        B = A.reshape(A.shape[0]*A.shape[1],)
+        lp.matrix = B.tolist()
+
+        # lp.interior()
+        # default choice, interior may have a big floating point error
+        lp.simplex()
+
+        if lp.status != 'opt':
+            raise Exception('error: cannot find an optimal solution, \
+            lp.status = {}'.format(lp.status))
+        else:
+            xmax = lp.obj.value + self.V[vert_id, horiz_id, channel_id, 0]
+     
         
     def get_range(self, *args):
         """
@@ -538,15 +591,15 @@ class ImageStar:
         if (f == 0).all():
             bounds[0] = self.V[vert_id, horiz_id, channel_id, 0]
             bounds[1] = self.V[vert_id, horiz_id, channel_id, 0]
-        elif solver == 'linprog':
+        elif solver == 'gurobi':
             if 'disp' in options:
                 print('Calculating the lower and upper bounds using Gurobi...')
                 
             min_ = gp.Model()
             min_.Params.LogToConsole = 0
             min_.Params.OptimalityTol = 1e-9
-            if self.pred_lb.size and self.pred_ub.size:
-                x = min_.addMVar(shape=self.numpred, lb=self.pred_lb, ub=self.pred_ub)
+            if self.predicate_lb.size and self.predicate_ub.size:
+                x = min_.addMVar(shape=self.numpred, lb=self.predicate_lb, ub=self.predicate_ub)
             else:
                 x = min_.addMVar(shape=self.numpred)
             min_.setObjective(f @ x, GRB.MINIMIZE)
@@ -563,8 +616,8 @@ class ImageStar:
             max_ = gp.Model()
             max_.Params.LogToConsole = 0
             max_.Params.OptimalityTol = 1e-9
-            if self.pred_lb.size and self.pred_ub.size:
-                x = max_.addMVar(shape=self.numpred, lb=self.pred_lb, ub=self.pred_ub)
+            if self.predicate_lb.size and self.predicate_ub.size:
+                x = max_.addMVar(shape=self.numpred, lb=self.predicate_lb, ub=self.predicate_ub)
             else:
                 x = max_.addMVar(shape=self.numpred)
             max_.setObjective(f @ x, GRB.MAXIMIZE)
@@ -577,12 +630,53 @@ class ImageStar:
                 xmax = max_.objVal + self.V[vert_id, horiz_id, channel_id, 0]
             else:
                 raise Exception('error: cannot find an optimal solution, exitflag = %d' % (max_.status))
-        else:
-            # TODO: add glpk here
+        elif solver == 'glpk':
             if 'disp' in options:
                 print('Calculating the lower and upper bounds using GLPK...')
                 
-            print('GLPK is not implemented for this method yet')
+            # https://pyglpk.readthedocs.io/en/latest/examples.html
+            # https://pyglpk.readthedocs.io/en/latest/
+
+            glpk.env.term_on = False  # turn off messages/display
+
+            if len(self.C) == 0:
+                A = np.zeros((1, self.numpred))
+                b = np.zeros(1)
+            else:
+                A = self.C
+                b = self.d
+
+            lb = self.predicate_lb
+            ub = self.predicate_ub
+            lb = lb.reshape((self.numpred, 1))
+            ub = ub.reshape((self.numpred, 1))
+
+            xmin = self._solve_glpk(A, b, lb, ub, f, vert_id, horiz_id, channel_id, False)
+            xmax = self._solve_glpk(A, b, lb, ub, vert_id, horiz_id, channel_id, True)
+        elif solver == 'linprog':
+            # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
+            if len(self.C) == 0:
+                A = np.zeros((1, self.numpred))
+                b = np.zeros(1)
+            else:
+                A = self.C
+                b = self.d
+
+            lb = self.pred_lb
+            ub = self.pred_ub
+            lb = lb.reshape((self.numpred, 1))
+            ub = ub.reshape((self.numpred, 1))
+            res_min = linprog(f, A_ub=A, b_ub=b, bounds=np.hstack((lb, ub)))
+            res_max = linprog(-f, A_ub=A, b_ub=b, bounds=np.hstack((lb, ub)))
+            if res_min.status == 0 and res_max.status:
+                xmin = res_min.fun + self.V[vert_id, horiz_id, channel_id, 0]
+                xmax = -res_max.fun + self.V[vert_id, horiz_id, channel_id, 0]
+            else:
+                raise Exception('error: cannot find an optimal solution, \
+                exitflag = {}'.format(res.status))        
+        else:
+            raise Exception('error: \
+            unknown lp solver, should be gurobi or linprog or glpk')
 
         return np.array([xmin, xmax])
 
@@ -613,11 +707,11 @@ class ImageStar:
         
         for i in range(1, self.numpred + 1):
             if f[i] >= 0:
-                xmin = xmin + f[i] * self.pred_lb[i - 1]
-                xmax = xmax + f[i] * self.pred_ub[i - 1]
+                xmin = xmin + f[i] * self.predicate_lb[i - 1]
+                xmax = xmax + f[i] * self.predicate_ub[i - 1]
             else:
-                xmin = xmin + f[i] * self.pred_ub[i - 1]
-                xmax = xmax + f[i] * self.pred_lb[i - 1]
+                xmin = xmin + f[i] * self.predicate_ub[i - 1]
+                xmax = xmax + f[i] * self.predicate_lb[i - 1]
 
         return np.array([xmin, xmax])
 
@@ -711,13 +805,16 @@ class ImageStar:
             points : np.array([*]) -> local points = [x1 y1 c1; x2 y2 c2; ...]
         """
         
-        if len(args == 0):
+        solver = None
+        options = None
+        
+        if len(args) == 0:
             solver = 'glpk'
             options = []
-        elif len(args == 1):
+        elif len(args) == 1:
             solver = args[0]
             options = []
-        elif len(args == 2):
+        elif len(args) == 2:
             solver = args[0]
             options = args[1]
         else:
@@ -765,7 +862,7 @@ class ImageStar:
             
         """
         
-        start_points = None
+        start_point = None
         pool_size = None
         channel_id = None
         solver = None
@@ -1029,7 +1126,7 @@ class ImageStar:
             else:
                 unk_layer_num += 1
                 
-        if unk_laye_num == ids_num:
+        if unk_layer_num == ids_num:
             raise Exception('error: %s' % ERRMSG_UNK_NAME_MAX_POOL_LAYER)
         
     def is_p1_larger_p2(self, *args):
@@ -1046,17 +1143,22 @@ class ImageStar:
             
         """
         
-        if len(args == 2):
+        p1 = None
+        p2 = None
+        solver = None
+        options = None
+        
+        if len(args) == 2:
             p1 = args[0]
             p2 = args[1]
             solver = 'glpk'
             options = []
-        elif len(args == 3):
+        elif len(args) == 3:
             p1 = args[0]
             p2 = args[2]
             solver = args[3]
             options = []
-        elif len(args == 4):
+        elif len(args) == 4:
             p1 = args[0]
             p2 = args[1]
             solver = args[2]
@@ -1067,11 +1169,11 @@ class ImageStar:
         C1 = np.zeros(self.numpred)
         
         for i in range(1, self.numpred + 1):
-            C1[i-1] = self.V[p12[0], p12[1], p12[2], i] - \
+            C1[i-1] = self.V[p2[0], p2[1], p2[2], i] - \
                       self.V[p1[0], p1[1], p1[2], i]
                       
         d1 = self.V[p1[0], p1[1], p1[2], 0] - \
-                 self.V[p12[0], p12[1], p12[2], 0]
+                 self.V[p2[0], p2[1], p2[2], 0]
                  
         new_C = np.vstack((self.C, C1))
         new_d = np.vstack((self.d, d1))
@@ -1081,14 +1183,14 @@ class ImageStar:
                 
         f = np.zeros(self.numpred)
         
-        if solver == 'linprog':
+        if solver == 'gurobi':
             if 'disp' in options:
                 print('Optimising using Gurobi...')
             m = gp.Model()
             # prevent optimization information
             m.Params.LogToConsole = 0
             m.Params.OptimalityTol = 1e-9
-            x = m.addMVar(shape=self.numpred, lb=self.pred_lb, ub=self.pred_ub)
+            x = m.addMVar(shape=self.numpred, lb=self.predicate_lb, ub=self.predicate_ub)
             m.setObjective(f @ x, GRB.MINIMIZE)
             A = sp.csr_matrix(new_C)
             b = new_d
@@ -1103,9 +1205,61 @@ class ImageStar:
                 raise Exception('error: exitflat = %d' % (m.status)) 
         elif solver == 'glpk':
             if 'disp' in options:
-                print('Optimizing using GLPK...')
-            #TODO: implement glpk here
-            print('GLPK is not implemented for this method yet')
+                print('Calculating the lower and upper bounds using GLPK...')
+                
+            # https://pyglpk.readthedocs.io/en/latest/examples.html
+            # https://pyglpk.readthedocs.io/en/latest/
+            lp = glpk.LPX()
+            glpk.env.term_on = False  # turn off messages/display
+
+            lb = self.predicate_lb
+            ub = self.predicate_ub
+            lb = lb.reshape((self.numpred, 1))
+            ub = ub.reshape((self.numpred, 1))
+
+            lp.obj.maximize = False
+            lp.rows.add(new_C.shape[0])  # append rows to this instance
+            for r in lp.rows:
+                r.name = chr(ord('p') + r.index)  # name rows if we want
+                lp.rows[r.index].bounds = None, new_d[r.index]
+
+            lp.cols.add(self.numpred)
+            for c in lp.cols:
+                c.name = 'x%d' % c.index
+                c.bounds = lb[c.index], ub[c.index]
+
+            lp.obj[:] = f.tolist()
+            B = new_C.reshape(new_C.shape[0]*new_C.shape[1],)
+            lp.matrix = B.tolist()
+
+            # lp.interior()
+            # default choice, interior may have a big floating point error
+            lp.simplex()
+
+            if lp.status == 2:
+                return True
+            elif lp.status == 3:
+                return False
+            else:
+                raise Exception('error: cannot find an optimal solution, \
+                lp.status = {}'.format(lp.status))
+        elif solver == 'linprog':
+            # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
+            
+            lb = self.predicate_lb
+            ub = self.predicate_ub
+            lb = lb.reshape((self.numpred, 1))
+            ub = ub.reshape((self.numpred, 1))
+            
+            res = linprog(f, A_ub=new_C, b_ub=new_d, bounds=np.hstack((lb, ub)))
+            if res.status == 2:
+                return True
+            elif res.status == 3:
+                return False
+            else:
+                raise Exception('error: cannot find an optimal solution, \
+                exitflag = {}'.format(res.status))
+                 
             
     @staticmethod
     def is_max(*args):
@@ -1175,7 +1329,7 @@ class ImageStar:
                 
         f = np.zeros(ori_image.get_num_pred())
         
-        if solver == 'linprog':
+        if solver == 'gurobi':
             m = gp.Model()
             # prevent optimization information
             m.Params.LogToConsole = 0
@@ -1193,9 +1347,60 @@ class ImageStar:
             return new_C, new_d
         elif solver == 'glpk':
             if 'disp' in options:
-                print('Optimizing using GLPK...')
-            #TODO: implement glpk here
-            print('GLPK is not implemented for this method yet')
+                print('Calculating the lower and upper bounds using GLPK...')
+                
+            # https://pyglpk.readthedocs.io/en/latest/examples.html
+            # https://pyglpk.readthedocs.io/en/latest/
+            lp = glpk.LPX()
+            glpk.env.term_on = False  # turn off messages/display
+
+            lb = ori_image.get_pred_lb()
+            ub = ori_image.get_pred_ub()
+            lb = lb.reshape((ori_image.get_num_pred(), 1))
+            ub = ub.reshape((ori_image.get_num_pred(), 1))
+
+            lp.obj.maximize = False
+            lp.rows.add(new_C.shape[0])  # append rows to this instance
+            for r in lp.rows:
+                r.name = chr(ord('p') + r.index)  # name rows if we want
+                lp.rows[r.index].bounds = None, new_d[r.index]
+
+            lp.cols.add(ori_image.get_num_pred())
+            for c in lp.cols:
+                c.name = 'x%d' % c.index
+                c.bounds = lb[c.index], ub[c.index]
+
+            lp.obj[:] = f.tolist()
+            B = new_C.reshape(new_C.shape[0]*new_C.shape[1],)
+            lp.matrix = B.tolist()
+
+            # lp.interior()
+            # default choice, interior may have a big floating point error
+            lp.simplex()
+
+            if lp.status == 2:
+                return True
+            elif lp.status == 3:
+                return False
+            else:
+                raise Exception('error: cannot find an optimal solution, \
+                lp.status = {}'.format(lp.status))
+        elif solver == 'linprog':
+            # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
+            
+            lb = ori_image.get_pred_lb()
+            ub = ori_image.get_pred_ub()
+            lb = lb.reshape((ori_image.get_num_pred(), 1))
+            ub = ub.reshape((ori_image.get_num_pred(), 1))
+            
+            res = linprog(f, A_ub=new_C, b_ub=new_d, bounds=np.hstack((lb, ub)))
+            if res.status == 2:
+                return True
+            elif res.status == 3:
+                return False
+            else:
+                raise Exception('error: cannot find an optimal solution, \
+                exitflag = {}'.format(res.status))
     
     @staticmethod
     def reshape(input, new_shape):
@@ -1328,14 +1533,14 @@ class ImageStar:
             return -> the predicate lowerbound of the ImageStar
         """
         
-        return self.pred_lb
+        return self.predicate_lb
         
     def get_pred_ub(self):
         """
             return -> the predicate upperbound of the ImageStar
         """
         
-        return self.pred_ub
+        return self.predicate_ub
   
     def get_im_lb(self):
         """
@@ -1440,8 +1645,8 @@ class ImageStar:
         self.V = copy.deepcopy(imagestar.get_V())
         self.C = copy.deepcopy(imagestar.get_C())
         self.d = copy.deepcopy(imagestar.get_d())
-        self.pred_lb = copy.deepcopy(imagestar.get_pred_lb())
-        self.pred_ub = copy.deepcopy(imagestar.get_pred_ub())
+        self.predicate_lb = copy.deepcopy(imagestar.get_pred_lb())
+        self.predicate_ub = copy.deepcopy(imagestar.get_pred_ub())
         
         self.im_lb = copy.deepcopy(imagestar.get_im_lb())
         self.im_ub = copy.deepcopy(imagestar.get_im_ub())
@@ -1501,16 +1706,107 @@ class ImageStar:
         self.max_input_sizes = []
     
     def validate_solver_name(self, name):
-        assert (name == 'glpk' or name == 'linprog'), 'error: %s' % ERRMSG_INCONSISTENT_SOLVER_INPUT
-           
-    def is_scalar(self, param):
-        return isinstance(param, np.ndarray)
-    
+        assert (name == 'glpk' or name == 'gurobi'), 'error: %s' % ERRMSG_INCONSISTENT_SOLVER_INPUT
+               
     def is_scalar_attribute(self, attribute_id):
         return attribute_id in self.scalar_attributes_ids
     
-    def get_attribute(self, i):
-        return self.attributes[i]
+    def _fix_input_essential_attributes(self, V, C, d, predicate_lb, predicate_ub):
+        # Fix V:.............
+        V = self._convert_to_numpy_array(V)
+        if len(V.shape) == 3:
+            V = np.reshape(V, (V.shape[0], V.shape[1], 1, V.shape[2]))
+        elif len(V.shape) == 2:
+            V = np.reshape(V, (1, 1, V.shape[0], V.shape[1]))
+            
+        # Fix C:.............
+        C = self._convert_to_numpy_array(C)
+        if len(C.shape) == 1:
+            C = np.reshape(C, (1, C.shape[0]))
+            
+        # Fix d:.............
+        if type(d) == float:
+            d = [d]
+        d = self._convert_to_numpy_array(d)
+        if d.size == 1 and len(d.shape) == 0:
+            d = np.array([d])
+        if len(d.shape) == 1:
+            d = np.reshape(d, (d.shape[0], 1))
+        elif len(d.shape) == 2 and d.shape[0] == 1 and d.shape[0] != 1:
+            self.d = np.reshape(d, (d.shape[0], 1))
+            
+        # Fix predicate_lb:.............
+        predicate_lb = self._convert_to_numpy_array(predicate_lb)
+        if len(predicate_lb.shape) == 1:
+            predicate_lb = np.reshape(predicate_lb, (predicate_lb.shape[0], 1))
+            
+        # Fix predicate_ub:.............
+        predicate_ub = self._convert_to_numpy_array(predicate_ub)
+        if len(predicate_ub.shape) == 1:
+            predicate_ub = np.reshape(predicate_ub, (predicate_ub.shape[0], 1))
+            
+        return V, C, d, predicate_lb, predicate_ub
+    
+    def _fix_essential_attributes(self):
+        # Fix V:.............
+        self.V = self._convert_to_numpy_array(self.V)
+        if len(self.V.shape) == 3:
+            self.V = np.reshape(self.V, (self.V.shape[0], self.V.shape[1], 1, self.V.shape[2]))
+        elif len(self.V.shape) == 2:
+            self.V = np.reshape(self.V, (1, 1, self.V.shape[0], self.V.shape[1]))
+            
+        # Fix C:.............
+        self.C = self._convert_to_numpy_array(self.C)
+        if len(self.C.shape) == 1:
+            self.C = np.reshape(self.C, (1, self.C.shape[0]))
+            
+        # Fix d:.............
+        if type(self.d) == float:
+            self.d = [self.d]
+        self.d = self._convert_to_numpy_array(self.d)
+        if self.d.size == 1:
+            self.d = np.array([self.d])
+        if len(self.d.shape) == 1:
+            self.d = np.reshape(self.d, (self.d.shape[0], 1))
+        elif len(self.d.shape) == 2 and self.d.shape[0] == 1 and self.d.shape[0] != 1:
+            self.d = np.reshape(self.d, (self.d.shape[0], 1))
+            
+        # Fix predicate_lb:.............
+        self.predicate_lb = self._convert_to_numpy_array(self.predicate_lb)
+        if len(self.predicate_lb.shape) == 1:
+            self.predicate_lb = np.reshape(self.predicate_lb, (self.predicate_lb.shape[0], 1))
+            
+        # Fix predicate_ub:.............
+        self.predicate_ub = self._convert_to_numpy_array(self.predicate_ub)
+        if len(self.predicate_ub.shape) == 1:
+            self.predicate_ub = np.reshape(self.predicate_ub, (self.predicate_ub.shape[0], 1))
+            
+    def _fix_image_bounds_attributes(self, im_lb, im_ub):
+        # Fix im_lb:.............
+        im_lb = self._convert_to_numpy_array(im_lb)
+        
+        # Fix im_ub:.............
+        im_ub = self._convert_to_numpy_array(im_ub)
+        
+        return im_lb, im_ub
+            
+    def _fix_image_attributes(self, im, lb, ub):
+        # Fix im:.............
+        im = self._convert_to_numpy_array(im)
+        
+        # Fix lb:.............
+        lb = self._convert_to_numpy_array(lb)
+        
+        # Fix ub:.............
+        ub = self._convert_to_numpy_array(ub)
+        
+        return im, lb, ub
+
+    def _convert_to_numpy_array(self, param):
+        if not isinstance(param, np.ndarray):
+            return np.array(param)
+        
+        return param
 
     # def __str__(self):
     #     from zono import Zono
