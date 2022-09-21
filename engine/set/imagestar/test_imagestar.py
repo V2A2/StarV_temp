@@ -18,10 +18,10 @@ class TestImageStar(unittest.TestCase):
             amount, errors, failures, skipped
 
     def tearDown(self):
-        amount = self.currentResult.testsRun
-        errors = self.currentResult.errors
-        failures = self.currentResult.failures
-        skipped = self.currentResult.skipped
+        amount = self.current_result.testsRun
+        errors = self.current_result.errors
+        failures = self.current_result.failures
+        skipped = self.current_result.skipped
         self.setResult(amount, errors, failures, skipped)
 
     @classmethod
@@ -33,10 +33,10 @@ class TestImageStar(unittest.TestCase):
         print("skipped: " + str(len(cls.skipped)))
 
     def run(self, result=None):
-        self.currentResult = result # remember result for use in tearDown
+        self.current_result = result # remember result for use in tearDown
         unittest.TestCase.run(self, result) # call superclass run method   
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_constructor_predicate_init(self):
         """
             Tests the initialization with:
@@ -61,7 +61,7 @@ class TestImageStar(unittest.TestCase):
 
         self.assertEqual(isinstance(test_star, ImageStar), True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_constructor_image_init(self):
         """
             Tests the initialization with:
@@ -106,7 +106,7 @@ class TestImageStar(unittest.TestCase):
 
         self.assertEqual(isinstance(test_star, ImageStar), True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_constructor_bounds_init(self):
         """
             Tests the initialization with:
@@ -131,7 +131,7 @@ class TestImageStar(unittest.TestCase):
 
         self.assertEqual(isinstance(test_star, ImageStar), True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_add_constraints_basic(self):
         """
             Tests the ImageStar's method that compares two points of the ImageStar 
@@ -172,7 +172,7 @@ class TestImageStar(unittest.TestCase):
         self.assertEqual((test_C.shape[0] == current_C.shape[0] + 1) and \
                          (test_d.shape[0] == current_d.shape[0] + 1), True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_affine_mapping(self):
         """
             Test affine mapping -> ImageStar .* scale + offset
@@ -221,7 +221,7 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(am_result.get_V().all(), test_am_output.all())    
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_affine_mapping_invalid_input(self):
         """
             Test affine mapping -> ImageStar .* scale + offset
@@ -266,7 +266,7 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(exception_handled, True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_affine_mapping_invalid_dims(self):
         """
             Test affine mapping -> ImageStar .* scale + offset
@@ -310,7 +310,7 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(exception_handled, True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_containts_false(self):
         """
             Checks if the initialized ImageStar contains the given image
@@ -352,7 +352,7 @@ class TestImageStar(unittest.TestCase):
 
         self.assertEqual(test_result, False)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_containts_true(self):
         """
             Checks if the initialized ImageStar contains the given image
@@ -394,7 +394,7 @@ class TestImageStar(unittest.TestCase):
 
         self.assertEqual(test_result, True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_estimate_range_valid_input(self):
         """
             Tests the ImageStar's range estimation method
@@ -442,7 +442,7 @@ class TestImageStar(unittest.TestCase):
         
         self.assertEqual(result.all(), range_output.all())
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_estimate_range_empty_imgstar(self):
         """
             Tests the ImageStar's range estimation method
@@ -487,7 +487,7 @@ class TestImageStar(unittest.TestCase):
         
         self.assertEqual(exception_handled, True)
 
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_estimate_range_invalid_input(self):
         """
             Tests the ImageStar's range estimation method
@@ -539,38 +539,125 @@ class TestImageStar(unittest.TestCase):
         
         self.assertEqual(all(item == True for item in exceptions_handled), True)
 
-
-    # def test_evaluation_valid_input(self):
-    #     """
-    #         Tests evaluation using predicate initialization
+    @unittest.skip("skip it")
+    def test_evaluation_valid_input(self):
+        """
+            Tests evaluation using predicate initialization
         
-    #         eval_input : int -> number of images
+            eval_input : int -> number of images
             
-    #         V -> Basis matrix
-    #         C -> Predicate matrix
-    #         d -> Predicate vector
-    #         predicate_lb -> predicate lower bound
-    #         predicate_ub -> predicate upper bound
-    #     """
-                
-    #     test_eval_input = read_csv_data(sources[EVALUATION_INIT][EVAL_INPUT_ID])
-    #     test_eval_output = read_csv_data(sources[EVALUATION_INIT][EVAL_OUTPUT_ID])
-                
-    #     test_V = np.reshape(read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][V_ID]), (28,28,1,785))
-    #     test_C = np.reshape(read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][C_ID]), (1, 784))
-    #     test_d = read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][D_ID])
-    #     test_predicate_lb = read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_LB_ID])
-    #     test_predicate_ub = read_csv_data(sources[CONSTRUCTOR_PREDICATE_BOUNDARIES_INIT][PREDICATE_UB_ID])
+            V -> Basis matrix
+            C -> Predicate matrix
+            d -> Predicate vector
+            predicate_lb -> predicate lower bound
+            predicate_ub -> predicate upper bound
+        """                
+        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+        eval_input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_input.mat"
+        eval_output_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_output.mat"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
         
-    #     test_star = ImageStar(
-    #             test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
-    #         )
-                
-    #     try:
-    #         test_result = test_star.evaluate(test_eval_input)
-    #     except Exception as ex:
-    #         completion_flag = False
-    #         process_exception(ex)
+        print("Loading the input from %s" % eval_input_path)
+        eval_input = SourceLoader.load_ndim_array(eval_input_path)
+        
+        print("Loading the output from %s" % eval_output_path)
+        eval_output = SourceLoader.load_ndim_array(eval_output_path)
+                        
+        try:
+            print("Evaluating the ImageStar on the given input.............")
+            test_result = test_star.evaluate(eval_input)
+            print("Evaluation completed.............")
+        except Exception as ex:
+            print("Evaluation failed.............")
+            print("Exception handled => " + str(ex))
+            
+        self.assertEqual(test_result.all(), eval_output.all())
+
+    @unittest.skip("skip it")
+    def test_evaluation_empty_imgstar(self):
+        """
+            Tests evaluation using predicate initialization
+        
+            eval_input : int -> number of images
+            
+            V -> Basis matrix
+            C -> Predicate matrix
+            d -> Predicate vector
+            predicate_lb -> predicate lower bound
+            predicate_ub -> predicate upper bound
+        """                
+        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        eval_input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_input.mat"
+        eval_output_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_output.mat"
+
+        print("Creating an empty ImageStar.............")
+        test_star = ImageStar()
+        
+        print("Loading the input from %s" % eval_input_path)
+        eval_input = SourceLoader.load_ndim_array(eval_input_path)
+                        
+        exceptions_handled = False
+                        
+        try:
+            print("Evaluating the ImageStar on the given input.............")
+            test_result = test_star.evaluate(eval_input)
+            print("Evaluation completed.............")
+        except Exception as ex:
+            print("Evaluation failed.............")
+            print("Exception handled => " + str(ex))
+            
+            if str(ex) == "error: ImageStar is empty":
+                exceptions_handled = True
+            
+        self.assertEqual(exceptions_handled, True)
+
+    @unittest.skip("skip it")
+    def test_evaluation_empty_imgstar(self):
+        """
+            Tests evaluation using predicate initialization
+        
+            eval_input : int -> number of images
+            
+            V -> Basis matrix
+            C -> Predicate matrix
+            d -> Predicate vector
+            predicate_lb -> predicate lower bound
+            predicate_ub -> predicate upper bound
+        """                
+        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        eval_input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_input.mat"
+
+        print("Creating an empty ImageStar.............")
+        test_star = ImageStar()
+        
+        print("Loading the input from %s" % eval_input_path)
+        eval_input = SourceLoader.load_ndim_array(eval_input_path)
+                        
+        exceptions_handled = False
+                        
+        try:
+            print("Evaluating the ImageStar on the given input.............")
+            test_result = test_star.evaluate(eval_input)
+            print("Evaluation completed.............")
+        except Exception as ex:
+            print("Evaluation failed.............")
+            print("Exception handled => " + str(ex))
+            
+            if str(ex) == "error: ImageStar is empty":
+                exceptions_handled = True
+            
+        self.assertEqual(exceptions_handled, True)
 
     # def test_get_local_bound_default(self):
     #     """
