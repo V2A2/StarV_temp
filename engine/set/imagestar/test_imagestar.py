@@ -599,7 +599,6 @@ class TestImageStar(unittest.TestCase):
         """                
         print("\n\nStarting <estimate_range> Test With Invalid Input.............")
         eval_input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_input.mat"
-        eval_output_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_output.mat"
 
         print("Creating an empty ImageStar.............")
         test_star = ImageStar()
@@ -659,6 +658,101 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(exceptions_handled, True)
 
+    @unittest.skip("skip it")
+    def test_get_range_gurobi(self):
+        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+        
+        get_range_input = np.array([12,12,0])
+        print("The input is: %s" % str(get_range_input))
+        get_range_output = np.array([0, 0.05])
+        print("The input is: %s" % str(get_range_output))
+                        
+        try:
+            print("Computing the range of the ImageStar for the input: %s" + str(get_range_input))
+            test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'gurobi')
+            print("Range computation completed.............")
+        except Exception as ex:
+            print("Range computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+        self.assertEqual(test_result.all(), get_range_output.all())
+        
+    @unittest.skip("skip it")
+    def test_get_range_glpk(self):
+        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+        
+        get_range_input = np.array([12,12,0])
+        print("The input is: %s" % str(get_range_input))
+        get_range_output = np.array([0, 0.05])
+        print("The input is: %s" % str(get_range_output))
+                        
+        try:
+            print("Computing the range of the ImageStar for the input: %s" + str(get_range_input))
+            test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'glpk')
+            print("Range computation completed.............")
+        except Exception as ex:
+            print("Range computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+        self.assertEqual(test_result.all(), get_range_output.all())
+        
+    #@unittest.skip("skip it")
+    def test_get_range_linprog(self):
+        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+        
+        get_range_input = np.array([12,12,0])
+        print("The input is: %s" % str(get_range_input))
+        get_range_output = np.array([0, 0.05])
+        print("The input is: %s" % str(get_range_output))
+                        
+        try:
+            print("Computing the range of the ImageStar for the input: %s" + str(get_range_input))
+            test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'linprog')
+            print("Range computation completed.............")
+        except Exception as ex:
+            print("Range computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+        self.assertEqual(test_result.all(), get_range_output.all())
+        
+        
+    # @unittest.skip("skip it")
     # def test_get_local_bound_default(self):
     #     """
     #         Tests the ImageStar's method that calculates the local bounds for the given point and pool size
@@ -673,21 +767,37 @@ class TestImageStar(unittest.TestCase):
     #         bounds_output -> valid output bounds
     #     """
         
-    #     test_V = np.reshape(read_csv_data(sources[GET_LOCAL_BOUND_INIT][V_ID]), (28, 28, 1, 785))
-    #     test_C = np.reshape(read_csv_data(sources[GET_LOCAL_BOUND_INIT][C_ID]), (1, 784))
-    #     test_d = read_csv_data(sources[GET_LOCAL_BOUND_INIT][D_ID])
-    #     test_predicate_lb = read_csv_data(sources[GET_LOCAL_BOUND_INIT][PREDICATE_LB_ID])
-    #     test_predicate_ub = read_csv_data(sources[GET_LOCAL_BOUND_INIT][PREDICATE_UB_ID])
-        
-    #     test_star = ImageStar(
-    #             test_V, test_C, test_d, test_predicate_lb, test_predicate_ub
-    #         )
-               
-    #     test_bounds_input = np.array([int(item) for item in read_csv_data(sources[GET_LOCAL_BOUND_INIT][INPUT_ID])])
-    #     test_bounds_output = read_csv_data(sources[GET_LOCAL_BOUND_INIT][OUTPUT_ID]).tolist()
-                                
-    #     self.assertEqual(test_star.get_local_bound(test_bounds_input[0:2], test_bounds_input[2:4], test_bounds_input[4]), test_bounds_output)
+    #     print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+    #     current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+    #     input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/get_local_bound/get_local_bound_input.mat"
+    #     output_path = os.getcwd() + "/engine/set/imagestar/test_inputs/get_local_bound/get_local_bound_output.mat"
 
+    #     try:
+    #         print("Loading ImageStar from %s" % current_path)
+    #         print("Loading ImageStar.............")         
+    #         test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+    #         print("ImageStar initialized successfully.............")  
+    #         print("V: " + str(test_star.get_V().shape))
+    #         print("C: " + str(test_star.get_C().shape))
+    #     except Exception as ex:
+    #         print("ImageStar initialization failed.............") 
+    #         print("Exception handled => " + str(ex))
+        
+    #     print("Loading the input from %s" % input_path)
+    #     glb_input = SourceLoader.load_ndim_array(input_path)
+        
+    #     print("Loading the output from %s" % output_path)
+    #     glb_output = SourceLoader.load_ndim_array(output_path)
+
+    #     try:
+    #         print("Computing a local bound of the ImageStar for input: %s" % str(glb_input))
+    #         test_result = test_star.get_local_bound(glb_input[0:2], glb_input[2:4], glb_input[4])
+    #         print("Local bound computed completed.............")
+    #     except Exception as ex:
+    #         print("Computation failed failed.............")
+    #         print("Exception handled => " + str(ex))
+            
+    #     self.assertEqual(test_result, glb_output)
                 
     # def test_get_local_bound_glpk(self):
     #     """

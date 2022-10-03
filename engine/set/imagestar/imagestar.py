@@ -652,8 +652,38 @@ class ImageStar:
             lb = lb.reshape((self.numpred, 1))
             ub = ub.reshape((self.numpred, 1))
 
-            xmin = self._solve_glpk(A, b, lb, ub, f, vert_id, horiz_id, channel_id, False)
-            xmax = self._solve_glpk(A, b, lb, ub, vert_id, horiz_id, channel_id, True)
+            lp = glpk.LPX() 
+            lp.rows.add(A.shape[0])  # append rows to this instance
+            for r in lp.rows:
+                r.name = chr(ord('p') + r.index)  # name rows if we want
+                lp.rows[r.index].bounds = None, b[r.index]
+
+            lp.cols.add(self.numpred)
+            for c in lp.cols:
+                c.name = 'x%d' % c.index
+                c.bounds = lb[c.index], ub[c.index]
+
+            lp.obj[:] = f.tolist()
+            B = A.reshape(A.shape[0]*A.shape[1],)
+            lp.matrix = B.tolist()
+            lp.obj.maximize = False
+            
+            # lp.interior()
+            lp.simplex()
+            if lp.status != 'opt':
+                raise Exception('error: cannot find an optimal solution, \
+                lp.status = {}'.format(lp.status))
+            else:
+                xmin = lp.obj.value + self.V[vert_id, horiz_id, channel_id, 0]
+                
+            lp.obj.maximize = True
+            lp.simplex()
+            if lp.status != 'opt':
+                raise Exception('error: cannot find an optimal solution, \
+                lp.status = {}'.format(lp.status))
+            else:
+                xmax = lp.obj.value + self.V[vert_id, horiz_id, channel_id, 0]
+                
         elif solver == 'linprog':
             # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
             if len(self.C) == 0:
@@ -663,18 +693,18 @@ class ImageStar:
                 A = self.C
                 b = self.d
 
-            lb = self.pred_lb
-            ub = self.pred_ub
+            lb = self.predicate_lb
+            ub = self.predicate_ub
             lb = lb.reshape((self.numpred, 1))
             ub = ub.reshape((self.numpred, 1))
             res_min = linprog(f, A_ub=A, b_ub=b, bounds=np.hstack((lb, ub)))
             res_max = linprog(-f, A_ub=A, b_ub=b, bounds=np.hstack((lb, ub)))
-            if res_min.status == 0 and res_max.status:
+            if res_min.status == 0 and res_max.status == 0:
                 xmin = res_min.fun + self.V[vert_id, horiz_id, channel_id, 0]
                 xmax = -res_max.fun + self.V[vert_id, horiz_id, channel_id, 0]
             else:
                 raise Exception('error: cannot find an optimal solution, \
-                exitflag = {}'.format(res.status))        
+                exitflag = {}'.format(res_min.status))        
         else:
             raise Exception('error: \
             unknown lp solver, should be gurobi or linprog or glpk')
@@ -887,6 +917,12 @@ class ImageStar:
             channel_id = args[2]
             solver = args[3]
             options = args[4]
+        
+        if start_point.dtype == 'float64':
+            print("WARNING: converting to int array to compute the local bound")
+            start_point = start_point.astype('int')
+            pool_size = pool_size.astype('int')
+            channel_id = channel_id.astype('int')
         
         points = self.get_local_points(start_point, pool_size)
         points_num = len(points)
@@ -1707,7 +1743,8 @@ class ImageStar:
         self.max_input_sizes = []
     
     def validate_solver_name(self, name):
-        assert (name == 'glpk' or name == 'gurobi'), 'error: %s' % ERRMSG_INCONSISTENT_SOLVER_INPUT
+        assert (name == 'glpk' or name == 'gurobi' or name == 'linprog'), \
+                'error: %s' % ERRMSG_INCONSISTENT_SOLVER_INPUT
                
     def is_scalar_attribute(self, attribute_id):
         return attribute_id in self.scalar_attributes_ids
