@@ -552,7 +552,7 @@ class TestImageStar(unittest.TestCase):
             predicate_lb -> predicate lower bound
             predicate_ub -> predicate upper bound
         """                
-        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        print("\n\nStarting <evaluate> Test.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
         eval_input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_input.mat"
         eval_output_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_output.mat"
@@ -597,44 +597,7 @@ class TestImageStar(unittest.TestCase):
             predicate_lb -> predicate lower bound
             predicate_ub -> predicate upper bound
         """                
-        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
-        eval_input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_input.mat"
-
-        print("Creating an empty ImageStar.............")
-        test_star = ImageStar()
-        
-        print("Loading the input from %s" % eval_input_path)
-        eval_input = SourceLoader.load_ndim_array(eval_input_path)
-                        
-        exceptions_handled = False
-                        
-        try:
-            print("Evaluating the ImageStar on the given input.............")
-            test_result = test_star.evaluate(eval_input)
-            print("Evaluation completed.............")
-        except Exception as ex:
-            print("Evaluation failed.............")
-            print("Exception handled => " + str(ex))
-            
-            if str(ex) == "error: ImageStar is empty":
-                exceptions_handled = True
-            
-        self.assertEqual(exceptions_handled, True)
-
-    @unittest.skip("skip it")
-    def test_evaluation_empty_imgstar(self):
-        """
-            Tests evaluation using predicate initialization
-        
-            eval_input : int -> number of images
-            
-            V -> Basis matrix
-            C -> Predicate matrix
-            d -> Predicate vector
-            predicate_lb -> predicate lower bound
-            predicate_ub -> predicate upper bound
-        """                
-        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        print("\n\nStarting <evaluate> Test With Empty ImageStar.............")
         eval_input_path = os.getcwd() + "/engine/set/imagestar/test_inputs/evaluate/eval_input.mat"
 
         print("Creating an empty ImageStar.............")
@@ -660,7 +623,7 @@ class TestImageStar(unittest.TestCase):
 
     @unittest.skip("skip it")
     def test_get_range_gurobi(self):
-        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        print("\n\nStarting <get_range> Test With Gurobi Solver.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
 
         try:
@@ -680,7 +643,7 @@ class TestImageStar(unittest.TestCase):
         print("The input is: %s" % str(get_range_output))
                         
         try:
-            print("Computing the range of the ImageStar for the input: %s" + str(get_range_input))
+            print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
             test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'gurobi')
             print("Range computation completed.............")
         except Exception as ex:
@@ -691,7 +654,7 @@ class TestImageStar(unittest.TestCase):
         
     @unittest.skip("skip it")
     def test_get_range_glpk(self):
-        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        print("\n\nStarting <get_range> Test With GLPK Solver.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
 
         try:
@@ -711,7 +674,7 @@ class TestImageStar(unittest.TestCase):
         print("The input is: %s" % str(get_range_output))
                         
         try:
-            print("Computing the range of the ImageStar for the input: %s" + str(get_range_input))
+            print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
             test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'glpk')
             print("Range computation completed.............")
         except Exception as ex:
@@ -720,9 +683,9 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(test_result.all(), get_range_output.all())
         
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_get_range_linprog(self):
-        print("\n\nStarting <estimate_range> Test With Invalid Input.............")
+        print("\n\nStarting <get_range> Test With LinProg Solver.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
 
         try:
@@ -742,7 +705,7 @@ class TestImageStar(unittest.TestCase):
         print("The input is: %s" % str(get_range_output))
                         
         try:
-            print("Computing the range of the ImageStar for the input: %s" + str(get_range_input))
+            print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
             test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'linprog')
             print("Range computation completed.............")
         except Exception as ex:
@@ -751,6 +714,181 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(test_result.all(), get_range_output.all())
         
+    @unittest.skip("skip it")
+    def test_get_range_empty_imgstar(self):
+        print("\n\nTesting <get_range> Test With Empty ImageStar.............")
+        print("Creating an empty ImageStar.............")
+        test_star = ImageStar()
+                        
+        exceptions_handled = False
+        
+        get_range_input = np.array([12,12,0])
+        print("The input is: %s" % str(get_range_input))
+                        
+        try:
+            print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
+            test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'linprog')
+            print("Range computation completed.............")
+        except Exception as ex:
+            print("Range computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+            if str(ex) == "error: ImageStar is empty":
+                exceptions_handled = True
+            
+        self.assertEqual(exceptions_handled, True)
+        
+    @unittest.skip("skip it")
+    def test_get_range_invalid_input(self):
+        print("\n\nStarting <get_range> Test With Invalid Input.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+        
+        test_V = test_star.get_V()
+        dims = test_V.shape[0:len(test_V.shape) - 1]
+        
+        print("Generating invalid input for the given ImageStar.............") 
+        test_input = np.zeros((2 * len(dims), len(dims)))
+        
+        for i in range(len(dims)):
+            first = i * 2
+            second = (i * 2 + 1) if (i > 0) else 1
+            
+            test_input[first, i] = -1
+            test_input[second, i] = dims[i]
+        
+        exceptions_handled = [False for i in range(test_input.shape[0])]
+        
+        for i in range (test_input.shape[0]):
+            try:
+                get_range_input = test_input[i, :]
+                print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
+                test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'linprog')
+                print("Range computation completed.............")
+            except Exception as ex:
+                print("Range computation failed.............")
+                print("Exception handled => " + str(ex))
+            
+                if str(ex) == "error: Invalid index value" or \
+                   str(ex) == "error: Inconsistent number of channels between the center image and the bound matrices":
+                                exceptions_handled[i] = True
+        
+        self.assertEqual(all(item == True for item in exceptions_handled), True)
+        
+    #@unittest.skip("skip it")
+    def test_get_range_invalid_solver(self):
+        print("\n\nStarting <get_range> Test With Invalid Solver.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+        
+        get_range_input = np.array([12,12,0])
+        print("The input is: %s" % str(get_range_input))
+        get_range_output = np.array([0, 0.05])
+        print("The input is: %s" % str(get_range_output))
+             
+        exception_handled = False
+                        
+        try:
+            print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
+            test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'invalid_solver_name')
+            print("Range computation completed.............")
+        except Exception as ex:
+            print("Range computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+            if str(ex) == "error: Given solver is not supported. Use \'glpk\' for GNU Linear Programming Kit or \'gurobi\' for Gurobi":
+                exception_handled = True
+            
+        self.assertEqual(exception_handled, True)
+        
+    #@unittest.skip("skip it")
+    def test_get_range_valid_options(self):
+        print("\n\nStarting <get_range> Test With Valid Options.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+        
+        get_range_input = np.array([12,12,0])
+        print("The input is: %s" % str(get_range_input))
+        get_range_output = np.array([0, 0.05])
+        print("The input is: %s" % str(get_range_output))
+             
+        exception_handled = False
+                        
+        try:
+            print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
+            test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'linprog', ['display'])
+            print("Range computation completed.............")
+        except Exception as ex:
+            print("Range computation failed.............")
+            print("Exception handled => " + str(ex))
+                        
+        self.assertEqual(test_result.all(), get_range_output.all())
+        
+    #@unittest.skip("skip it")
+    def test_get_range_invalid_options(self):
+        print("\n\nStarting <get_range> Test With Invalid Options.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+        
+        get_range_input = np.array([12,12,0])
+        print("The input is: %s" % str(get_range_input))
+        get_range_output = np.array([0, 0.05])
+        print("The input is: %s" % str(get_range_output))
+             
+        exception_handled = False
+                        
+        try:
+            print("Computing the range of the ImageStar for the input: %s" % str(get_range_input))
+            test_result = test_star.get_range(get_range_input[0], get_range_input[1], get_range_input[2], 'linprog', ['random_option'])
+            print("Range computation completed.............")
+        except Exception as ex:
+            print("Range computation failed.............")
+            print("Exception handled => " + str(ex))
+        
+            if str(ex) == "error: The given options list contains an unsupported option":
+                exception_handled = True
+            
+        self.assertEqual(exception_handled, True)
         
     # @unittest.skip("skip it")
     # def test_get_local_bound_default(self):

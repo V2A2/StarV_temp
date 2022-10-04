@@ -76,6 +76,8 @@ ERRMSG_INPUT_NOT_NUMPY_ARRAY = "Input should be a numpy array"
 
 ERRMSG_INVALID_NEW_SHAPE = "Number of input dimensions should be 3"
 
+ERRMSG_INCONSISTENT_OPTIONS_LIST = "The given options list contains an unsupported option"
+
 DEFAULT_DISP_OPTION = []
 
 class ImageStar:
@@ -1712,16 +1714,16 @@ class ImageStar:
     def validate_options_list(self, options):
         # TODO: this should be unified
         if not(type(options) == list):
-            raise Exception(ERRMSG_INCONSISTENT_OPTIONS_LIST)
+            raise Exception('error: %s' % ERRMSG_INCONSISTENT_OPTIONS_LIST)
         
         if options == []:
             return
             
-        available_options = ['disp']
+        available_options = ['display']
         
         for option in options:
             if not (option in available_options):
-                raise Exception(ERRMSG_INCONSISTENT_OPTIONS_LIST)
+                raise Exception('error: %s' % ERRMSG_INCONSISTENT_OPTIONS_LIST)
                 
         
     
