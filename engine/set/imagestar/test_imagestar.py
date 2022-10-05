@@ -785,7 +785,7 @@ class TestImageStar(unittest.TestCase):
         
         self.assertEqual(all(item == True for item in exceptions_handled), True)
         
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_get_range_invalid_solver(self):
         print("\n\nStarting <get_range> Test With Invalid Solver.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
@@ -821,7 +821,7 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(exception_handled, True)
         
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_get_range_valid_options(self):
         print("\n\nStarting <get_range> Test With Valid Options.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
@@ -854,7 +854,7 @@ class TestImageStar(unittest.TestCase):
                         
         self.assertEqual(test_result.all(), get_range_output.all())
         
-    #@unittest.skip("skip it")
+    @unittest.skip("skip it")
     def test_get_range_invalid_options(self):
         print("\n\nStarting <get_range> Test With Invalid Options.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
@@ -889,6 +889,134 @@ class TestImageStar(unittest.TestCase):
                 exception_handled = True
             
         self.assertEqual(exception_handled, True)
+
+    @unittest.skip("skip it")
+    def test_get_ranges_solvers(self):
+        print("\n\nStarting <get_ranges> Test With Multiple Solvers.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+                
+        exception_occurred = False
+                            
+        try:
+            print("Computing the ranges of the ImageStar")
+            test_result_gurobi = test_star.get_ranges('gurobi')
+            test_result_glpk = test_star.get_ranges('glpk')
+            test_result_linprog = test_star.get_ranges('linprog')
+            print("Ranges computation completed.............")
+        except Exception as ex:
+            print("Ranges computation failed.............")
+            print("Exception handled => " + str(ex))
+            exception_occurred = True
+            
+        self.assertEqual(exception_occurred, False)
+
+    #@unittest.skip("skip it")        
+    def test_get_ranges_invalid_solver(self):
+        print("\n\nStarting <get_ranges> Test With Multiple Solvers.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+                
+        exception_occurred = False
+                            
+        try:
+            print("Computing the ranges of the ImageStar")
+            test_result_gurobi = test_star.get_ranges('invalid_solver')
+            test_result_glpk = test_star.get_ranges('glpk')
+            test_result_linprog = test_star.get_ranges('linprog')
+            print("Ranges computation completed.............")
+        except Exception as ex:
+            print("Ranges computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+            if str(ex) == "error: Given solver is not supported. Use \'glpk\' for GNU Linear Programming Kit or \'gurobi\' for Gurobi":
+                exception_occurred = True
+            
+        self.assertEqual(exception_occurred, True)
+
+    #@unittest.skip("skip it")        
+    def test_get_ranges_valid_options(self):
+        print("\n\nStarting <get_ranges> Test With Multiple Solvers.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+                
+        exception_occurred = False
+                            
+        try:
+            print("Computing the ranges of the ImageStar")
+            test_result_gurobi = test_star.get_ranges('gurobi', ['display'])
+            test_result_glpk = test_star.get_ranges('glpk', ['display'])
+            test_result_linprog = test_star.get_ranges('linprog', ['display'])
+            print("Ranges computation completed.............")
+        except Exception as ex:
+            print("Ranges computation failed.............")
+            print("Exception handled => " + str(ex))
+            exception_occurred = True
+            
+        self.assertEqual(exception_occurred, False)
+
+    #@unittest.skip("skip it")        
+    def test_get_ranges_invalid_options(self):
+        print("\n\nStarting <get_ranges> Test With Multiple Solvers.............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+                
+        exception_occurred = False
+                            
+        try:
+            print("Computing the ranges of the ImageStar")
+            test_result_gurobi = test_star.get_ranges('gurobi', 'invalid_option')
+            test_result_glpk = test_star.get_ranges('glpk', 'invalid_option')
+            test_result_linprog = test_star.get_ranges('linprog', 'invalid_option')
+            print("Ranges computation completed.............")
+        except Exception as ex:
+            print("Ranges computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+            if str(ex) == "error: The given options list contains an unsupported option":
+                exception_occurred = True
+            
+        self.assertEqual(exception_occurred, True)
         
     # @unittest.skip("skip it")
     # def test_get_local_bound_default(self):
