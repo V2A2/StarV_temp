@@ -921,7 +921,7 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(exception_occurred, False)
 
-    #@unittest.skip("skip it")        
+    @unittest.skip("skip it")        
     def test_get_ranges_invalid_solver(self):
         print("\n\nStarting <get_ranges> Test With Multiple Solvers.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
@@ -954,7 +954,7 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(exception_occurred, True)
 
-    #@unittest.skip("skip it")        
+    @unittest.skip("skip it")        
     def test_get_ranges_valid_options(self):
         print("\n\nStarting <get_ranges> Test With Multiple Solvers.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
@@ -985,7 +985,7 @@ class TestImageStar(unittest.TestCase):
             
         self.assertEqual(exception_occurred, False)
 
-    #@unittest.skip("skip it")        
+    @unittest.skip("skip it")        
     def test_get_ranges_invalid_options(self):
         print("\n\nStarting <get_ranges> Test With Multiple Solvers.............")
         current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
@@ -1017,6 +1017,39 @@ class TestImageStar(unittest.TestCase):
                 exception_occurred = True
             
         self.assertEqual(exception_occurred, True)
+    
+    #@unittest.skip("skip it")        
+    def test_estimate_ranges(self):
+        print("\n\nStarting <estimate_ranges> Test .............")
+        current_path = os.getcwd() + "/engine/set/imagestar/test_inputs/fmnist_img"
+        output_path = os.getcwd() + "/engine/set/imagestar/test_inputs/estimate_ranges/estimate_ranges_output.mat"
+
+        try:
+            print("Loading ImageStar from %s" % current_path)
+            print("Loading ImageStar.............")         
+            test_star = SourceLoader.load_image_star(current_path, 'matlab', 'folder', 'standard')
+            print("ImageStar initialized successfully.............")  
+            print("V: " + str(test_star.get_V().shape))
+            print("C: " + str(test_star.get_C().shape))
+        except Exception as ex:
+            print("ImageStar initialization failed.............") 
+            print("Exception handled => " + str(ex))
+                
+        print("Loading the output from %s" % output_path)
+        ranges_output = SourceLoader.load_ndim_array(output_path).astype('float64')
+                
+        exception_occurred = False
+                            
+        try:
+            print("Computing the ranges of the ImageStar")
+            test_result = test_star.estimate_ranges().astype('float64')
+            test_result = np.round_(np.reshape(test_result, (28,56)), 2)
+            print("Ranges computation completed.............")
+        except Exception as ex:
+            print("Ranges computation failed.............")
+            print("Exception handled => " + str(ex))
+            
+        self.assertEqual((ranges_output == test_result).all(), True)
         
     # @unittest.skip("skip it")
     # def test_get_local_bound_default(self):

@@ -783,7 +783,7 @@ class ImageStar:
             image_lb = self.im_lb
             image_ub = self.im_ub
             
-        return np.array([image_lb, image_ub])
+        return np.hstack((image_lb, image_ub))
     
     def get_ranges(self, *args):
         """
